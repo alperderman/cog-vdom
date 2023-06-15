@@ -1,4 +1,4 @@
-//CognitiveJS EXPERIMENTAL V-DOM
+//CognitiveJS VDOM
 
 if (typeof window.CustomEvent !== 'function') { window.CustomEvent = function (event, params) { params = params || {bubbles: false, cancelable: false, detail: null}; var evt = document.createEvent('CustomEvent'); evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail); return evt; }; }
 
@@ -44,7 +44,7 @@ cog.keyword = {
     auto: "_auto",
     keep: "_keep"
 };
-cog.token = { // new token delimiters
+cog.token = { //new token delimiters
     open: "{{",
     close: "}}",
     escape: "##"
@@ -61,10 +61,13 @@ cog.regex = {
 
 
 
-cog.render2 = function (dom) { //NEW RENDER
-    var dommap, attrKey, attrVal, attrNode, attrContent, newAttrLength, tokens, token, tokenPure, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+cog.render2 = function (dom, ret) { //NEW RENDER
+    var dommap, attrKey, attrVal, attrNode, attrContent, newAttrLength, cloneNode, tokens, token, tokenPure, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) {
         dom = document.body;
+    }
+    if (ret == null) {
+        ret = false;
     }
     dommap = cog.createDOMMap(dom)
     cog.iterate(dommap, function(obj){
@@ -195,8 +198,14 @@ cog.render2 = function (dom) { //NEW RENDER
                 for (i = 0;i < nodeRegexMatches.length;i++) {
                     if (tokenContents.hasOwnProperty(nodeRegexMatches[i])) {
                         tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
-                        newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[nodeRegexMatches[i]]));
-                        newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
+                        //if content is node, this part is different than attribute because attributes only accepts string
+                        if (!cog.isElement(tokenContents[nodeRegexMatches[i]])) {
+                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[nodeRegexMatches[i]]));
+                            newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
+                        } else {
+                            cloneNode = cog.render2(tokenContents[nodeRegexMatches[i]].cloneNode(true), 1);
+                            newNode.appendChild(cloneNode);
+                        }
                     } else {
                         newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
                     }
@@ -205,12 +214,121 @@ cog.render2 = function (dom) { //NEW RENDER
             }
         }
     });
+    if (ret) {
+        return dom;
+    }
 };
 cog.rebind2 = function (key) { //NEW REBIND
-
+    var token = cog.normalizeKeys(key), i, newNode, content;
+    if (cog.nodes.hasOwnProperty(token)) {
+        content = cog.getRecursiveValue({str:token});
+        //TEXT NODES
+        for (i = 0;i < cog.nodes[token].length;i++) {
+            if (cog.nodes[token][i].textContent != content) {
+                newNode = document.createTextNode(content);
+                cog.nodes[token][i].parentNode.replaceChild(newNode, cog.nodes[token][i]);
+                cog.nodes[token][i] = newNode;
+            }
+        }
+        //ATTRS
+        for (i = 0;i < cog.attrs.length;i++) {
+            if (cog.attrs[i].node.value != cog.attrs[i].content.innerHTML) {
+                cog.attrs[i].node.value = cog.attrs[i].content.innerHTML;
+            }
+        }
+    }
 };
-
-
+cog.get2 = function (key, arg) {
+    if (key == null) {return;}
+    if (arg == null) {arg = {};}
+    if (arg.action == null) {arg.action = "get";}
+    if (arg.reference == null) {arg.reference = false;}
+    if (arg.execute == null) {arg.execute = false;}
+    var result, old, alter = false;
+    if (typeof arg.replace === 'function') {
+        alter = true;
+    }
+    if (arg.action == "get") {
+        result = cog.getRecursiveValue({str:key, ref:arg.reference, exec:arg.execute});
+    }
+    if (arg.action == "set" || alter) {
+        if (old !== arg.set || alter) {
+            if (alter) {
+                result = arg.replace({act:arg.action, str:key, val:arg.set, ref:arg.reference, exec:arg.execute});
+            } else {
+                result = cog.getRecursiveValue({act:arg.action, str:key, val:arg.set, ref:arg.reference, exec:arg.execute});
+            }
+            cog.rebind2(key); //NEW REBIND WITHOUT RETURNING CHANGED ELEMS
+            document.dispatchEvent(new CustomEvent(cog.event.afterData, {detail:{key:key, old:old, new:result}}));
+        } else {
+            result = old;
+        }
+    }
+    if (typeof arg.callback === 'function') {
+        arg.callback({key:key, old:old, new:result});
+    }
+    return result;
+};
+cog.set2 = function (key, set, arg) {
+    if (arg == null) {arg = {};}
+    if (arg.alter == null) {arg.alter = false;}
+    if (arg.setElems == null) {arg.setElems = false;}
+    if (arg.setElems) {
+        cog.loadContents(function () {
+            var setElem, setAttr, setType, setKey, bindType, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("["+cog.label.head+"]"), head;
+            while (setElem = document.querySelector("["+cog.label.set+"]:not(["+cog.label.skip+"])")) {
+                setAttr = setElem.getAttribute(cog.label.set);
+                setType = cog.parseSet(setAttr)[0];
+                setKey = cog.parseSet(setAttr)[1].trim();
+                for (bindType in cog.bindTypes) {
+                    if (cog.bindTypes[bindType].set != null && setType == bindType) {
+                        cog.bindTypes[bindType].set(setElem, setKey);
+                    }
+                }
+                setElem.parentNode.removeChild(setElem);
+            }
+            for (i = 0;i < links.length;i++) {
+                link = links[i];
+                document.head.appendChild(link);
+                link.href = link.href;
+            }
+            for (i = 0;i < heads.length;i++) {
+                head = heads[i];
+                head.removeAttribute("head");
+                document.head.appendChild(head);
+            }
+            if (typeof arg.callback === 'function') {
+                arg.callback();
+            }
+        });
+    } else if (arg.alter && typeof set === 'function') {
+        cog.get2(key, {
+            action: "set",
+            set: set,
+            callback: arg.callback,
+            replace: function (argReplace) {
+                var result = cog.getRecursiveValue({str:argReplace.str, exec:false});
+                var replace = set(result);
+                if (replace !== result) {
+                    argReplace.val = replace;
+                    result = cog.getRecursiveValue(argReplace);
+                }
+                return result;
+            }
+        });
+    } else {
+        cog.get2(key, {
+            action: "set",
+            set: set,
+            callback: arg.callback
+        });
+    }
+};
+cog.alter2 = function (key, set, arg) {
+    if (arg == null) {arg = {};}
+    arg.alter = true;
+    cog.set2(key, set, arg);
+};
 
 
 
