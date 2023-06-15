@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOMMAP</title>
+</head>
+<body>
+    <em><strong>Note:</strong> Look in the console.</em>
+
+    <div id="app">
+        
+        <h1 class="title" cog-style="color:{{color}};">Hello, {{world}}  {{name}}!</h1>
+
+        <p id="subtitle" data-attribute="be friendly">
+            <strong style="color: rebeccapurple;">How are you today?</strong>
+        </p>
+
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewbox="0 0 800 800" aria-described="title-thumbsup">
+            <title id="title-thumbsup">Thumbs Up!</title>
+            <path d="M725 450c57.031 0 25 150-25 150 25 0 0 125-50 125 0 50-50 75-100 75-211.212 0-136.925-52.852-350-75V325C388.22 268.541 575 127.012 575 0c41.406 0 150 50 0 300h150c75 0 50 150 0 150zM150 325v400h50v25H100c-27.5 0-50-33.75-50-75V375c0-41.25 22.5-75 50-75h100v25h-50z"/>
+        </svg>
+
+        I'm doing pretty good, thanks!
+        
+    </div>
+    <script src="cog.js"></script>
+    <script>
+        // Get the #app element
+        var app = document.querySelector('#app');
+
+        // Create a map of it's elements
+        var map = cog.createDOMMap(app);
+        
+        //console.log(map);
+        
+        //map[1].children[0].node.parentNode.replaceChild(document.createTextNode("testinnnggggggg"),map[1].children[0].node );
+        var map2 = cog.createDOMMap(app);
+        //console.log(deepDiffMapper.mapAlt({type:function(){return 1;}, data:"wow"}, {type:function(){return 1;}}));
+        //console.log(deepDiffMapper.mapAlt([{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
+        //console.log(deepDiffMapper.mapAlt([{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
+        cog.data.world=function(){
+            return cog.get("greet")+" "+cog.get("name");
+        };
+        cog.data.greet = "hello";
+        cog.data.name="Jack";
+        cog.data.color="red";
+        cog.render2();
+    </script>
+</body>
+</html>
