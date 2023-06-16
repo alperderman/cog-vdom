@@ -10,7 +10,9 @@
     <em><strong>Note:</strong> Look in the console.</em>
 
     <div id="app">
-        
+        <div data-set="temp:card">
+            <h3 cog-style="color:{{pep.color}};">{{pep.name}}</h3>
+        </div>
         <h1 class="title" cog-style="color:{{color}};">Hello, {{world}}  {{name}}!</h1>
 
         <p id="subtitle" data-attribute="be friendly">
@@ -27,7 +29,7 @@
             <button onclick='cog.set2("world", "wowowowooww")'>CHANGE</button>
         </div>
     </div>
-    <script src="cog.js"></script>
+    <script src="dist/cog.js"></script>
     <script>
         // Get the #app element
         var app = document.querySelector('#app');
@@ -47,7 +49,12 @@
         cog.data.greet = "hello";
         cog.data.name="Jack";
         cog.data.color="red";
+        cog.data.temp = {name:"Alex", color:"#9f4"};
         cog.data.elem = document.getElementById("subtitle");
+        cog.set(null, null, {setElems: true});
+        var testTemp = cog.template2({id:"card", data:"temp as pep"});
+        //document.body.appendChild(testTemp);
+        console.log(document.body.contains(testTemp));
         cog.render2();
     </script>
 </body>

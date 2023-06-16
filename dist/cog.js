@@ -61,16 +61,16 @@ cog.regex = {
 
 
 
-cog.render2 = function (dom, ret) { //NEW RENDER
-    var dommap, attrKey, attrVal, attrNode, attrContent, newAttrLength, cloneNode, tokens, token, tokenPure, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+cog.render2 = function (dom, arg) { //NEW RENDER
+    var dommap, attrKey, attrVal, attrNode, attrContent, newAttrLength, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) {
         dom = document.body;
     }
-    if (ret == null) {
-        ret = false;
+    if (arg == null) {
+        arg = {};
     }
     dommap = cog.createDOMMap(dom)
-    cog.iterate(dommap, function(obj){
+    cog.iterate(dommap, {obj:function(obj){
         //FOR ATTRIBUTES
         if (obj.hasOwnProperty("attrs")) {
             for (i = 0;i < obj.attrs.length;i++) {
@@ -89,10 +89,14 @@ cog.render2 = function (dom, ret) { //NEW RENDER
                     for (i = 0;i < tokens.length;i++) {
                         token = tokens[i];
                         tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length-cog.token.close.length));
+                        tokenArr = tokenPure.split(".");
                         if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
+                            if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                                tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                            }
                             tokenContent = cog.getRecursiveValue({str:tokenPure});
                             if (typeof tokenContent !== "undefined") {
-                                tokenContents[token] = tokenContent;
+                                tokenContents[tokenPure] = tokenContent;
                                 if (!cog.nodes.hasOwnProperty(tokenPure)) {
                                     cog.nodes[tokenPure] = [];
                                 }
@@ -131,9 +135,13 @@ cog.render2 = function (dom, ret) { //NEW RENDER
                     attrContent = document.createElement("span");
                     newNode = document.createDocumentFragment();
                     for (i = 0;i < nodeRegexMatches.length;i++) {
-                        if (tokenContents.hasOwnProperty(nodeRegexMatches[i])) {
-                            tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
-                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[nodeRegexMatches[i]]));
+                        tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
+                        tokenArr = tokenPure.split(".");
+                        if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                            tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                        }
+                        if (tokenContents.hasOwnProperty(tokenPure)) {
+                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
                             newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
                         } else {
                             newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
@@ -151,15 +159,19 @@ cog.render2 = function (dom, ret) { //NEW RENDER
         if (obj.hasOwnProperty("type") && obj.type == "text" && !obj.isSVG) {
             tokens = cog.removeDuplicatesFromArray(obj.content.match(cog.regex.token));
             if (tokens.length > 0) {
-                //ADD CONTENTS OF THE TOKENS THAT ARE USED IN THIS TEXT NODE INTO AN OBJECT
+                //ADD CONTENTS OF THE TOKENS THAT ARE USED IN THIS TEXT NODE INTO AN OBJECT (SAME AS ATTR)
                 tokenContents = {};
                 for (i = 0;i < tokens.length;i++) {
                     token = tokens[i];
                     tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length-cog.token.close.length));
+                    tokenArr = tokenPure.split(".");
                     if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
+                        if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                            tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                        }
                         tokenContent = cog.getRecursiveValue({str:tokenPure});
                         if (typeof tokenContent !== "undefined") {
-                            tokenContents[token] = tokenContent;
+                            tokenContents[tokenPure] = tokenContent;
                             if (!cog.nodes.hasOwnProperty(tokenPure)) {
                                 cog.nodes[tokenPure] = [];
                             }
@@ -167,8 +179,8 @@ cog.render2 = function (dom, ret) { //NEW RENDER
                     }
                     
                 }
-
-                //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS
+                
+                //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS (SAME AS ATTR)
                 nodeRegexMatches = [];
                 nodeRegexString = "";
                 while (nodeRegexMatch = cog.regex.node.exec(obj.content)) {
@@ -187,23 +199,29 @@ cog.render2 = function (dom, ret) { //NEW RENDER
                     nodeRegexString = nodeRegexString+nodeRegexMatch[2];
                 }
                 
-                //ADD THE LAST PIECE OF TEXT IF IT HAS IT
+                //ADD THE LAST PIECE OF TEXT IF IT HAS IT (SAME AS ATTR)
                 nodeRegexString = obj.content.replace(nodeRegexString, "");
                 if (nodeRegexString != "") {
                     nodeRegexMatches.push(nodeRegexString);
                 }
 
-                //RECONSTRUCT THE TEXT NODE
+                //RECONSTRUCT THE TEXT NODE (DIFFERENT THAN ATTR)
                 newNode = document.createDocumentFragment();
                 for (i = 0;i < nodeRegexMatches.length;i++) {
-                    if (tokenContents.hasOwnProperty(nodeRegexMatches[i])) {
-                        tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
+                    tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
+                    tokenArr = tokenPure.split(".");
+                    if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                        
+                        tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                    }
+                    if (tokenContents.hasOwnProperty(tokenPure)) {
+                        
                         //if content is node, this part is different than attribute because attributes only accepts string
-                        if (!cog.isElement(tokenContents[nodeRegexMatches[i]])) {
-                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[nodeRegexMatches[i]]));
+                        if (!cog.isElement(tokenContents[tokenPure])) {
+                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
                             newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
                         } else {
-                            cloneNode = cog.render2(tokenContents[nodeRegexMatches[i]].cloneNode(true), 1);
+                            cloneNode = cog.render2(tokenContents[tokenPure].cloneNode(true), {ret: 1});
                             newNode.appendChild(cloneNode);
                         }
                     } else {
@@ -213,10 +231,8 @@ cog.render2 = function (dom, ret) { //NEW RENDER
                 obj.node.parentNode.replaceChild(newNode, obj.node);
             }
         }
-    });
-    if (ret) {
-        return dom;
-    }
+    }});
+    return dom;
 };
 cog.rebind2 = function (key) { //NEW REBIND
     var token = cog.normalizeKeys(key), i, newNode, content;
@@ -235,6 +251,60 @@ cog.rebind2 = function (key) { //NEW REBIND
             if (cog.attrs[i].node.value != cog.attrs[i].content.innerHTML) {
                 cog.attrs[i].node.value = cog.attrs[i].content.innerHTML;
             }
+        }
+    }
+};
+cog.template2 = function (arg) {
+    var template, createEl, parent, alias;
+    if (arg.id == null) {return;}
+    if (arg.bind == null) {arg.bind = true;}
+    if (arg.fragment == null) {arg.fragment = false;}
+    if (cog.templates[arg.id] == null && arg.elem != null) {
+        if (typeof arg.elem === 'string') {
+            createEl = document.createElement("div");
+            createEl.innerHTML = arg.elem;
+            cog.templates[arg.id] = createEl.cloneNode(true);
+        } else {
+            cog.templates[arg.id] = arg.elem.cloneNode(true);
+        }
+    }
+    if (cog.templates[arg.id] != null) {
+        template = cog.templates[arg.id].cloneNode(true);
+    }
+    if (arg.data != null && template != null) {
+        parent = cog.normalizeKeys(arg.data.split(" ")[0]);
+        alias = arg.data.split(" ")[2];
+        console.log(parent+"      "+alias);
+        cog.render2(template, {parent: parent, alias: alias});
+    }
+    
+    if (arg.bind && cog.isReady) {
+        cog.bindAll({set:false, elem:template});
+    }
+    if (arg.fragment) {
+        template = cog.elemFragment(template);
+    }
+    return template;
+};
+cog.collectGarbage = function () { //remove nodes that are not inside the DOM
+    var i;
+    //FOR TEXT
+    cog.iterate(cog.nodes, {item:function(k, v){
+        if (Array.isArray(v)) {
+            cog.iterate(v, {item:function(kk, vv){
+                if (!document.body.contains(vv)) {
+                    cog.nodes[k].splice(kk, 1);
+                }
+            }});
+            if (cog.nodes[k].length == 0) {
+                delete cog.nodes[k];
+            }
+        }
+    }});
+    //FOR ATTRS
+    for (i = 0;i < cog.attrs.length;i++) {
+        if (!document.body.contains(cog.attrs[i].node)) {
+            cog.attrs.splice(i, 1);
         }
     }
 };
@@ -336,16 +406,27 @@ cog.alter2 = function (key, set, arg) {
 
 
 
-cog.iterate = function (obj, func) { //SOURCE: https://stackoverflow.com/questions/8085004/iterate-through-nested-javascript-objects
+cog.iterate = function (obj, arg) { //SOURCE: https://stackoverflow.com/questions/8085004/iterate-through-nested-javascript-objects
+    if (arg == null) {
+        arg = {};
+    }
+    if (arg.obj == null) {
+        arg.obj = false;
+    }
+    if (arg.item == null) {
+        arg.item = false;
+    }
     var stack = [obj];
     var _loop = function _loop() {
         var currentObj = stack.pop();
-        if (typeof func === "function") {
-            func(currentObj);
+        if (typeof arg.obj === "function") {
+            arg.obj(currentObj);
         }
         Object.keys(currentObj).forEach(function (key) {
             //key, currentObj[key]
-            
+            if (typeof arg.item === "function") {
+                arg.item(key, currentObj[key]);
+            }
             if (typeof currentObj[key] === "object" && currentObj[key] !== null) {
                 stack.push(currentObj[key]);
             }
