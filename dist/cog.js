@@ -6,6 +6,7 @@ var cog = {};
 cog.data = {};
 cog.nodes = {}; //text nodes, flat object, keys are normalized keys of cog.data
 cog.attrs = []; //attr nodes
+cog.repeats = {}; //repeater nodes
 cog.templates = {};
 cog.bindTypes = {};
 cog.bound = {};
@@ -20,7 +21,8 @@ cog.label = {
     head: "head",
     skip: "skip",
     source: "data-src",
-    prefix: "cog-", //prefix escape label for attrs
+    prefix: "#", //prefix escape label for attrs
+    repeat: "cog-repeat", //label for repeats: token, alias, template
     sourceObject: "data-object",
     sourceMethod: "data-method",
     sourceType: "data-type",
@@ -47,7 +49,7 @@ cog.keyword = {
 cog.token = { //new token delimiters
     open: "{{",
     close: "}}",
-    escape: "##"
+    escape: "#"
 };
 cog.regex = {
     head: new RegExp("<head[^>]*>((.|[\\\n\\\r])*)<\\\/head>", "im"),
@@ -62,7 +64,7 @@ cog.regex = {
 
 
 cog.render2 = function (dom, arg) { //NEW RENDER
-    var dommap, attrKey, attrVal, attrNode, attrContent, newAttrLength, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    var i, ii, dommap, repeatNode, repeatsArr, repeatsArrKey, repeatsArrNodes, repeatTemp, repeatAttr, repeatAttrToken, repeatAttrTokenArr, repeatAttrAlias, repeatAttrTemp, attrKey, attrVal, attrNode, attrContent, newAttrLength, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) {
         dom = document.body;
     }
@@ -91,8 +93,8 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                         tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length-cog.token.close.length));
                         tokenArr = tokenPure.split(".");
                         if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                            if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                                tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                            if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                                tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
                             }
                             tokenContent = cog.getRecursiveValue({str:tokenPure});
                             if (typeof tokenContent !== "undefined") {
@@ -137,8 +139,8 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                     for (i = 0;i < nodeRegexMatches.length;i++) {
                         tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
                         tokenArr = tokenPure.split(".");
-                        if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                            tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                        if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                            tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
                         }
                         if (tokenContents.hasOwnProperty(tokenPure)) {
                             newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
@@ -166,8 +168,8 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                     tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length-cog.token.close.length));
                     tokenArr = tokenPure.split(".");
                     if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                        if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                            tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                        if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                            tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
                         }
                         tokenContent = cog.getRecursiveValue({str:tokenPure});
                         if (typeof tokenContent !== "undefined") {
@@ -210,9 +212,9 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                 for (i = 0;i < nodeRegexMatches.length;i++) {
                     tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
                     tokenArr = tokenPure.split(".");
-                    if (arg.parent != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                    if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
                         
-                        tokenPure = arg.parent+tokenPure.substring(arg.alias.length, tokenPure.length);
+                        tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
                     }
                     if (tokenContents.hasOwnProperty(tokenPure)) {
                         
@@ -221,7 +223,7 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                             newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
                             newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
                         } else {
-                            cloneNode = cog.render2(tokenContents[tokenPure].cloneNode(true), {ret: 1});
+                            cloneNode = cog.render2(tokenContents[tokenPure].cloneNode(true));
                             newNode.appendChild(cloneNode);
                         }
                     } else {
@@ -232,12 +234,43 @@ cog.render2 = function (dom, arg) { //NEW RENDER
             }
         }
     }});
+    //REPEATERS
+    while (repeatNode = document.querySelector("["+cog.label.repeat+"]")) {
+        repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
+        repeatAttrToken = cog.normalizeKeys(repeatAttr[0].trim());
+        repeatAttrTokenArr = cog.getRecursiveValue({str:repeatAttrToken});
+        repeatAttrAlias = repeatAttr[1].trim();
+        repeatAttrTemp = repeatAttr[2].trim();
+        repeatNode.removeAttribute(cog.label.repeat);
+        cog.template2({id:repeatAttrTemp, elem:repeatNode});
+        repeatNode.innerHTML = "";
+        // REPEATS STRUCTURE {parentname:[[[childNodes1, childNodes2...]]]}
+        if (Array.isArray(repeatAttrTokenArr)) {
+            repeatsArr = [];
+            for (i = 0;i < repeatAttrTokenArr.length;i++) {
+                repeatsArrNodes = [];
+                repeatTemp = cog.template2({id:repeatAttrTemp, data:repeatAttrToken+"."+i+","+repeatAttrAlias, fragment:true});
+                for (ii = 0;ii < repeatTemp.childNodes.length;ii++) {
+                    repeatsArrNodes.push(repeatTemp.childNodes[ii]);
+                }
+                repeatsArr.push(repeatsArrNodes);
+            }
+            if (!cog.repeats.hasOwnProperty(repeatAttrToken)) {
+                cog.repeats[repeatAttrToken] = [];
+            }
+            repeatsArrKey = cog.repeats[repeatAttrToken].push({nodes:repeatsArr, owner:repeatNode, token:repeatAttrToken, alias:repeatAttrAlias, temp:repeatAttrTemp})-1;
+            for (i = 0;i < cog.repeats[repeatAttrToken][repeatsArrKey].nodes.length;i++) {
+                for (ii = 0;ii < cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i].length;ii++) {
+                    repeatNode.appendChild(cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i][ii]);
+                }
+            }
+        }
+    }
     return dom;
 };
 cog.rebind2 = function (key) { //NEW REBIND
-    var token = cog.normalizeKeys(key), i, newNode, content;
+    var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({str:token}), repeatTemp, repeatsArrNodes, repeatsLength;
     if (cog.nodes.hasOwnProperty(token)) {
-        content = cog.getRecursiveValue({str:token});
         //TEXT NODES
         for (i = 0;i < cog.nodes[token].length;i++) {
             if (cog.nodes[token][i].textContent != content) {
@@ -253,9 +286,53 @@ cog.rebind2 = function (key) { //NEW REBIND
             }
         }
     }
+    //REPEATS REMOVE OR ADD TO LAST IF ARRAY LENGTH CHANGED
+    if (cog.repeats.hasOwnProperty(token) && cog.repeats[token][0].nodes.length != content.length) {
+        console.log(cog.repeats[token][0].nodes);
+        repeatsLength = cog.repeats[token][0].nodes.length;
+        if (cog.repeats[token][0].nodes.length > content.length) {
+            for (i = 0;i < cog.repeats[token].length;i++) {
+                for (ii = 0;ii < cog.repeats[token][i].nodes.length;ii++) {
+                    if (ii >= content.length) {
+                        cog.repeats[token][i].nodes[ii].parentNode.removeChild(cog.repeats[token][i].nodes[ii]);
+                    }
+                }
+                //cog.repeats[token][i].nodes.splice(content.length, cog.repeats[token][0].nodes.length-content.length);
+            }
+        } else {
+            for (i = 0;i < cog.repeats[token].length;i++) {
+                for (ii = 0;ii < content.length;ii++) {
+                    if (ii >= cog.repeats[token][i].nodes.length) {
+                        repeatsArrNodes = [];
+                        repeatTemp = cog.template2({id:cog.repeats[token][i].temp, data:cog.repeats[token][i].token+"."+ii+","+cog.repeats[token][i].alias, fragment:true});
+                        for (iii = 0;iii < repeatTemp.childNodes.length;iii++) {
+                            repeatsArrNodes.push(repeatTemp.childNodes[iii]);
+                        }
+                        cog.repeats[token][i].nodes.push(repeatsArrNodes);
+                    }
+                    
+                }
+                for (ii = 0;ii < cog.repeats[token][i].nodes.length;ii++) {
+                    
+                    if (ii >= repeatsLength) {
+                        console.log(cog.repeats[token][i].nodes);
+                        for (iii = 0;iii < cog.repeats[token][i].nodes[ii].length;iii++) {
+                            cog.repeats[token][i].owner.appendChild(cog.repeats[token][i].nodes[ii][iii]);
+                        }
+                    }
+                }
+            }
+        }
+        /*
+        for (i = 0;i < cog.repeats[token].length;i++) {
+            for (ii = 0;ii < cog.repeats[token][i].length;ii++) {
+                
+            }
+        }*/
+    }
 };
 cog.template2 = function (arg) {
-    var template, createEl, parent, alias;
+    var template, createEl, token, alias;
     if (arg.id == null) {return;}
     if (arg.bind == null) {arg.bind = true;}
     if (arg.fragment == null) {arg.fragment = false;}
@@ -272,14 +349,9 @@ cog.template2 = function (arg) {
         template = cog.templates[arg.id].cloneNode(true);
     }
     if (arg.data != null && template != null) {
-        parent = cog.normalizeKeys(arg.data.split(" ")[0]);
-        alias = arg.data.split(" ")[2];
-        console.log(parent+"      "+alias);
-        cog.render2(template, {parent: parent, alias: alias});
-    }
-    
-    if (arg.bind && cog.isReady) {
-        cog.bindAll({set:false, elem:template});
+        token = cog.normalizeKeys(arg.data.split(",")[0].trim());
+        alias = arg.data.split(",")[1].trim();
+        cog.render2(template, {token: token, alias: alias});
     }
     if (arg.fragment) {
         template = cog.elemFragment(template);
