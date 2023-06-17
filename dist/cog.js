@@ -287,13 +287,37 @@ cog.template2 = function (arg) {
     return template;
 };
 cog.collectGarbage = function () { //remove nodes that are not inside the DOM
-    var i;
+    var i, exclude = [], removeAttrs = [], removeNodes = [], removeNode;
+    //FOR ATTRS
+    cog.iterate(cog.attrs, {item:function(k, v){
+        if (typeof v !== "undefined" && v.hasOwnProperty("node")) {
+            if (!document.body.contains(v.node.ownerElement)) {
+                cog.attrs[k].content.innerHTML = "";
+                removeAttrs.push(k);
+            } else {
+                exclude.push(cog.attrs[k].content);
+            }
+        }
+        
+    }});
+    cog.iterate(removeAttrs, {item:function(k, v){
+        cog.attrs.splice(v, 1);
+    }});
     //FOR TEXT
     cog.iterate(cog.nodes, {item:function(k, v){
         if (Array.isArray(v)) {
             cog.iterate(v, {item:function(kk, vv){
-                if (!document.body.contains(vv)) {
-                    cog.nodes[k].splice(kk, 1);
+                if (!document.body.contains(vv.parentNode)) {
+                    removeNode = true;
+                    for (i = 0;i < exclude.length;i++) {
+                        if (vv.parentNode === exclude[i]) {
+                            removeNode = false;
+                            break;
+                        }
+                    }
+                    if (removeNode) {
+                        removeNodes.push({parentKey:k, key:kk});
+                    }
                 }
             }});
             if (cog.nodes[k].length == 0) {
@@ -301,10 +325,10 @@ cog.collectGarbage = function () { //remove nodes that are not inside the DOM
             }
         }
     }});
-    //FOR ATTRS
-    for (i = 0;i < cog.attrs.length;i++) {
-        if (!document.body.contains(cog.attrs[i].node)) {
-            cog.attrs.splice(i, 1);
+    for (i = 0;i < removeNodes.length;i++) {
+        cog.nodes[removeNodes[i].parentKey].splice(removeNodes[i].key, 1);
+        if (cog.nodes[removeNodes[i].parentKey].length == 0) {
+            delete cog.nodes[removeNodes[i].parentKey];
         }
     }
 };
