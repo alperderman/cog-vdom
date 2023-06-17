@@ -258,7 +258,7 @@ cog.render2 = function (dom, arg) { //NEW RENDER
             if (!cog.repeats.hasOwnProperty(repeatAttrToken)) {
                 cog.repeats[repeatAttrToken] = [];
             }
-            repeatsArrKey = cog.repeats[repeatAttrToken].push({nodes:repeatsArr, owner:repeatNode, token:repeatAttrToken, alias:repeatAttrAlias, temp:repeatAttrTemp})-1;
+            repeatsArrKey = cog.repeats[repeatAttrToken].push({nodes:repeatsArr, parent:repeatNode, token:repeatAttrToken, alias:repeatAttrAlias, temp:repeatAttrTemp})-1;
             for (i = 0;i < cog.repeats[repeatAttrToken][repeatsArrKey].nodes.length;i++) {
                 for (ii = 0;ii < cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i].length;ii++) {
                     repeatNode.appendChild(cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i][ii]);
@@ -288,47 +288,58 @@ cog.rebind2 = function (key) { //NEW REBIND
     }
     //REPEATS REMOVE OR ADD TO LAST IF ARRAY LENGTH CHANGED
     if (cog.repeats.hasOwnProperty(token) && cog.repeats[token][0].nodes.length != content.length) {
-        console.log(cog.repeats[token][0].nodes);
         repeatsLength = cog.repeats[token][0].nodes.length;
         if (cog.repeats[token][0].nodes.length > content.length) {
             for (i = 0;i < cog.repeats[token].length;i++) {
-                for (ii = 0;ii < cog.repeats[token][i].nodes.length;ii++) {
-                    if (ii >= content.length) {
-                        cog.repeats[token][i].nodes[ii].parentNode.removeChild(cog.repeats[token][i].nodes[ii]);
+                for (ii = content.length;ii < cog.repeats[token][i].nodes.length;ii++) {
+                    for (iii = 0;iii < cog.repeats[token][i].nodes[ii].length;iii++) {
+                        //if (cog.repeats[token][i].nodes[ii][iii].parentNode) {
+                            cog.repeats[token][i].nodes[ii][iii].parentNode.removeChild(cog.repeats[token][i].nodes[ii][iii]);
+                        //}
                     }
                 }
-                //cog.repeats[token][i].nodes.splice(content.length, cog.repeats[token][0].nodes.length-content.length);
+                cog.repeats[token][i].nodes.splice(content.length, repeatsLength-content.length);
             }
         } else {
             for (i = 0;i < cog.repeats[token].length;i++) {
-                for (ii = 0;ii < content.length;ii++) {
-                    if (ii >= cog.repeats[token][i].nodes.length) {
-                        repeatsArrNodes = [];
-                        repeatTemp = cog.template2({id:cog.repeats[token][i].temp, data:cog.repeats[token][i].token+"."+ii+","+cog.repeats[token][i].alias, fragment:true});
-                        for (iii = 0;iii < repeatTemp.childNodes.length;iii++) {
-                            repeatsArrNodes.push(repeatTemp.childNodes[iii]);
-                        }
-                        cog.repeats[token][i].nodes.push(repeatsArrNodes);
+                for (ii = cog.repeats[token][i].nodes.length;ii < content.length;ii++) {
+                    repeatsArrNodes = [];
+                    repeatTemp = cog.template2({id:cog.repeats[token][i].temp, data:cog.repeats[token][i].token+"."+ii+","+cog.repeats[token][i].alias, fragment:true});
+                    for (iii = 0;iii < repeatTemp.childNodes.length;iii++) {
+                        repeatsArrNodes.push(repeatTemp.childNodes[iii]);
                     }
-                    
+                    cog.repeats[token][i].nodes.push(repeatsArrNodes);
                 }
-                for (ii = 0;ii < cog.repeats[token][i].nodes.length;ii++) {
-                    
-                    if (ii >= repeatsLength) {
-                        console.log(cog.repeats[token][i].nodes);
-                        for (iii = 0;iii < cog.repeats[token][i].nodes[ii].length;iii++) {
-                            cog.repeats[token][i].owner.appendChild(cog.repeats[token][i].nodes[ii][iii]);
-                        }
+                for (ii = repeatsLength;ii < cog.repeats[token][i].nodes.length;ii++) {
+                    for (iii = 0;iii < cog.repeats[token][i].nodes[ii].length;iii++) {
+                        cog.repeats[token][i].parent.appendChild(cog.repeats[token][i].nodes[ii][iii]);
                     }
                 }
             }
         }
-        /*
-        for (i = 0;i < cog.repeats[token].length;i++) {
-            for (ii = 0;ii < cog.repeats[token][i].length;ii++) {
-                
+    }
+    rebound();
+    cog.collectGarbage();
+    function rebound() {
+        var i, ii, rebindKey, boundKeys, boundKey;
+        for (i = 0;i < Object.keys(cog.bound).length;i++) {
+            rebindKey = Object.keys(cog.bound)[i];
+            boundKeys = cog.bound[rebindKey];
+            if (typeof boundKeys === 'string') {
+                boundKey = boundKeys;
+                if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey)) {
+                    cog.rebind2(rebindKey);
+                }
+            } else if (Array.isArray(boundKeys)) {
+                for (ii = 0;ii < boundKeys.length;ii++) {
+                    boundKey = boundKeys[ii];
+                    if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey)) {
+                        cog.rebind2(rebindKey);
+                        break;
+                    }
+                }
             }
-        }*/
+        }
     }
 };
 cog.template2 = function (arg) {
@@ -358,49 +369,65 @@ cog.template2 = function (arg) {
     }
     return template;
 };
+cog.isElement2 = function ($obj) {
+    try {
+        return ($obj.constructor.__proto__.prototype.constructor.name)?true:false;
+    } catch(e) {
+        return false;
+    }
+};
 cog.collectGarbage = function () { //remove nodes that are not inside the DOM
-    var i, exclude = [], removeAttrs = [], removeNodes = [], removeNode;
-    //FOR ATTRS
-    cog.iterate(cog.attrs, {item:function(k, v){
-        if (typeof v !== "undefined" && v.hasOwnProperty("node")) {
-            if (!document.body.contains(v.node.ownerElement)) {
-                cog.attrs[k].content.innerHTML = "";
-                removeAttrs.push(k);
-            } else {
-                exclude.push(cog.attrs[k].content);
+    var i, ii, iii, excludeAttrs = [], removeRepeats = [], removeAttrs = [], removeNodes = [], removeNode;
+    //FOR REPEATS
+    for (i = 0;i < Object.keys(cog.repeats).length;i++) {
+        for (ii = 0;ii < cog.repeats[Object.keys(cog.repeats)[i]].length;ii++) {
+            if (!document.body.contains(cog.repeats[Object.keys(cog.repeats)[i]][ii].parent)) {
+                removeRepeats.push({k:i, kk:ii});
             }
         }
-        
-    }});
-    cog.iterate(removeAttrs, {item:function(k, v){
-        cog.attrs.splice(v, 1);
-    }});
+    }
+    for (i = removeRepeats.length-1;i >= 0;i--) {
+        cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]].splice(removeRepeats[i].kk, 1);
+        if (cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]].length == 0) {
+            delete cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]];
+        }
+    }
+    //FOR ATTRS
+    for (i = 0;i < cog.attrs.length;i++) {
+        if (!document.body.contains(cog.attrs[i].node.ownerElement)) {
+            cog.attrs[i].content.innerHTML = "";
+            removeAttrs.push(i);
+        } else {
+            excludeAttrs.push(cog.attrs[i].content);
+        }
+    }
+    for (i = removeAttrs.length-1;i >= 0;i--) {
+        cog.attrs.splice(removeAttrs[i], 1);
+    }
     //FOR TEXT
-    cog.iterate(cog.nodes, {item:function(k, v){
-        if (Array.isArray(v)) {
-            cog.iterate(v, {item:function(kk, vv){
-                if (!document.body.contains(vv.parentNode)) {
-                    removeNode = true;
-                    for (i = 0;i < exclude.length;i++) {
-                        if (vv.parentNode === exclude[i]) {
-                            removeNode = false;
-                            break;
-                        }
-                    }
-                    if (removeNode) {
-                        removeNodes.push({parentKey:k, key:kk});
+    for (i = 0;i < Object.keys(cog.nodes).length;i++) {
+        for (ii = 0;ii < cog.nodes[Object.keys(cog.nodes)[i]].length;ii++) {
+            if (!document.body.contains(cog.nodes[Object.keys(cog.nodes)[i]][ii].parentNode)) {
+                removeNode = true;
+                for (iii = 0;iii < excludeAttrs.length;iii++) {
+                    if (cog.nodes[Object.keys(cog.nodes)[i]][ii].parentNode === excludeAttrs[iii]) {
+                        removeNode = false;
+                        break;
                     }
                 }
-            }});
-            if (cog.nodes[k].length == 0) {
-                delete cog.nodes[k];
+                if (removeNode) {
+                    removeNodes.push({k:Object.keys(cog.nodes)[i], kk:ii});
+                }
             }
         }
-    }});
-    for (i = 0;i < removeNodes.length;i++) {
-        cog.nodes[removeNodes[i].parentKey].splice(removeNodes[i].key, 1);
-        if (cog.nodes[removeNodes[i].parentKey].length == 0) {
-            delete cog.nodes[removeNodes[i].parentKey];
+        if (cog.nodes[Object.keys(cog.nodes)[i]].length == 0) {
+            delete cog.nodes[Object.keys(cog.nodes)[i]];
+        }
+    }
+    for (i = removeNodes.length-1;i >= 0;i--) {
+        cog.nodes[removeNodes[i].k].splice(removeNodes[i].kk, 1);
+        if (cog.nodes[removeNodes[i].k].length == 0) {
+            delete cog.nodes[removeNodes[i].k];
         }
     }
 };

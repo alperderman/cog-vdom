@@ -27,7 +27,7 @@
             <path d="M725 450c57.031 0 25 150-25 150 25 0 0 125-50 125 0 50-50 75-100 75-211.212 0-136.925-52.852-350-75V325C388.22 268.541 575 127.012 575 0c41.406 0 150 50 0 300h150c75 0 50 150 0 150zM150 325v400h50v25H100c-27.5 0-50-33.75-50-75V375c0-41.25 22.5-75 50-75h100v25h-50z"/>
         </svg>
         
-        I'm doing pretty good, thanks!
+        I'm doing pretty good, thanks {{greetName}} !
         <div>
             <button onclick='cog.set2("world", "wowowowooww")'>CHANGE</button>
         </div>
@@ -43,7 +43,7 @@
         var map2 = cog.createDOMMap(app);
 
         //console.log(deepDiffMapper.mapAlt({type:function(){return 1;}, data:"wow"}, {type:function(){return 1;}}));
-        console.log(cog.deepDiffMapper.mapAlt([{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
+        //console.log(cog.deepDiffMapper.mapAlt([{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
         //console.log(deepDiffMapper.mapAlt([{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
         
         cog.data.world=function(){
@@ -51,6 +51,8 @@
         };
         cog.data.greet = "hello";
         cog.data.name="Jack";
+        cog.data.greetName = function () {return cog.get2("greet")+" "+cog.get2("name")};
+        cog.bound["greetName"] = ["greet", "name"];
         cog.data.names = ["alex", "john", "brock"];
         cog.data.color="red";
         cog.data.temp = {name:"Alex", color:"#9f4"};
@@ -58,7 +60,7 @@
         cog.set(null, null, {setElems: true});
         var testTemp = cog.template2({id:"card", data:"temp,pep"});
         //document.body.appendChild(testTemp);
-        console.log(document.body.contains(testTemp));
+        //console.log(document.body.contains(testTemp));
         cog.render2();
     </script>
 </body>
