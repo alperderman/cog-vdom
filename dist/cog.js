@@ -174,12 +174,11 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                         tokenContent = cog.getRecursiveValue({str:tokenPure});
                         if (typeof tokenContent !== "undefined") {
                             tokenContents[tokenPure] = tokenContent;
-                            if (!cog.nodes.hasOwnProperty(tokenPure)) {
+                            if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement2(tokenContent)) {
                                 cog.nodes[tokenPure] = [];
                             }
                         }
                     }
-                    
                 }
                 
                 //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS (SAME AS ATTR)
@@ -219,7 +218,7 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                     if (tokenContents.hasOwnProperty(tokenPure)) {
                         
                         //if content is node, this part is different than attribute because attributes only accepts string
-                        if (!cog.isElement(tokenContents[tokenPure])) {
+                        if (!cog.isElement2(tokenContents[tokenPure])) {
                             newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
                             newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
                         } else {
@@ -316,6 +315,12 @@ cog.rebind2 = function (key) { //NEW REBIND
                     }
                 }
             }
+        }
+    }
+    //BIND RELATED TOKENS
+    for (i = 0;i < Object.keys(cog.nodes).length;i++) {
+        if (token != cog.normalizeKeys(Object.keys(cog.nodes)[i]) && cog.checkKeys(token, Object.keys(cog.nodes)[i])) {
+            cog.rebind2(Object.keys(cog.nodes)[i]);
         }
     }
     rebound();

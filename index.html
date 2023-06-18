@@ -29,7 +29,7 @@
         
         I'm doing pretty good, thanks {{greetName}} !
         <div>
-            <button onclick='cog.set2("world", "wowowowooww")'>CHANGE</button>
+            <button onclick='cog.alter2("names", function(val){val.unshift("josh");return val;})'>CHANGE</button>
         </div>
     </div>
     <script src="dist/cog.js"></script>
