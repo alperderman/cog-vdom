@@ -13,7 +13,7 @@
         <div data-set="temp:card">
             <h3 #style="color:{{pep.color}};">{{pep.name}}</h3>
         </div>
-        <h1 class="title" #style="color:{{color}};">Hello, {{world}}  {{name}}!</h1>
+        <h1 class="title" #style="color:{{color}};background-color:{{bg}};">Hello, {{world}}  {{name}}!</h1>
 
         <p id="subtitle" data-attribute="be friendly">
             <strong style="color: rebeccapurple;">How are you {{world}} today?</strong>
@@ -55,9 +55,10 @@
         cog.bound["greetName"] = ["greet", "name"];
         cog.data.names = ["alex", "john", "brock"];
         cog.data.color="red";
+        cog.data.bg="yellow";
         cog.data.temp = {name:"Alex", color:"#9f4"};
         cog.data.elem = document.getElementById("subtitle");
-        cog.set(null, null, {setElems: true});
+        cog.set2(null, null, {setElems: true});
         var testTemp = cog.template2({id:"card", data:"temp,pep"});
         //document.body.appendChild(testTemp);
         //console.log(document.body.contains(testTemp));
