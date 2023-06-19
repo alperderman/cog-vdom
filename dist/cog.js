@@ -518,121 +518,17 @@ cog.cssToObj = function (css) {
     return obj;
 };
 cog.strToObj = function (json) {
-    json = json.trim();
-    if (json.indexOf("{") !== 0) {
-        json = "{" + json + "}";
+    fixedJSON = json.trim();
+    if (fixedJSON.indexOf("{") !== 0) {
+        fixedJSON = "{" + fixedJSON + "}";
     }
-    function bulkRegex(str, callback) {
-        if (callback && typeof callback === "function") {
-            return callback(str);
-        } else if (callback && Array.isArray(callback)) {
-            for (var i = 0; i < callback.length; i++) {
-                if (callback[i] && typeof callback[i] === "function") {
-                    str = callback[i](str);
-                } else {
-                    break;
-                }
-            }
-            return str;
-        }
-        return str;
-    }
-    if (json && json !== "") {
-        if (typeof json !== "string") {
-            try {
-                json = JSON.stringify(json);
-            } catch (e) {
-                return false;
-            }
-        }
-        if (typeof json === "string") {
-            json = bulkRegex(json, [
-                function (str) {
-                    return str.replace(/[\n\t]/gm, "");
-                },
-                function (str) {
-                    return str.replace(/,\}/gm, "}");
-                },
-                function (str) {
-                    return str.replace(/,\]/gm, "]");
-                },
-                function (str) {
-                    str = str.split(/(?=[,\}\]])/g);
-                    str = str.map(function (s) {
-                        if (s.includes(":") && s) {
-                            var strP = s.split(/:(.+)/, 2);
-                            strP[0] = strP[0].trim();
-                            if (strP[0]) {
-                                var firstP = strP[0].split(/([,\{\[])/g);
-                                firstP[firstP.length - 1] = bulkRegex(
-                                    firstP[firstP.length - 1],
-                                    function (p) {
-                                        return p.replace(/[^A-Za-z0-9\-_]/, "");
-                                    }
-                                );
-                                strP[0] = firstP.join("");
-                            }
-                            var part = strP[1].trim();
-                            if (
-                                (part.startsWith('"') && part.endsWith('"')) ||
-                                (part.startsWith("'") && part.endsWith("'")) ||
-                                (part.startsWith("`") && part.endsWith("`"))
-                            ) {
-                                part = part.substr(1, part.length - 2);
-                            }
-                            part = bulkRegex(part, [
-                                function (p) {
-                                    return p.replace(/(["])/gm, "\\$1");
-                                },
-                                function (p) {
-                                    return p.replace(/\\'/gm, "'");
-                                },
-                                function (p) {
-                                    return p.replace(/\\`/gm, "`");
-                                }
-                            ]);
-                            strP[1] = ('"' + part + '"').trim();
-                            s = strP.join(":");
-                        }
-                        return s;
-                    });
-                    return str.join("");
-                },
-                function (str) {
-                    return str.replace(/(['"])?([a-zA-Z0-9\-_]+)(['"])?:/g, '"$2":');
-                },
-                function (str) {
-                    str = str.split(/(?=[,\}\]])/g);
-                    str = str.map(function (s) {
-                        if (s.includes(":") && s) {
-                            var strP = s.split(/:(.+)/, 2);
-                            strP[0] = strP[0].trim();
-                            if (strP[1].includes('"') && strP[1].includes(":")) {
-                                var part = strP[1].trim();
-                                if (part.startsWith('"') && part.endsWith('"')) {
-                                    part = part.substr(1, part.length - 2);
-                                    part = bulkRegex(part, function (p) {
-                                        return p.replace(/(?<!\\)"/gm, "");
-                                    });
-                                }
-                                strP[1] = ('"' + part + '"').trim();
-                            }
-                            s = strP.join(":");
-                        }
-                        return s;
-                    });
-                    return str.join("");
-                }
-            ]);
-            try {
-                json = JSON.parse(json);
-            } catch (e) {
-                return false;
-            }
-        }
-        return json;
-    }
-    return false;
+    var fixedJSON = fixedJSON
+        .replace(/'/g, '"')
+        .replace(/,\s*([\]}])/g, '$1')
+        .replace(/([{\[,])\s*$/, '$1')
+        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3')
+        .replace(/\\\"/g, '"');
+    return JSON.parse(fixedJSON);
 };
 
 cog.get2 = function (key, arg) {
