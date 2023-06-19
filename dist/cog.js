@@ -23,7 +23,9 @@ cog.label = {
     source: "data-src",
     escape: "#", //prefix escape label for attrs
     repeat: "cog-repeat", //label for repeats: token, alias, template
-    style: "cog-style", //label for repeats: token, alias, template
+    style: "cog-style", //label for style
+    context: "cog-context", //label for context
+    class: "cog-class", //label for class
     sourceObject: "data-object",
     sourceMethod: "data-method",
     sourceType: "data-type",
@@ -81,7 +83,7 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                 attrVal = obj.attrs[i].value;
 
                 tokens = cog.removeDuplicatesFromArray(attrVal.match(cog.regex.token));
-                if (tokens.length > 0) {
+                if (tokens.length > 0 || (attrKey == cog.label.style || attrKey == cog.label.context || attrKey == cog.label.class)) {
                     //CHECK IF IT AS PREFIX
                     if (attrKey.substring(0, cog.label.escape.length) == cog.label.escape) {
                         obj.node.removeAttribute(attrKey);
@@ -153,7 +155,7 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                         }
                     }
                     attrContent.appendChild(newNode);
-                    
+                    //ATTR TYPES
                     if (attrKey == cog.label.style) {
                         attrContentObj = cog.cssToObj(attrContent.innerHTML);
                         if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
@@ -162,6 +164,24 @@ cog.render2 = function (dom, arg) { //NEW RENDER
                             }
                             cog.attrs.push({node:obj.node, type:"style", content:attrContent, tokens:attrTokens});
                         }
+                        obj.node.removeAttribute(attrKey);
+                    } else if (attrKey == cog.label.context) {
+                        attrContentObj = cog.strToObj(attrContent.innerHTML);
+                        if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
+                            for (i = 0;i < Object.keys(attrContentObj).length;i++) {
+                                obj.node[Object.keys(attrContentObj)[i]] = attrContentObj[Object.keys(attrContentObj)[i]];
+                            }
+                            cog.attrs.push({node:obj.node, type:"context", content:attrContent, tokens:attrTokens});
+                        }
+                        obj.node.removeAttribute(attrKey);
+                    } else if (attrKey == cog.label.class) {
+                        attrContentObj = attrContent.innerHTML.trim().split(" ");
+                        for (i = 0;i < attrContentObj.length;i++) {
+                            if (attrContentObj[i] != null) {
+                                obj.node.classList.add(attrContentObj[i]);
+                            }
+                        }
+                        cog.attrs.push({node:obj.node, type:"class", content:attrContent, tokens:attrTokens, old:attrContentObj});
                         obj.node.removeAttribute(attrKey);
                     } else {
                         attrNode = document.createAttribute(attrKey);
@@ -295,6 +315,7 @@ cog.rebind2 = function (key) { //NEW REBIND
             }
         }
         //ATTRS
+        
         for (i = 0;i < cog.attrs.length;i++) {
             for (ii = 0;ii < cog.attrs[i].tokens.length;ii++) {
                 if (token == cog.attrs[i].tokens[ii]) {//ATTR
@@ -304,11 +325,33 @@ cog.rebind2 = function (key) { //NEW REBIND
                         attrContentObj = cog.cssToObj(cog.attrs[i].content.innerHTML);
                         if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
                             for (iii = 0;iii < Object.keys(attrContentObj).length;iii++) {
-                                if (attrContentObj[Object.keys(attrContentObj)[iii]] !=  cog.attrs[i].node.style[Object.keys(attrContentObj)[iii]]) {
+                                if (attrContentObj[Object.keys(attrContentObj)[iii]] != cog.attrs[i].node.style[Object.keys(attrContentObj)[iii]]) {
                                     cog.attrs[i].node.style[Object.keys(attrContentObj)[iii]] = attrContentObj[Object.keys(attrContentObj)[iii]];
                                 }
                             }
                         }
+                    } else if (cog.attrs[i].type == "context") { //CONTEXT
+                        attrContentObj = cog.strToObj(cog.attrs[i].content.innerHTML);
+                        if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
+                            for (iii = 0;iii < Object.keys(attrContentObj).length;iii++) {
+                                if (attrContentObj[Object.keys(attrContentObj)[iii]] != cog.attrs[i].node[Object.keys(attrContentObj)[iii]]) {
+                                    cog.attrs[i].node[Object.keys(attrContentObj)[iii]] = attrContentObj[Object.keys(attrContentObj)[iii]];
+                                }
+                            }
+                        }
+                    } else if (cog.attrs[i].type == "class") { //CLASS
+                        attrContentObj = cog.attrs[i].content.innerHTML.trim().split(" ");
+                        for (iii = 0;iii < cog.attrs[i].old.length;iii++) {
+                            if (cog.attrs[i].old[iii] != null) {
+                                cog.attrs[i].node.classList.remove(cog.attrs[i].old[iii]);
+                            }
+                        }
+                        for (iii = 0;iii < attrContentObj.length;iii++) {
+                            if (attrContentObj[iii] != null) {
+                                cog.attrs[i].node.classList.add(attrContentObj[iii]);
+                            }
+                        }
+                        cog.attrs[i].old = attrContentObj;
                     }
                 }
             }
@@ -472,7 +515,97 @@ cog.cssToObj = function (css) {
         obj[s[i].replace(/\s/g,"")] = s[i+1].replace(/^\s+|\s+$/g,"");
     return obj;
 };
-
+cog.strToObj = function (json){
+    json = json.trim();
+    if (json.indexOf("{") !== 0) {
+        json = "{"+json+"}";
+    }
+    function bulkRegex(str, callback){
+        
+        if(callback && typeof callback === 'function'){
+            
+            return callback(str);
+        }else if(callback && Array.isArray(callback)){
+            
+            for(let i = 0; i < callback.length; i++){
+                if(callback[i] && typeof callback[i] === 'function'){
+                    str = callback[i](str);
+                    
+                }else{break;}
+            }
+            
+            return str;
+        }
+        return str;
+    }
+    if(json && json !== ''){
+        if(typeof json !== 'string'){
+            try{
+                json = JSON.stringify(json);
+            }catch(e){return false;}
+        }
+        if(typeof json === 'string'){
+            json = bulkRegex(json, [
+                str => str.replace(/[\n\t]/gm, ''),
+                str => str.replace(/,\}/gm, '}'),
+                str => str.replace(/,\]/gm, ']'),
+                str => {
+                    str = str.split(/(?=[,\}\]])/g);
+                    str = str.map(s => {
+                        if(s.includes(':') && s){
+                            let strP = s.split(/:(.+)/, 2);
+                            strP[0] = strP[0].trim();
+                            if(strP[0]){
+                                let firstP = strP[0].split(/([,\{\[])/g);
+                                firstP[firstP.length-1] = bulkRegex(firstP[firstP.length-1], p => p.replace(/[^A-Za-z0-9\-_]/, ''));
+                                strP[0] = firstP.join('');
+                            }
+                            let part = strP[1].trim();
+                            if((part.startsWith('"') && part.endsWith('"')) || (part.startsWith('\'') && part.endsWith('\'')) || (part.startsWith('`') && part.endsWith('`'))){
+                                part = part.substr(1, part.length - 2);
+                            }
+                            part = bulkRegex(part, [
+                                p => p.replace(/(["])/gm, '\\$1'),
+                                p => p.replace(/\\'/gm, '\''),
+                                p => p.replace(/\\`/gm, '`'),
+                            ]);
+                            strP[1] = ('"'+part+'"').trim();
+                            s = strP.join(':');
+                        }
+                        return s;
+                    });
+                    return str.join('');
+                },
+                str => str.replace(/(['"])?([a-zA-Z0-9\-_]+)(['"])?:/g, '"$2":'),
+                str => {
+                    str = str.split(/(?=[,\}\]])/g);
+                    str = str.map(s => {
+                        if(s.includes(':') && s){
+                            let strP = s.split(/:(.+)/, 2);
+                            strP[0] = strP[0].trim();
+                            if(strP[1].includes('"') && strP[1].includes(':')){
+                                let part = strP[1].trim();
+                                if(part.startsWith('"') && part.endsWith('"')){
+                                    part = part.substr(1, part.length - 2);
+                                    part = bulkRegex(part, p => p.replace(/(?<!\\)"/gm, ''));
+                                }
+                                strP[1] = ('"'+part+'"').trim();
+                            }
+                            s = strP.join(':');
+                        }
+                        return s;
+                    });
+                    return str.join('');
+                },
+            ]);
+            try{
+                json = JSON.parse(json);
+            }catch(e){return false;}
+        }
+        return json;
+    }
+    return false;
+}
 
 cog.get2 = function (key, arg) {
     if (key == null) {return;}
