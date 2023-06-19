@@ -1,6 +1,6 @@
 //CognitiveJS VDOM
 
-if (typeof window.CustomEvent !== 'function') { window.CustomEvent = function (event, params) { params = params || {bubbles: false, cancelable: false, detail: null}; var evt = document.createEvent('CustomEvent'); evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail); return evt; }; }
+if (typeof window.CustomEvent !== 'function') { window.CustomEvent = function (event, params) { params = params || { bubbles: false, cancelable: false, detail: null }; var evt = document.createEvent('CustomEvent'); evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail); return evt; }; }
 
 var cog = {};
 cog.data = {};
@@ -59,8 +59,8 @@ cog.regex = {
     body: new RegExp("<body[^>]*>((.|[\\\n\\\r])*)<\\\/body>", "im"),
     normalize: new RegExp("(?:\\\[\\\'|\\\[\\\"|\\\[)(\\\w+)(?:\\\'\\\]|\\\"\\\]|\\\])", "g"),
     normalizeCheck: new RegExp("[^a-zA-Z0-9\\\_\\\-\\\.]", "g"),
-    token: new RegExp(cog.token.open+"[\\s\\S]*?"+cog.token.close, "g"), //token regex
-    node: new RegExp("([\\s\\S]*?)("+cog.token.open+"[\\s\\S]*?"+cog.token.close+")", "gm") //token regex for splitting
+    token: new RegExp(cog.token.open + "[\\s\\S]*?" + cog.token.close, "g"), //token regex
+    node: new RegExp("([\\s\\S]*?)(" + cog.token.open + "[\\s\\S]*?" + cog.token.close + ")", "gm") //token regex for splitting
 };
 
 
@@ -75,217 +75,219 @@ cog.render2 = function (dom, arg) { //NEW RENDER
         arg = {};
     }
     dommap = cog.createDOMMap(dom)
-    cog.iterate(dommap, {obj:function(obj){
-        //FOR ATTRIBUTES
-        if (obj.hasOwnProperty("attrs")) {
-            for (i = 0;i < obj.attrs.length;i++) {
-                attrKey = obj.attrs[i].attr;
-                attrVal = obj.attrs[i].value;
+    cog.iterate(dommap, {
+        obj: function (obj) {
+            //FOR ATTRIBUTES
+            if (obj.hasOwnProperty("attrs")) {
+                for (i = 0; i < obj.attrs.length; i++) {
+                    attrKey = obj.attrs[i].attr;
+                    attrVal = obj.attrs[i].value;
 
-                tokens = cog.removeDuplicatesFromArray(attrVal.match(cog.regex.token));
-                if (tokens.length > 0 || (attrKey == cog.label.style || attrKey == cog.label.context || attrKey == cog.label.class)) {
-                    //CHECK IF IT AS PREFIX
-                    if (attrKey.substring(0, cog.label.escape.length) == cog.label.escape) {
-                        obj.node.removeAttribute(attrKey);
-                        attrKey = attrKey.substring(cog.label.escape.length, attrKey.length);
+                    tokens = cog.removeDuplicatesFromArray(attrVal.match(cog.regex.token));
+                    if (tokens.length > 0 || (attrKey == cog.label.style || attrKey == cog.label.context || attrKey == cog.label.class)) {
+                        //CHECK IF IT AS PREFIX
+                        if (attrKey.substring(0, cog.label.escape.length) == cog.label.escape) {
+                            obj.node.removeAttribute(attrKey);
+                            attrKey = attrKey.substring(cog.label.escape.length, attrKey.length);
+                        }
+                        //ADD CONTENTS OF THE TOKENS THAT ARE USED IN THIS TEXT NODE INTO AN OBJECT
+                        tokenContents = {};
+                        for (i = 0; i < tokens.length; i++) {
+                            token = tokens[i];
+                            tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length - cog.token.close.length));
+                            tokenArr = tokenPure.split(".");
+                            if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
+                                if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                                    tokenPure = arg.token + tokenPure.substring(arg.alias.length, tokenPure.length);
+                                }
+                                tokenContent = cog.getRecursiveValue({ str: tokenPure });
+                                if (typeof tokenContent !== "undefined") {
+                                    tokenContents[tokenPure] = tokenContent;
+                                    if (!cog.nodes.hasOwnProperty(tokenPure)) {
+                                        cog.nodes[tokenPure] = [];
+                                    }
+                                }
+                            }
+
+                        }
+
+
+                        //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS
+                        nodeRegexMatches = [];
+                        nodeRegexString = "";
+                        while (nodeRegexMatch = cog.regex.node.exec(attrVal)) {
+                            if (nodeRegexMatch[1] != "") {
+                                nodeRegexMatches.push(nodeRegexMatch[1]);
+                                nodeRegexString = nodeRegexString + nodeRegexMatch[1];
+                            }
+
+                            tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
+                            if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
+                                tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
+                                nodeRegexMatches.push(tokenEscaped);
+                            } else {
+                                nodeRegexMatches.push(nodeRegexMatch[2]);
+                            }
+                            nodeRegexString = nodeRegexString + nodeRegexMatch[2];
+                        }
+
+                        //ADD THE LAST PIECE OF TEXT IF IT HAS IT
+                        nodeRegexString = attrVal.replace(nodeRegexString, "");
+                        if (nodeRegexString != "") {
+                            nodeRegexMatches.push(nodeRegexString);
+                        }
+
+                        //CREATE NEW NODE AND SET IT TEXT TO RENDERED CONTENT
+                        attrContent = document.createElement("span");
+                        newNode = document.createDocumentFragment();
+                        attrTokens = [];
+                        for (i = 0; i < nodeRegexMatches.length; i++) {
+                            tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length - cog.token.close.length));
+                            tokenArr = tokenPure.split(".");
+                            if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
+                                tokenPure = arg.token + tokenPure.substring(arg.alias.length, tokenPure.length);
+                            }
+                            if (tokenContents.hasOwnProperty(tokenPure)) {
+                                newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
+                                newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                                attrTokens.push(tokenPure);
+                            } else {
+                                newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
+                            }
+                        }
+                        attrContent.appendChild(newNode);
+                        //ATTR TYPES
+                        if (attrKey == cog.label.style) {
+                            attrContentObj = cog.cssToObj(attrContent.innerHTML);
+                            if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
+                                for (i = 0; i < Object.keys(attrContentObj).length; i++) {
+                                    obj.node.style[Object.keys(attrContentObj)[i]] = attrContentObj[Object.keys(attrContentObj)[i]];
+                                }
+                                cog.attrs.push({ node: obj.node, type: "style", content: attrContent, tokens: attrTokens });
+                            }
+                            obj.node.removeAttribute(attrKey);
+                        } else if (attrKey == cog.label.context) {
+                            attrContentObj = cog.strToObj(attrContent.innerHTML);
+                            if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
+                                for (i = 0; i < Object.keys(attrContentObj).length; i++) {
+                                    obj.node[Object.keys(attrContentObj)[i]] = attrContentObj[Object.keys(attrContentObj)[i]];
+                                }
+                                cog.attrs.push({ node: obj.node, type: "context", content: attrContent, tokens: attrTokens });
+                            }
+                            obj.node.removeAttribute(attrKey);
+                        } else if (attrKey == cog.label.class) {
+                            attrContentObj = attrContent.innerHTML.trim().split(" ");
+                            for (i = 0; i < attrContentObj.length; i++) {
+                                if (attrContentObj[i] != null) {
+                                    obj.node.classList.add(attrContentObj[i]);
+                                }
+                            }
+                            cog.attrs.push({ node: obj.node, type: "class", content: attrContent, tokens: attrTokens, old: attrContentObj });
+                            obj.node.removeAttribute(attrKey);
+                        } else {
+                            attrNode = document.createAttribute(attrKey);
+                            attrNode.value = attrContent.innerHTML;
+                            obj.node.setAttribute(attrKey, attrContent.innerHTML);
+                            cog.attrs.push({ node: obj.node, type: "attr", attr: attrKey, content: attrContent, tokens: attrTokens });
+
+                        }
                     }
-                    //ADD CONTENTS OF THE TOKENS THAT ARE USED IN THIS TEXT NODE INTO AN OBJECT
+                }
+            }
+            //FOR TEXTS
+            if (obj.hasOwnProperty("type") && obj.type == "text" && !obj.isSVG) {
+                tokens = cog.removeDuplicatesFromArray(obj.content.match(cog.regex.token));
+                if (tokens.length > 0) {
+                    //ADD CONTENTS OF THE TOKENS THAT ARE USED IN THIS TEXT NODE INTO AN OBJECT (SAME AS ATTR)
                     tokenContents = {};
-                    for (i = 0;i < tokens.length;i++) {
+                    for (i = 0; i < tokens.length; i++) {
                         token = tokens[i];
-                        tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length-cog.token.close.length));
+                        tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length - cog.token.close.length));
                         tokenArr = tokenPure.split(".");
                         if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
                             if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                                tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
+                                tokenPure = arg.token + tokenPure.substring(arg.alias.length, tokenPure.length);
                             }
-                            tokenContent = cog.getRecursiveValue({str:tokenPure});
+                            tokenContent = cog.getRecursiveValue({ str: tokenPure });
                             if (typeof tokenContent !== "undefined") {
                                 tokenContents[tokenPure] = tokenContent;
-                                if (!cog.nodes.hasOwnProperty(tokenPure)) {
+                                if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement2(tokenContent)) {
                                     cog.nodes[tokenPure] = [];
                                 }
                             }
                         }
-                        
                     }
-                
 
-                    //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS
+                    //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS (SAME AS ATTR)
                     nodeRegexMatches = [];
                     nodeRegexString = "";
-                    while (nodeRegexMatch = cog.regex.node.exec(attrVal)) {
+                    while (nodeRegexMatch = cog.regex.node.exec(obj.content)) {
                         if (nodeRegexMatch[1] != "") {
                             nodeRegexMatches.push(nodeRegexMatch[1]);
-                            nodeRegexString = nodeRegexString+nodeRegexMatch[1];
+                            nodeRegexString = nodeRegexString + nodeRegexMatch[1];
                         }
-                        
-                        tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length-cog.token.close.length));
+
+                        tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
                         if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
-                            tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length)+nodeRegexMatch[2].substring(cog.token.open.length+cog.token.escape.length, nodeRegexMatch[2].length);
+                            tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
                             nodeRegexMatches.push(tokenEscaped);
                         } else {
                             nodeRegexMatches.push(nodeRegexMatch[2]);
                         }
-                        nodeRegexString = nodeRegexString+nodeRegexMatch[2];
+                        nodeRegexString = nodeRegexString + nodeRegexMatch[2];
                     }
-                    
-                    //ADD THE LAST PIECE OF TEXT IF IT HAS IT
-                    nodeRegexString = attrVal.replace(nodeRegexString, "");
+
+                    //ADD THE LAST PIECE OF TEXT IF IT HAS IT (SAME AS ATTR)
+                    nodeRegexString = obj.content.replace(nodeRegexString, "");
                     if (nodeRegexString != "") {
                         nodeRegexMatches.push(nodeRegexString);
                     }
 
-                    //CREATE NEW NODE AND SET IT TEXT TO RENDERED CONTENT
-                    attrContent = document.createElement("span");
+                    //RECONSTRUCT THE TEXT NODE (DIFFERENT THAN ATTR)
                     newNode = document.createDocumentFragment();
-                    attrTokens = [];
-                    for (i = 0;i < nodeRegexMatches.length;i++) {
-                        tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
+                    for (i = 0; i < nodeRegexMatches.length; i++) {
+                        tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length - cog.token.close.length));
                         tokenArr = tokenPure.split(".");
                         if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                            tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
+
+                            tokenPure = arg.token + tokenPure.substring(arg.alias.length, tokenPure.length);
                         }
                         if (tokenContents.hasOwnProperty(tokenPure)) {
-                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
-                            newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
-                            attrTokens.push(tokenPure);
+
+                            //if content is node, this part is different than attribute because attributes only accepts string
+                            if (!cog.isElement2(tokenContents[tokenPure])) {
+                                newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
+                                newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                            } else {
+                                cloneNode = cog.render2(tokenContents[tokenPure].cloneNode(true));
+                                newNode.appendChild(cloneNode);
+                            }
                         } else {
                             newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
                         }
                     }
-                    attrContent.appendChild(newNode);
-                    //ATTR TYPES
-                    if (attrKey == cog.label.style) {
-                        attrContentObj = cog.cssToObj(attrContent.innerHTML);
-                        if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
-                            for (i = 0;i < Object.keys(attrContentObj).length;i++) {
-                                obj.node.style[Object.keys(attrContentObj)[i]] = attrContentObj[Object.keys(attrContentObj)[i]];
-                            }
-                            cog.attrs.push({node:obj.node, type:"style", content:attrContent, tokens:attrTokens});
-                        }
-                        obj.node.removeAttribute(attrKey);
-                    } else if (attrKey == cog.label.context) {
-                        attrContentObj = cog.strToObj(attrContent.innerHTML);
-                        if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
-                            for (i = 0;i < Object.keys(attrContentObj).length;i++) {
-                                obj.node[Object.keys(attrContentObj)[i]] = attrContentObj[Object.keys(attrContentObj)[i]];
-                            }
-                            cog.attrs.push({node:obj.node, type:"context", content:attrContent, tokens:attrTokens});
-                        }
-                        obj.node.removeAttribute(attrKey);
-                    } else if (attrKey == cog.label.class) {
-                        attrContentObj = attrContent.innerHTML.trim().split(" ");
-                        for (i = 0;i < attrContentObj.length;i++) {
-                            if (attrContentObj[i] != null) {
-                                obj.node.classList.add(attrContentObj[i]);
-                            }
-                        }
-                        cog.attrs.push({node:obj.node, type:"class", content:attrContent, tokens:attrTokens, old:attrContentObj});
-                        obj.node.removeAttribute(attrKey);
-                    } else {
-                        attrNode = document.createAttribute(attrKey);
-                        attrNode.value = attrContent.innerHTML;
-                        obj.node.setAttribute(attrKey, attrContent.innerHTML);
-                        cog.attrs.push({node:obj.node, type:"attr", attr:attrKey, content:attrContent, tokens:attrTokens});
-                        
-                    }
+                    obj.node.parentNode.replaceChild(newNode, obj.node);
                 }
             }
         }
-        //FOR TEXTS
-        if (obj.hasOwnProperty("type") && obj.type == "text" && !obj.isSVG) {
-            tokens = cog.removeDuplicatesFromArray(obj.content.match(cog.regex.token));
-            if (tokens.length > 0) {
-                //ADD CONTENTS OF THE TOKENS THAT ARE USED IN THIS TEXT NODE INTO AN OBJECT (SAME AS ATTR)
-                tokenContents = {};
-                for (i = 0;i < tokens.length;i++) {
-                    token = tokens[i];
-                    tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length-cog.token.close.length));
-                    tokenArr = tokenPure.split(".");
-                    if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                        if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                            tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
-                        }
-                        tokenContent = cog.getRecursiveValue({str:tokenPure});
-                        if (typeof tokenContent !== "undefined") {
-                            tokenContents[tokenPure] = tokenContent;
-                            if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement2(tokenContent)) {
-                                cog.nodes[tokenPure] = [];
-                            }
-                        }
-                    }
-                }
-                
-                //SPLIT THE TEXT NODE INTO PORTIONS FROM TOKENS (SAME AS ATTR)
-                nodeRegexMatches = [];
-                nodeRegexString = "";
-                while (nodeRegexMatch = cog.regex.node.exec(obj.content)) {
-                    if (nodeRegexMatch[1] != "") {
-                        nodeRegexMatches.push(nodeRegexMatch[1]);
-                        nodeRegexString = nodeRegexString+nodeRegexMatch[1];
-                    }
-                    
-                    tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length-cog.token.close.length));
-                    if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
-                        tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length)+nodeRegexMatch[2].substring(cog.token.open.length+cog.token.escape.length, nodeRegexMatch[2].length);
-                        nodeRegexMatches.push(tokenEscaped);
-                    } else {
-                        nodeRegexMatches.push(nodeRegexMatch[2]);
-                    }
-                    nodeRegexString = nodeRegexString+nodeRegexMatch[2];
-                }
-                
-                //ADD THE LAST PIECE OF TEXT IF IT HAS IT (SAME AS ATTR)
-                nodeRegexString = obj.content.replace(nodeRegexString, "");
-                if (nodeRegexString != "") {
-                    nodeRegexMatches.push(nodeRegexString);
-                }
-
-                //RECONSTRUCT THE TEXT NODE (DIFFERENT THAN ATTR)
-                newNode = document.createDocumentFragment();
-                for (i = 0;i < nodeRegexMatches.length;i++) {
-                    tokenPure = cog.normalizeKeys(nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length-cog.token.close.length));
-                    tokenArr = tokenPure.split(".");
-                    if (arg.token != null && arg.alias != null && tokenArr[0] == arg.alias) { //if it has alias than replace alias
-                        
-                        tokenPure = arg.token+tokenPure.substring(arg.alias.length, tokenPure.length);
-                    }
-                    if (tokenContents.hasOwnProperty(tokenPure)) {
-                        
-                        //if content is node, this part is different than attribute because attributes only accepts string
-                        if (!cog.isElement2(tokenContents[tokenPure])) {
-                            newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
-                            newNode.appendChild(cog.nodes[tokenPure][newNodeLength-1]);
-                        } else {
-                            cloneNode = cog.render2(tokenContents[tokenPure].cloneNode(true));
-                            newNode.appendChild(cloneNode);
-                        }
-                    } else {
-                        newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
-                    }
-                }
-                obj.node.parentNode.replaceChild(newNode, obj.node);
-            }
-        }
-    }});
+    });
     //REPEATERS
-    while (repeatNode = document.querySelector("["+cog.label.repeat+"]")) {
+    while (repeatNode = document.querySelector("[" + cog.label.repeat + "]")) {
         repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
         repeatAttrToken = cog.normalizeKeys(repeatAttr[0].trim());
-        repeatAttrTokenArr = cog.getRecursiveValue({str:repeatAttrToken});
+        repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
         repeatAttrAlias = repeatAttr[1].trim();
         repeatAttrTemp = repeatAttr[2].trim();
         repeatNode.removeAttribute(cog.label.repeat);
-        cog.template2({id:repeatAttrTemp, elem:repeatNode});
+        cog.template2({ id: repeatAttrTemp, elem: repeatNode });
         repeatNode.innerHTML = "";
         // REPEATS STRUCTURE {parentname:[[[childNodes1, childNodes2...]]]}
         if (Array.isArray(repeatAttrTokenArr)) {
             repeatsArr = [];
-            for (i = 0;i < repeatAttrTokenArr.length;i++) {
+            for (i = 0; i < repeatAttrTokenArr.length; i++) {
                 repeatsArrNodes = [];
-                repeatTemp = cog.template2({id:repeatAttrTemp, data:repeatAttrToken+"."+i+","+repeatAttrAlias, fragment:true});
-                for (ii = 0;ii < repeatTemp.childNodes.length;ii++) {
+                repeatTemp = cog.template2({ id: repeatAttrTemp, data: repeatAttrToken + "." + i + "," + repeatAttrAlias, fragment: true });
+                for (ii = 0; ii < repeatTemp.childNodes.length; ii++) {
                     repeatsArrNodes.push(repeatTemp.childNodes[ii]);
                 }
                 repeatsArr.push(repeatsArrNodes);
@@ -293,9 +295,9 @@ cog.render2 = function (dom, arg) { //NEW RENDER
             if (!cog.repeats.hasOwnProperty(repeatAttrToken)) {
                 cog.repeats[repeatAttrToken] = [];
             }
-            repeatsArrKey = cog.repeats[repeatAttrToken].push({nodes:repeatsArr, parent:repeatNode, token:repeatAttrToken, alias:repeatAttrAlias, temp:repeatAttrTemp})-1;
-            for (i = 0;i < cog.repeats[repeatAttrToken][repeatsArrKey].nodes.length;i++) {
-                for (ii = 0;ii < cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i].length;ii++) {
+            repeatsArrKey = cog.repeats[repeatAttrToken].push({ nodes: repeatsArr, parent: repeatNode, token: repeatAttrToken, alias: repeatAttrAlias, temp: repeatAttrTemp }) - 1;
+            for (i = 0; i < cog.repeats[repeatAttrToken][repeatsArrKey].nodes.length; i++) {
+                for (ii = 0; ii < cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i].length; ii++) {
                     repeatNode.appendChild(cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i][ii]);
                 }
             }
@@ -304,10 +306,10 @@ cog.render2 = function (dom, arg) { //NEW RENDER
     return dom;
 };
 cog.rebind2 = function (key) { //NEW REBIND
-    var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({str:token}), attrContentObj, repeatTemp, repeatsArrNodes, repeatsLength;
+    var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({ str: token }), attrContentObj, repeatTemp, repeatsArrNodes, repeatsLength;
     if (cog.nodes.hasOwnProperty(token)) {
         //TEXT NODES
-        for (i = 0;i < cog.nodes[token].length;i++) {
+        for (i = 0; i < cog.nodes[token].length; i++) {
             if (cog.nodes[token][i].textContent != content) {
                 newNode = document.createTextNode(content);
                 cog.nodes[token][i].parentNode.replaceChild(newNode, cog.nodes[token][i]);
@@ -315,16 +317,16 @@ cog.rebind2 = function (key) { //NEW REBIND
             }
         }
         //ATTRS
-        
-        for (i = 0;i < cog.attrs.length;i++) {
-            for (ii = 0;ii < cog.attrs[i].tokens.length;ii++) {
+
+        for (i = 0; i < cog.attrs.length; i++) {
+            for (ii = 0; ii < cog.attrs[i].tokens.length; ii++) {
                 if (token == cog.attrs[i].tokens[ii]) {//ATTR
                     if (cog.attrs[i].type == "attr" && cog.attrs[i].node.getAttribute(cog.attrs[i].attr) != cog.attrs[i].content.innerHTML) {
                         cog.attrs[i].node.setAttribute(cog.attrs[i].attr, cog.attrs[i].content.innerHTML);
                     } else if (cog.attrs[i].type == "style") { //STYLE
                         attrContentObj = cog.cssToObj(cog.attrs[i].content.innerHTML);
                         if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
-                            for (iii = 0;iii < Object.keys(attrContentObj).length;iii++) {
+                            for (iii = 0; iii < Object.keys(attrContentObj).length; iii++) {
                                 if (attrContentObj[Object.keys(attrContentObj)[iii]] != cog.attrs[i].node.style[Object.keys(attrContentObj)[iii]]) {
                                     cog.attrs[i].node.style[Object.keys(attrContentObj)[iii]] = attrContentObj[Object.keys(attrContentObj)[iii]];
                                 }
@@ -333,7 +335,7 @@ cog.rebind2 = function (key) { //NEW REBIND
                     } else if (cog.attrs[i].type == "context") { //CONTEXT
                         attrContentObj = cog.strToObj(cog.attrs[i].content.innerHTML);
                         if (typeof attrContentObj === "object" && !Array.isArray(attrContentObj)) {
-                            for (iii = 0;iii < Object.keys(attrContentObj).length;iii++) {
+                            for (iii = 0; iii < Object.keys(attrContentObj).length; iii++) {
                                 if (attrContentObj[Object.keys(attrContentObj)[iii]] != cog.attrs[i].node[Object.keys(attrContentObj)[iii]]) {
                                     cog.attrs[i].node[Object.keys(attrContentObj)[iii]] = attrContentObj[Object.keys(attrContentObj)[iii]];
                                 }
@@ -341,12 +343,12 @@ cog.rebind2 = function (key) { //NEW REBIND
                         }
                     } else if (cog.attrs[i].type == "class") { //CLASS
                         attrContentObj = cog.attrs[i].content.innerHTML.trim().split(" ");
-                        for (iii = 0;iii < cog.attrs[i].old.length;iii++) {
+                        for (iii = 0; iii < cog.attrs[i].old.length; iii++) {
                             if (cog.attrs[i].old[iii] != null) {
                                 cog.attrs[i].node.classList.remove(cog.attrs[i].old[iii]);
                             }
                         }
-                        for (iii = 0;iii < attrContentObj.length;iii++) {
+                        for (iii = 0; iii < attrContentObj.length; iii++) {
                             if (attrContentObj[iii] != null) {
                                 cog.attrs[i].node.classList.add(attrContentObj[iii]);
                             }
@@ -361,26 +363,26 @@ cog.rebind2 = function (key) { //NEW REBIND
     if (cog.repeats.hasOwnProperty(token) && cog.repeats[token][0].nodes.length != content.length) {
         repeatsLength = cog.repeats[token][0].nodes.length;
         if (cog.repeats[token][0].nodes.length > content.length) {
-            for (i = 0;i < cog.repeats[token].length;i++) {
-                for (ii = content.length;ii < cog.repeats[token][i].nodes.length;ii++) {
-                    for (iii = 0;iii < cog.repeats[token][i].nodes[ii].length;iii++) {
+            for (i = 0; i < cog.repeats[token].length; i++) {
+                for (ii = content.length; ii < cog.repeats[token][i].nodes.length; ii++) {
+                    for (iii = 0; iii < cog.repeats[token][i].nodes[ii].length; iii++) {
                         cog.repeats[token][i].nodes[ii][iii].parentNode.removeChild(cog.repeats[token][i].nodes[ii][iii]);
                     }
                 }
-                cog.repeats[token][i].nodes.splice(content.length, repeatsLength-content.length);
+                cog.repeats[token][i].nodes.splice(content.length, repeatsLength - content.length);
             }
         } else {
-            for (i = 0;i < cog.repeats[token].length;i++) {
-                for (ii = cog.repeats[token][i].nodes.length;ii < content.length;ii++) {
+            for (i = 0; i < cog.repeats[token].length; i++) {
+                for (ii = cog.repeats[token][i].nodes.length; ii < content.length; ii++) {
                     repeatsArrNodes = [];
-                    repeatTemp = cog.template2({id:cog.repeats[token][i].temp, data:cog.repeats[token][i].token+"."+ii+","+cog.repeats[token][i].alias, fragment:true});
-                    for (iii = 0;iii < repeatTemp.childNodes.length;iii++) {
+                    repeatTemp = cog.template2({ id: cog.repeats[token][i].temp, data: cog.repeats[token][i].token + "." + ii + "," + cog.repeats[token][i].alias, fragment: true });
+                    for (iii = 0; iii < repeatTemp.childNodes.length; iii++) {
                         repeatsArrNodes.push(repeatTemp.childNodes[iii]);
                     }
                     cog.repeats[token][i].nodes.push(repeatsArrNodes);
                 }
-                for (ii = repeatsLength;ii < cog.repeats[token][i].nodes.length;ii++) {
-                    for (iii = 0;iii < cog.repeats[token][i].nodes[ii].length;iii++) {
+                for (ii = repeatsLength; ii < cog.repeats[token][i].nodes.length; ii++) {
+                    for (iii = 0; iii < cog.repeats[token][i].nodes[ii].length; iii++) {
                         cog.repeats[token][i].parent.appendChild(cog.repeats[token][i].nodes[ii][iii]);
                     }
                 }
@@ -388,7 +390,7 @@ cog.rebind2 = function (key) { //NEW REBIND
         }
     }
     //BIND RELATED TOKENS
-    for (i = 0;i < Object.keys(cog.nodes).length;i++) {
+    for (i = 0; i < Object.keys(cog.nodes).length; i++) {
         if (token != cog.normalizeKeys(Object.keys(cog.nodes)[i]) && cog.checkKeys(token, Object.keys(cog.nodes)[i])) {
             cog.rebind2(Object.keys(cog.nodes)[i]);
         }
@@ -397,7 +399,7 @@ cog.rebind2 = function (key) { //NEW REBIND
     cog.collectGarbage();
     function rebound() {
         var i, ii, rebindKey, boundKeys, boundKey;
-        for (i = 0;i < Object.keys(cog.bound).length;i++) {
+        for (i = 0; i < Object.keys(cog.bound).length; i++) {
             rebindKey = Object.keys(cog.bound)[i];
             boundKeys = cog.bound[rebindKey];
             if (typeof boundKeys === 'string') {
@@ -406,7 +408,7 @@ cog.rebind2 = function (key) { //NEW REBIND
                     cog.rebind2(rebindKey);
                 }
             } else if (Array.isArray(boundKeys)) {
-                for (ii = 0;ii < boundKeys.length;ii++) {
+                for (ii = 0; ii < boundKeys.length; ii++) {
                     boundKey = boundKeys[ii];
                     if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey)) {
                         cog.rebind2(rebindKey);
@@ -420,21 +422,21 @@ cog.rebind2 = function (key) { //NEW REBIND
 cog.collectGarbage = function () { //remove nodes that are not inside the DOM
     var i, ii, iii, excludeAttrs = [], checkAttr, removeRepeats = [], removeAttrs = [], removeNodes = [], removeNode;
     //FOR REPEATS
-    for (i = 0;i < Object.keys(cog.repeats).length;i++) {
-        for (ii = 0;ii < cog.repeats[Object.keys(cog.repeats)[i]].length;ii++) {
+    for (i = 0; i < Object.keys(cog.repeats).length; i++) {
+        for (ii = 0; ii < cog.repeats[Object.keys(cog.repeats)[i]].length; ii++) {
             if (!document.body.contains(cog.repeats[Object.keys(cog.repeats)[i]][ii].parent)) {
-                removeRepeats.push({k:i, kk:ii});
+                removeRepeats.push({ k: i, kk: ii });
             }
         }
     }
-    for (i = removeRepeats.length-1;i >= 0;i--) {
+    for (i = removeRepeats.length - 1; i >= 0; i--) {
         cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]].splice(removeRepeats[i].kk, 1);
         if (cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]].length == 0) {
             delete cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]];
         }
     }
     //FOR ATTRS
-    for (i = 0;i < cog.attrs.length;i++) {
+    for (i = 0; i < cog.attrs.length; i++) {
         checkAttr = cog.attrs[i].node;
         if (!document.body.contains(checkAttr)) {
             cog.attrs[i].content.innerHTML = "";
@@ -443,22 +445,22 @@ cog.collectGarbage = function () { //remove nodes that are not inside the DOM
             excludeAttrs.push(cog.attrs[i].content);
         }
     }
-    for (i = removeAttrs.length-1;i >= 0;i--) {
+    for (i = removeAttrs.length - 1; i >= 0; i--) {
         cog.attrs.splice(removeAttrs[i], 1);
     }
     //FOR TEXT
-    for (i = 0;i < Object.keys(cog.nodes).length;i++) {
-        for (ii = 0;ii < cog.nodes[Object.keys(cog.nodes)[i]].length;ii++) {
+    for (i = 0; i < Object.keys(cog.nodes).length; i++) {
+        for (ii = 0; ii < cog.nodes[Object.keys(cog.nodes)[i]].length; ii++) {
             if (!document.body.contains(cog.nodes[Object.keys(cog.nodes)[i]][ii].parentNode)) {
                 removeNode = true;
-                for (iii = 0;iii < excludeAttrs.length;iii++) {
+                for (iii = 0; iii < excludeAttrs.length; iii++) {
                     if (cog.nodes[Object.keys(cog.nodes)[i]][ii].parentNode === excludeAttrs[iii]) {
                         removeNode = false;
                         break;
                     }
                 }
                 if (removeNode) {
-                    removeNodes.push({k:Object.keys(cog.nodes)[i], kk:ii});
+                    removeNodes.push({ k: Object.keys(cog.nodes)[i], kk: ii });
                 }
             }
         }
@@ -466,7 +468,7 @@ cog.collectGarbage = function () { //remove nodes that are not inside the DOM
             delete cog.nodes[Object.keys(cog.nodes)[i]];
         }
     }
-    for (i = removeNodes.length-1;i >= 0;i--) {
+    for (i = removeNodes.length - 1; i >= 0; i--) {
         cog.nodes[removeNodes[i].k].splice(removeNodes[i].kk, 1);
         if (cog.nodes[removeNodes[i].k].length == 0) {
             delete cog.nodes[removeNodes[i].k];
@@ -475,9 +477,9 @@ cog.collectGarbage = function () { //remove nodes that are not inside the DOM
 };
 cog.template2 = function (arg) {
     var template, createEl, token, alias;
-    if (arg.id == null) {return;}
-    if (arg.bind == null) {arg.bind = true;}
-    if (arg.fragment == null) {arg.fragment = false;}
+    if (arg.id == null) { return; }
+    if (arg.bind == null) { arg.bind = true; }
+    if (arg.fragment == null) { arg.fragment = false; }
     if (cog.templates[arg.id] == null && arg.elem != null) {
         if (typeof arg.elem === 'string') {
             createEl = document.createElement("div");
@@ -493,7 +495,7 @@ cog.template2 = function (arg) {
     if (arg.data != null && template != null) {
         token = cog.normalizeKeys(arg.data.split(",")[0].trim());
         alias = arg.data.split(",")[1].trim();
-        cog.render2(template, {token: token, alias: alias});
+        cog.render2(template, { token: token, alias: alias });
     }
     if (arg.fragment) {
         template = cog.elemFragment(template);
@@ -502,150 +504,176 @@ cog.template2 = function (arg) {
 };
 cog.isElement2 = function ($obj) {
     try {
-        return ($obj.constructor.__proto__.prototype.constructor.name)?true:false;
-    } catch(e) {
+        return ($obj.constructor.__proto__.prototype.constructor.name) ? true : false;
+    } catch (e) {
         return false;
     }
 };
 cog.cssToObj = function (css) {
     var obj = {}, s = css.toLowerCase().replace(/-(.)/g, function (m, g) {
         return g.toUpperCase();
-    }).replace(/;\s?$/g,"").split(/:|;/g);
+    }).replace(/;\s?$/g, "").split(/:|;/g);
     for (var i = 0; i < s.length; i += 2)
-        obj[s[i].replace(/\s/g,"")] = s[i+1].replace(/^\s+|\s+$/g,"");
+        obj[s[i].replace(/\s/g, "")] = s[i + 1].replace(/^\s+|\s+$/g, "");
     return obj;
 };
-cog.strToObj = function (json){
+cog.strToObj = function (json) {
     json = json.trim();
     if (json.indexOf("{") !== 0) {
-        json = "{"+json+"}";
+        json = "{" + json + "}";
     }
-    function bulkRegex(str, callback){
-        
-        if(callback && typeof callback === 'function'){
-            
+    function bulkRegex(str, callback) {
+        if (callback && typeof callback === "function") {
             return callback(str);
-        }else if(callback && Array.isArray(callback)){
-            
-            for(let i = 0; i < callback.length; i++){
-                if(callback[i] && typeof callback[i] === 'function'){
+        } else if (callback && Array.isArray(callback)) {
+            for (var i = 0; i < callback.length; i++) {
+                if (callback[i] && typeof callback[i] === "function") {
                     str = callback[i](str);
-                    
-                }else{break;}
+                } else {
+                    break;
+                }
             }
-            
             return str;
         }
         return str;
     }
-    if(json && json !== ''){
-        if(typeof json !== 'string'){
-            try{
+    if (json && json !== "") {
+        if (typeof json !== "string") {
+            try {
                 json = JSON.stringify(json);
-            }catch(e){return false;}
+            } catch (e) {
+                return false;
+            }
         }
-        if(typeof json === 'string'){
+        if (typeof json === "string") {
             json = bulkRegex(json, [
-                str => str.replace(/[\n\t]/gm, ''),
-                str => str.replace(/,\}/gm, '}'),
-                str => str.replace(/,\]/gm, ']'),
-                str => {
+                function (str) {
+                    return str.replace(/[\n\t]/gm, "");
+                },
+                function (str) {
+                    return str.replace(/,\}/gm, "}");
+                },
+                function (str) {
+                    return str.replace(/,\]/gm, "]");
+                },
+                function (str) {
                     str = str.split(/(?=[,\}\]])/g);
-                    str = str.map(s => {
-                        if(s.includes(':') && s){
-                            let strP = s.split(/:(.+)/, 2);
+                    str = str.map(function (s) {
+                        if (s.includes(":") && s) {
+                            var strP = s.split(/:(.+)/, 2);
                             strP[0] = strP[0].trim();
-                            if(strP[0]){
-                                let firstP = strP[0].split(/([,\{\[])/g);
-                                firstP[firstP.length-1] = bulkRegex(firstP[firstP.length-1], p => p.replace(/[^A-Za-z0-9\-_]/, ''));
-                                strP[0] = firstP.join('');
+                            if (strP[0]) {
+                                var firstP = strP[0].split(/([,\{\[])/g);
+                                firstP[firstP.length - 1] = bulkRegex(
+                                    firstP[firstP.length - 1],
+                                    function (p) {
+                                        return p.replace(/[^A-Za-z0-9\-_]/, "");
+                                    }
+                                );
+                                strP[0] = firstP.join("");
                             }
-                            let part = strP[1].trim();
-                            if((part.startsWith('"') && part.endsWith('"')) || (part.startsWith('\'') && part.endsWith('\'')) || (part.startsWith('`') && part.endsWith('`'))){
+                            var part = strP[1].trim();
+                            if (
+                                (part.startsWith('"') && part.endsWith('"')) ||
+                                (part.startsWith("'") && part.endsWith("'")) ||
+                                (part.startsWith("`") && part.endsWith("`"))
+                            ) {
                                 part = part.substr(1, part.length - 2);
                             }
                             part = bulkRegex(part, [
-                                p => p.replace(/(["])/gm, '\\$1'),
-                                p => p.replace(/\\'/gm, '\''),
-                                p => p.replace(/\\`/gm, '`'),
-                            ]);
-                            strP[1] = ('"'+part+'"').trim();
-                            s = strP.join(':');
-                        }
-                        return s;
-                    });
-                    return str.join('');
-                },
-                str => str.replace(/(['"])?([a-zA-Z0-9\-_]+)(['"])?:/g, '"$2":'),
-                str => {
-                    str = str.split(/(?=[,\}\]])/g);
-                    str = str.map(s => {
-                        if(s.includes(':') && s){
-                            let strP = s.split(/:(.+)/, 2);
-                            strP[0] = strP[0].trim();
-                            if(strP[1].includes('"') && strP[1].includes(':')){
-                                let part = strP[1].trim();
-                                if(part.startsWith('"') && part.endsWith('"')){
-                                    part = part.substr(1, part.length - 2);
-                                    part = bulkRegex(part, p => p.replace(/(?<!\\)"/gm, ''));
+                                function (p) {
+                                    return p.replace(/(["])/gm, "\\$1");
+                                },
+                                function (p) {
+                                    return p.replace(/\\'/gm, "'");
+                                },
+                                function (p) {
+                                    return p.replace(/\\`/gm, "`");
                                 }
-                                strP[1] = ('"'+part+'"').trim();
-                            }
-                            s = strP.join(':');
+                            ]);
+                            strP[1] = ('"' + part + '"').trim();
+                            s = strP.join(":");
                         }
                         return s;
                     });
-                    return str.join('');
+                    return str.join("");
                 },
+                function (str) {
+                    return str.replace(/(['"])?([a-zA-Z0-9\-_]+)(['"])?:/g, '"$2":');
+                },
+                function (str) {
+                    str = str.split(/(?=[,\}\]])/g);
+                    str = str.map(function (s) {
+                        if (s.includes(":") && s) {
+                            var strP = s.split(/:(.+)/, 2);
+                            strP[0] = strP[0].trim();
+                            if (strP[1].includes('"') && strP[1].includes(":")) {
+                                var part = strP[1].trim();
+                                if (part.startsWith('"') && part.endsWith('"')) {
+                                    part = part.substr(1, part.length - 2);
+                                    part = bulkRegex(part, function (p) {
+                                        return p.replace(/(?<!\\)"/gm, "");
+                                    });
+                                }
+                                strP[1] = ('"' + part + '"').trim();
+                            }
+                            s = strP.join(":");
+                        }
+                        return s;
+                    });
+                    return str.join("");
+                }
             ]);
-            try{
+            try {
                 json = JSON.parse(json);
-            }catch(e){return false;}
+            } catch (e) {
+                return false;
+            }
         }
         return json;
     }
     return false;
-}
+};
 
 cog.get2 = function (key, arg) {
-    if (key == null) {return;}
-    if (arg == null) {arg = {};}
-    if (arg.action == null) {arg.action = "get";}
-    if (arg.reference == null) {arg.reference = false;}
-    if (arg.execute == null) {arg.execute = false;}
+    if (key == null) { return; }
+    if (arg == null) { arg = {}; }
+    if (arg.action == null) { arg.action = "get"; }
+    if (arg.reference == null) { arg.reference = false; }
+    if (arg.execute == null) { arg.execute = false; }
     var result, old, alter = false;
     if (typeof arg.replace === 'function') {
         alter = true;
     }
     if (arg.action == "get") {
-        result = cog.getRecursiveValue({str:key, ref:arg.reference, exec:arg.execute});
+        result = cog.getRecursiveValue({ str: key, ref: arg.reference, exec: arg.execute });
     }
     if (arg.action == "set" || alter) {
         if (old !== arg.set || alter) {
             if (alter) {
-                result = arg.replace({act:arg.action, str:key, val:arg.set, ref:arg.reference, exec:arg.execute});
+                result = arg.replace({ act: arg.action, str: key, val: arg.set, ref: arg.reference, exec: arg.execute });
             } else {
-                result = cog.getRecursiveValue({act:arg.action, str:key, val:arg.set, ref:arg.reference, exec:arg.execute});
+                result = cog.getRecursiveValue({ act: arg.action, str: key, val: arg.set, ref: arg.reference, exec: arg.execute });
             }
             cog.rebind2(key); //NEW REBIND WITHOUT RETURNING CHANGED ELEMS
-            document.dispatchEvent(new CustomEvent(cog.event.afterData, {detail:{key:key, old:old, new:result}}));
+            document.dispatchEvent(new CustomEvent(cog.event.afterData, { detail: { key: key, old: old, new: result } }));
         } else {
             result = old;
         }
     }
     if (typeof arg.callback === 'function') {
-        arg.callback({key:key, old:old, new:result});
+        arg.callback({ key: key, old: old, new: result });
     }
     return result;
 };
 cog.set2 = function (key, set, arg) {
-    if (arg == null) {arg = {};}
-    if (arg.alter == null) {arg.alter = false;}
-    if (arg.setElems == null) {arg.setElems = false;}
+    if (arg == null) { arg = {}; }
+    if (arg.alter == null) { arg.alter = false; }
+    if (arg.setElems == null) { arg.setElems = false; }
     if (arg.setElems) {
         cog.loadContents(function () {
-            var setElem, setAttr, setType, setKey, bindType, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("["+cog.label.head+"]"), head;
-            while (setElem = document.querySelector("["+cog.label.set+"]:not(["+cog.label.skip+"])")) {
+            var setElem, setAttr, setType, setKey, bindType, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
+            while (setElem = document.querySelector("[" + cog.label.set + "]:not([" + cog.label.skip + "])")) {
                 setAttr = setElem.getAttribute(cog.label.set);
                 setType = cog.parseSet(setAttr)[0];
                 setKey = cog.parseSet(setAttr)[1].trim();
@@ -656,12 +684,12 @@ cog.set2 = function (key, set, arg) {
                 }
                 setElem.parentNode.removeChild(setElem);
             }
-            for (i = 0;i < links.length;i++) {
+            for (i = 0; i < links.length; i++) {
                 link = links[i];
                 document.head.appendChild(link);
                 link.href = link.href;
             }
-            for (i = 0;i < heads.length;i++) {
+            for (i = 0; i < heads.length; i++) {
                 head = heads[i];
                 head.removeAttribute("head");
                 document.head.appendChild(head);
@@ -676,7 +704,7 @@ cog.set2 = function (key, set, arg) {
             set: set,
             callback: arg.callback,
             replace: function (argReplace) {
-                var result = cog.getRecursiveValue({str:argReplace.str, exec:false});
+                var result = cog.getRecursiveValue({ str: argReplace.str, exec: false });
                 var replace = set(result);
                 if (replace !== result) {
                     argReplace.val = replace;
@@ -694,7 +722,7 @@ cog.set2 = function (key, set, arg) {
     }
 };
 cog.alter2 = function (key, set, arg) {
-    if (arg == null) {arg = {};}
+    if (arg == null) { arg = {}; }
     arg.alter = true;
     cog.set2(key, set, arg);
 };
@@ -736,25 +764,25 @@ cog.iterate = function (obj, arg) { //SOURCE: https://stackoverflow.com/question
     }
 };
 cog.getAttributes = function (attributes) { //SOURCE: https://gomakethings.com/how-to-create-a-map-of-dom-nodes-with-vanilla-js/
-	return Array.prototype.map.call(attributes, function (attribute) {
-		return {
-			attr: attribute.name,
-			value: attribute.value
-		};
-	});
+    return Array.prototype.map.call(attributes, function (attribute) {
+        return {
+            attr: attribute.name,
+            value: attribute.value
+        };
+    });
 };
 cog.createDOMMap = function (element, isSVG) { //SOURCE: https://gomakethings.com/how-to-create-a-map-of-dom-nodes-with-vanilla-js/
-	return Array.prototype.map.call(element.childNodes, (function (node) {
-		var details = {
-			content: node.childNodes && node.childNodes.length > 0 ? null : node.textContent,
-			attrs: node.nodeType !== 1 ? [] : cog.getAttributes(node.attributes),
-			type: node.nodeType === 3 ? 'text' : (node.nodeType === 8 ? 'comment' : node.tagName.toLowerCase()),
-			node: node
-		};
-		details.isSVG = isSVG || details.type === 'svg';
-		details.children = cog.createDOMMap(node, details.isSVG);
-		return details;
-	}));
+    return Array.prototype.map.call(element.childNodes, (function (node) {
+        var details = {
+            content: node.childNodes && node.childNodes.length > 0 ? null : node.textContent,
+            attrs: node.nodeType !== 1 ? [] : cog.getAttributes(node.attributes),
+            type: node.nodeType === 3 ? 'text' : (node.nodeType === 8 ? 'comment' : node.tagName.toLowerCase()),
+            node: node
+        };
+        details.isSVG = isSVG || details.type === 'svg';
+        details.children = cog.createDOMMap(node, details.isSVG);
+        return details;
+    }));
 };
 cog.deepDiffMapper = function () { //SOURCE: https://stackoverflow.com/questions/8572826/generic-deep-diff-between-two-objects
     return {
@@ -762,110 +790,110 @@ cog.deepDiffMapper = function () { //SOURCE: https://stackoverflow.com/questions
         VALUE_UPDATED: 'updated',
         VALUE_DELETED: 'deleted',
         VALUE_UNCHANGED: 'unchanged',
-        map: function(obj1, obj2, keys) {
-        if (keys == null) {keys = []}
-        if (this.isValue(obj1) || this.isValue(obj2)) {
-            return {
-            type: this.compareValues(obj1, obj2),
-            data: obj1 === undefined ? obj2 : obj1,
-            keys: JSON.parse(JSON.stringify(keys))
-            };
-        }
-    
-        var diff = {};
-        
-        for (var key in obj1) {
-            var value2 = undefined;
-            if (obj2[key] !== undefined) {
-            value2 = obj2[key];
-            }
-            keys.push(key);
-            diff[key] = this.map(obj1[key], value2, keys);
-            keys.pop();
-        }
-        for (var key in obj2) {
-            if (diff[key] !== undefined) {
-            continue;
-            }
-            keys.push(key);
-            diff[key] = this.map(undefined, obj2[key], keys);
-            keys.pop();
-        }
-    
-        return diff;
-        },
-        mapAlt: function(obj1, obj2, keys, allKeys) {
-        if (keys == null) {keys = []}
-        if (allKeys == null) {allKeys = []}
-        if (this.isValue(obj1) || this.isValue(obj2)) {
-            if (this.compareValues(obj1, obj2) != this.VALUE_UNCHANGED) {
-                allKeys.push({
+        map: function (obj1, obj2, keys) {
+            if (keys == null) { keys = [] }
+            if (this.isValue(obj1) || this.isValue(obj2)) {
+                return {
                     type: this.compareValues(obj1, obj2),
-                    data: obj2,
+                    data: obj1 === undefined ? obj2 : obj1,
                     keys: JSON.parse(JSON.stringify(keys))
-                });
+                };
             }
-            return {
-            type: this.compareValues(obj1, obj2),
-            data: obj1 === undefined ? obj2 : obj1,
-            keys: JSON.parse(JSON.stringify(keys))
-            };
-        }
-    
-        var diff = {};
-        
-        for (var key in obj1) {
-            var value2 = undefined;
-            if (obj2[key] !== undefined) {
-            value2 = obj2[key];
+
+            var diff = {};
+
+            for (var key in obj1) {
+                var value2 = undefined;
+                if (obj2[key] !== undefined) {
+                    value2 = obj2[key];
+                }
+                keys.push(key);
+                diff[key] = this.map(obj1[key], value2, keys);
+                keys.pop();
             }
-            keys.push(key);
-            diff[key] = this.mapAlt(obj1[key], value2, keys, allKeys);
-            keys.pop();
-        }
-        for (var key in obj2) {
-            if (diff[key] !== undefined) {
-            continue;
+            for (var key in obj2) {
+                if (diff[key] !== undefined) {
+                    continue;
+                }
+                keys.push(key);
+                diff[key] = this.map(undefined, obj2[key], keys);
+                keys.pop();
             }
-            keys.push(key);
-            diff[key] = this.mapAlt(undefined, obj2[key], keys, allKeys);
-            keys.pop();
-        }
-    
-        return allKeys;
+
+            return diff;
+        },
+        mapAlt: function (obj1, obj2, keys, allKeys) {
+            if (keys == null) { keys = [] }
+            if (allKeys == null) { allKeys = [] }
+            if (this.isValue(obj1) || this.isValue(obj2)) {
+                if (this.compareValues(obj1, obj2) != this.VALUE_UNCHANGED) {
+                    allKeys.push({
+                        type: this.compareValues(obj1, obj2),
+                        data: obj2,
+                        keys: JSON.parse(JSON.stringify(keys))
+                    });
+                }
+                return {
+                    type: this.compareValues(obj1, obj2),
+                    data: obj1 === undefined ? obj2 : obj1,
+                    keys: JSON.parse(JSON.stringify(keys))
+                };
+            }
+
+            var diff = {};
+
+            for (var key in obj1) {
+                var value2 = undefined;
+                if (obj2[key] !== undefined) {
+                    value2 = obj2[key];
+                }
+                keys.push(key);
+                diff[key] = this.mapAlt(obj1[key], value2, keys, allKeys);
+                keys.pop();
+            }
+            for (var key in obj2) {
+                if (diff[key] !== undefined) {
+                    continue;
+                }
+                keys.push(key);
+                diff[key] = this.mapAlt(undefined, obj2[key], keys, allKeys);
+                keys.pop();
+            }
+
+            return allKeys;
         },
         compareValues: function (value1, value2) {
-        if (value1 === value2) {
-            return this.VALUE_UNCHANGED;
-        }
-        if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
-            return this.VALUE_UNCHANGED;
-        }
-        if (this.isFunction(value1) && this.isFunction(value2) && value1.toString() === value2.toString()) {
-            return this.VALUE_UNCHANGED;
-        }
-        if (value1 === undefined) {
-            return this.VALUE_CREATED;
-        }
-        if (value2 === undefined) {
-            return this.VALUE_DELETED;
-        }
-        return this.VALUE_UPDATED;
+            if (value1 === value2) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (this.isFunction(value1) && this.isFunction(value2) && value1.toString() === value2.toString()) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (value1 === undefined) {
+                return this.VALUE_CREATED;
+            }
+            if (value2 === undefined) {
+                return this.VALUE_DELETED;
+            }
+            return this.VALUE_UPDATED;
         },
         isFunction: function (x) {
-        return Object.prototype.toString.call(x) === '[object Function]';
+            return Object.prototype.toString.call(x) === '[object Function]';
         },
         isArray: function (x) {
-        return Object.prototype.toString.call(x) === '[object Array]';
+            return Object.prototype.toString.call(x) === '[object Array]';
         },
         isDate: function (x) {
-        return Object.prototype.toString.call(x) === '[object Date]';
+            return Object.prototype.toString.call(x) === '[object Date]';
         },
         isObject: function (x) {
-        return Object.prototype.toString.call(x) === '[object Object]';
+            return Object.prototype.toString.call(x) === '[object Object]';
         },
         isValue: function (x) {
-        return !this.isObject(x) && !this.isArray(x);
+            return !this.isObject(x) && !this.isArray(x);
         }
     }
 }();
@@ -873,44 +901,44 @@ cog.deepDiffMapper = function () { //SOURCE: https://stackoverflow.com/questions
 
 //FUNCTIONS
 cog.get = function (key, arg) {
-    if (key == null) {return;}
-    if (arg == null) {arg = {};}
-    if (arg.action == null) {arg.action = "get";}
-    if (arg.reference == null) {arg.reference = false;}
-    if (arg.execute == null) {arg.execute = false;}
+    if (key == null) { return; }
+    if (arg == null) { arg = {}; }
+    if (arg.action == null) { arg.action = "get"; }
+    if (arg.reference == null) { arg.reference = false; }
+    if (arg.execute == null) { arg.execute = false; }
     var result, old, changedElems = [], alter = false;
     if (typeof arg.replace === 'function') {
         alter = true;
     }
     if (arg.action == "get") {
-        result = cog.getRecursiveValue({str:key, ref:arg.reference, exec:arg.execute});
+        result = cog.getRecursiveValue({ str: key, ref: arg.reference, exec: arg.execute });
     }
     if (arg.action == "set" || alter) {
         if (old !== arg.set || alter) {
             if (alter) {
-                result = arg.replace({act:arg.action, str:key, val:arg.set, ref:arg.reference, exec:arg.execute});
+                result = arg.replace({ act: arg.action, str: key, val: arg.set, ref: arg.reference, exec: arg.execute });
             } else {
-                result = cog.getRecursiveValue({act:arg.action, str:key, val:arg.set, ref:arg.reference, exec:arg.execute});
+                result = cog.getRecursiveValue({ act: arg.action, str: key, val: arg.set, ref: arg.reference, exec: arg.execute });
             }
             changedElems = cog.rebind(key);
-            document.dispatchEvent(new CustomEvent(cog.event.afterData, {detail:{elems:changedElems, key:key, old:old, new:result}}));
+            document.dispatchEvent(new CustomEvent(cog.event.afterData, { detail: { elems: changedElems, key: key, old: old, new: result } }));
         } else {
             result = old;
         }
     }
     if (typeof arg.callback === 'function') {
-        arg.callback({elems:changedElems, key:key, old:old, new:result});
+        arg.callback({ elems: changedElems, key: key, old: old, new: result });
     }
     return result;
 };
 cog.set = function (key, set, arg) {
-    if (arg == null) {arg = {};}
-    if (arg.alter == null) {arg.alter = false;}
-    if (arg.setElems == null) {arg.setElems = false;}
+    if (arg == null) { arg = {}; }
+    if (arg.alter == null) { arg.alter = false; }
+    if (arg.setElems == null) { arg.setElems = false; }
     if (arg.setElems) {
         cog.loadContents(function () {
-            var setElem, setAttr, setType, setKey, bindType, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("["+cog.label.head+"]"), head;
-            while (setElem = document.querySelector("["+cog.label.set+"]:not(["+cog.label.skip+"])")) {
+            var setElem, setAttr, setType, setKey, bindType, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
+            while (setElem = document.querySelector("[" + cog.label.set + "]:not([" + cog.label.skip + "])")) {
                 setAttr = setElem.getAttribute(cog.label.set);
                 setType = cog.parseSet(setAttr)[0];
                 setKey = cog.parseSet(setAttr)[1].trim();
@@ -921,12 +949,12 @@ cog.set = function (key, set, arg) {
                 }
                 setElem.parentNode.removeChild(setElem);
             }
-            for (i = 0;i < links.length;i++) {
+            for (i = 0; i < links.length; i++) {
                 link = links[i];
                 document.head.appendChild(link);
                 link.href = link.href;
             }
-            for (i = 0;i < heads.length;i++) {
+            for (i = 0; i < heads.length; i++) {
                 head = heads[i];
                 head.removeAttribute("head");
                 document.head.appendChild(head);
@@ -941,7 +969,7 @@ cog.set = function (key, set, arg) {
             set: set,
             callback: arg.callback,
             replace: function (argReplace) {
-                var result = cog.getRecursiveValue({str:argReplace.str, exec:false});
+                var result = cog.getRecursiveValue({ str: argReplace.str, exec: false });
                 var replace = set(result);
                 if (replace !== result) {
                     argReplace.val = replace;
@@ -959,18 +987,18 @@ cog.set = function (key, set, arg) {
     }
 };
 cog.alter = function (key, set, arg) {
-    if (arg == null) {arg = {};}
+    if (arg == null) { arg = {}; }
     arg.alter = true;
     cog.set(key, set, arg);
 };
 cog.rebind = function (key, changed, i, query) {
-    if (i == null) {i = 0;}
-    if (query == null) {query = ""}
-    if (changed == null) {changed = [];}
+    if (i == null) { i = 0; }
+    if (query == null) { query = "" }
+    if (changed == null) { changed = []; }
     var elems, elem;
     if (query == "") {
         query = cog.getBoundElements(key, true);
-        query += ",["+cog.label.bind+"='"+cog.keyword.auto+"']:not(["+cog.label.skip+"])";
+        query += ",[" + cog.label.bind + "='" + cog.keyword.auto + "']:not([" + cog.label.skip + "])";
     }
     elems = document.querySelectorAll(query);
     if (i < elems.length) {
@@ -985,7 +1013,7 @@ cog.rebind = function (key, changed, i, query) {
     }
     function rebound() {
         var i, ii, rebindKey, boundKeys, boundKey;
-        for (i = 0;i < Object.keys(cog.bound).length;i++) {
+        for (i = 0; i < Object.keys(cog.bound).length; i++) {
             rebindKey = Object.keys(cog.bound)[i];
             boundKeys = cog.bound[rebindKey];
             if (typeof boundKeys === 'string') {
@@ -994,7 +1022,7 @@ cog.rebind = function (key, changed, i, query) {
                     changed = changed.concat(cog.rebind(rebindKey));
                 }
             } else if (Array.isArray(boundKeys)) {
-                for (ii = 0;ii < boundKeys.length;ii++) {
+                for (ii = 0; ii < boundKeys.length; ii++) {
                     boundKey = boundKeys[ii];
                     if (cog.normalizeKeys(key) != cog.normalizeKeys(rebindKey) && cog.checkKeys(key, boundKey)) {
                         changed = changed.concat(cog.rebind(rebindKey));
@@ -1006,8 +1034,8 @@ cog.rebind = function (key, changed, i, query) {
     }
 };
 cog.getBoundElements = function (tokens, returnQuery) {
-    if (tokens == null) {return;}
-    if (returnQuery == null) {returnQuery = false;}
+    if (tokens == null) { return; }
+    if (returnQuery == null) { returnQuery = false; }
     if (!Array.isArray(tokens)) {
         tokens = [tokens];
     }
@@ -1019,9 +1047,9 @@ cog.getBoundElements = function (tokens, returnQuery) {
             if (i == 0) {
                 combined += key;
             } else {
-                combined += "."+key;
+                combined += "." + key;
             }
-            queryArr.push("["+cog.label.bind+"*='["+combined+"]']:not(["+cog.label.skip+"])");
+            queryArr.push("[" + cog.label.bind + "*='[" + combined + "]']:not([" + cog.label.skip + "])");
         });
     });
     queryArr = cog.removeDuplicatesFromArray(queryArr);
@@ -1067,7 +1095,7 @@ cog.getElementAllEvents = function (elem) {
     return elemLives.concat(elemEvents);
 };
 cog.getRecursiveValue = function (arg) {
-    if (arg == null) {arg = {};}
+    if (arg == null) { arg = {}; }
     if (arg.act == null) {
         if (typeof arg.val !== 'undefined') {
             arg.act = "set";
@@ -1075,35 +1103,35 @@ cog.getRecursiveValue = function (arg) {
             arg.act = "get";
         }
     }
-    if (arg.root == null) {arg.root = cog.data;}
-    if (arg.ref == null) {arg.ref = true;}
-    if (arg.exec == null) {arg.exec = true;}
+    if (arg.root == null) { arg.root = cog.data; }
+    if (arg.ref == null) { arg.ref = true; }
+    if (arg.exec == null) { arg.exec = true; }
     var refData = arg.root, result, i, key;
     if (typeof arg.str === 'string') {
         strSplit = cog.normalizeKeys(arg.str).split(".");
     } else {
         strSplit = arg.str;
     }
-    for (i = 0;i < strSplit.length;i++) {
+    for (i = 0; i < strSplit.length; i++) {
         key = strSplit[i];
-        if ((typeof refData === 'object' || typeof refData === 'string') && refData[key] != null && i != strSplit.length-1 && i != arg.index) {
+        if ((typeof refData === 'object' || typeof refData === 'string') && refData[key] != null && i != strSplit.length - 1 && i != arg.index) {
             refData = refData[key];
             if (typeof refData === 'function') {
                 refData = refData();
             }
         } else {
             if (key == cog.keyword.parent) {
-                strSplit.splice(i,1);
-                strSplit.splice(i-1,1);
-                i = i-2;
+                strSplit.splice(i, 1);
+                strSplit.splice(i - 1, 1);
+                i = i - 2;
                 arg.index = i;
                 arg.str = strSplit;
                 refData = cog.getRecursiveValue(arg);
                 result = refData;
             } else if (key == cog.keyword.key) {
-                result = strSplit[i-1];
+                result = strSplit[i - 1];
             } else if (key == cog.keyword.token) {
-                strSplit.splice(i,1);
+                strSplit.splice(i, 1);
                 result = cog.normalizeKeys(strSplit);
             } else if (key == cog.keyword.count) {
                 if (typeof refData === 'object' && !Array.isArray(refData)) {
@@ -1113,7 +1141,7 @@ cog.getRecursiveValue = function (arg) {
                 }
             } else {
                 if (arg.act === "set" && refData[key] !== arg.val) {
-                    document.dispatchEvent(new CustomEvent(cog.event.beforeData, {detail:{key:arg.str, old:refData[key], new:arg.val}}));
+                    document.dispatchEvent(new CustomEvent(cog.event.beforeData, { detail: { key: arg.str, old: refData[key], new: arg.val } }));
                     refData[key] = arg.val;
                 }
                 result = refData[key];
@@ -1132,7 +1160,7 @@ cog.getRecursiveValue = function (arg) {
 cog.normalizeKeys = function (val) {
     var result;
     if (typeof val === 'string') {
-        result = val.replace(cog.regex.normalize, function (m1, m2) {return "."+m2;});
+        result = val.replace(cog.regex.normalize, function (m1, m2) { return "." + m2; });
         result = result.replace(/^\./, '');
     }
     if (Array.isArray(val)) {
@@ -1141,7 +1169,7 @@ cog.normalizeKeys = function (val) {
             if (i == 0) {
                 result += key;
             } else {
-                result += "."+key;
+                result += "." + key;
             }
         });
     }
@@ -1151,10 +1179,10 @@ cog.checkKeys = function (key1, key2) {
     var result = false, i, keys1, keys2, keysLong, keyShort, keyLong = "";
     key1 = cog.normalizeKeys(key1);
     key2 = cog.normalizeKeys(key2);
-    if (key1 == key2) {return true;}
+    if (key1 == key2) { return true; }
     keys1 = key1.split(".");
     keys2 = key2.split(".");
-    if (keys1.length == keys2.length) {return false;}
+    if (keys1.length == keys2.length) { return false; }
     if (keys1.length > keys2.length) {
         keysLong = keys1;
         keyShort = key2;
@@ -1162,11 +1190,11 @@ cog.checkKeys = function (key1, key2) {
         keysLong = keys2;
         keyShort = key1;
     }
-    for (i = 0;i < keysLong.length;i++) {
+    for (i = 0; i < keysLong.length; i++) {
         if (i == 0) {
             keyLong += keysLong[i];
         } else {
-            keyLong += "."+keysLong[i];
+            keyLong += "." + keysLong[i];
         }
         if (keyLong == keyShort) {
             result = true;
@@ -1185,19 +1213,19 @@ cog.parseProp = function (str) {
     var result = cog.isJSON(cog.decodeHTML(str));
     if (!result) {
         if (str.trim().indexOf("{") === 0) {
-            result = cog.eval("(["+str+"])");
+            result = cog.eval("([" + str + "])");
         } else {
-            result = cog.eval("([{"+str+"}])");
+            result = cog.eval("([{" + str + "}])");
         }
     }
     return result;
 };
 cog.parseToken = function (str, replace) {
     var delimiters = [], tokens = [], text, i, tokenReplace;
-    for (i = 0;i < str.length;i++) {
+    for (i = 0; i < str.length; i++) {
         if (str[i] === cog.delimiter) {
             if (delimiters.length != 0) {
-                text = str.slice(delimiters[delimiters.length-1], i+1);
+                text = str.slice(delimiters[delimiters.length - 1], i + 1);
                 if (cog.purifyToken(text) != "") {
                     if (typeof replace !== 'undefined') {
                         tokenReplace = replace(text);
@@ -1233,8 +1261,8 @@ cog.newBind = function (arg) {
 };
 cog.bind = function (node, arg) {
     var nodeProp, nodePropData, nodeAttr;
-    if (arg == null) {arg = {};}
-    if (arg.keep == null) {arg.keep = false;}
+    if (arg == null) { arg = {}; }
+    if (arg.keep == null) { arg.keep = false; }
     if (typeof node === 'string') {
         cog.get(node, arg);
         return function (arg) {
@@ -1276,8 +1304,8 @@ cog.bind = function (node, arg) {
                 if (arg.bind.length > 0) {
                     nodeAttr = "";
                     arg.bind.forEach(function (bind, i) {
-                        if (i != arg.bind.length-1) {
-                            nodeAttr += bind+",";
+                        if (i != arg.bind.length - 1) {
+                            nodeAttr += bind + ",";
                         } else {
                             nodeAttr += bind;
                         }
@@ -1346,10 +1374,10 @@ cog.bind = function (node, arg) {
     }
 };
 cog.bindAll = function (arg) {
-    if (arg == null) {arg = {};}
-    if (arg.elem == null) {arg.elem = document;}
-    if (arg.i == null) {arg.i = 0;}
-    if (arg.set == null) {arg.set = true;}
+    if (arg == null) { arg = {}; }
+    if (arg.elem == null) { arg.elem = document; }
+    if (arg.i == null) { arg.i = 0; }
+    if (arg.set == null) { arg.set = true; }
     if (arg.set) {
         cog.set(null, null, {
             setElems: true,
@@ -1361,7 +1389,7 @@ cog.bindAll = function (arg) {
         bind();
     }
     function bind() {
-        var elems = arg.elem.querySelectorAll("["+cog.label.prop+"]:not(["+cog.label.skip+"])");
+        var elems = arg.elem.querySelectorAll("[" + cog.label.prop + "]:not([" + cog.label.skip + "])");
         if (arg.i < elems.length) {
             cog.bind(elems[arg.i]);
             arg.i++;
@@ -1375,12 +1403,12 @@ cog.bindAll = function (arg) {
 };
 cog.replaceToken = function (node, replace, recursive) {
     var attrBind, attrProp, child, childs, i;
-    if (recursive == null) {recursive = true;}
+    if (recursive == null) { recursive = true; }
     if (typeof node === 'string') {
         return replace_string(node);
     } else if (cog.isElement(node)) {
-        childs = node.querySelectorAll("["+cog.label.bind+"], ["+cog.label.prop+"]");
-        for (i = 0;i < childs.length;i++) {
+        childs = node.querySelectorAll("[" + cog.label.bind + "], [" + cog.label.prop + "]");
+        for (i = 0; i < childs.length; i++) {
             child = childs[i];
             if (child.getAttribute(cog.label.bind) != null) {
                 attrBind = replace_string(child.getAttribute(cog.label.bind));
@@ -1402,7 +1430,7 @@ cog.replaceToken = function (node, replace, recursive) {
             tokenPure = cog.purifyToken(token);
             tokenData = replace(tokenPure);
             if (tokenData != null) {
-                result = cog.replaceAll(result, token, function () {return tokenData;}, 'gim');
+                result = cog.replaceAll(result, token, function () { return tokenData; }, 'gim');
             }
         });
         if (str != result && recursive) {
@@ -1412,13 +1440,13 @@ cog.replaceToken = function (node, replace, recursive) {
     }
 };
 cog.purifyToken = function (token) {
-    return cog.replaceAll(token.substring(cog.delimiter.length, token.length-cog.delimiter.length).trim(), "\\", "");
+    return cog.replaceAll(token.substring(cog.delimiter.length, token.length - cog.delimiter.length).trim(), "\\", "");
 };
 cog.template = function (arg) {
     var template, createEl, parent, alias;
-    if (arg.id == null) {return;}
-    if (arg.bind == null) {arg.bind = true;}
-    if (arg.fragment == null) {arg.fragment = false;}
+    if (arg.id == null) { return; }
+    if (arg.bind == null) { arg.bind = true; }
+    if (arg.fragment == null) { arg.fragment = false; }
     if (cog.templates[arg.id] == null && arg.elem != null) {
         if (typeof arg.elem === 'string') {
             createEl = document.createElement("div");
@@ -1451,7 +1479,7 @@ cog.template = function (arg) {
         }
     }
     if (arg.bind && cog.isReady) {
-        cog.bindAll({set:false, elem:template});
+        cog.bindAll({ set: false, elem: template });
     }
     if (arg.fragment) {
         template = cog.elemFragment(template);
@@ -1473,14 +1501,14 @@ cog.encapIf = function () {
     }
 };
 cog.encapEval = function () {
-    try {return eval(cog.encapVar);} catch (e) {}
+    try { return eval(cog.encapVar); } catch (e) { }
 };
 cog.if = function (str) {
     if (typeof str === 'string') {
         cog.encapVar = cog.replaceToken(str, function (pure) {
             pure = cog.normalizeKeys(pure);
             if (!(cog.regex.normalizeCheck.test(pure))) {
-                return "cog.getRecursiveValue({str:'"+pure+"'})";
+                return "cog.getRecursiveValue({str:'" + pure + "'})";
             } else {
                 return undefined;
             }
@@ -1498,8 +1526,8 @@ cog.eventListener = function (event) {
     cog.eventHandler(event);
 };
 cog.eventHandler = function (event, elem) {
-    if (!elem) {elem = event.target;}
-    if (typeof elem.getAttribute !== 'function') {return;}
+    if (!elem) { elem = event.target; }
+    if (typeof elem.getAttribute !== 'function') { return; }
     var elemAllEvents = cog.getElementAllEvents(elem), prevent = false;
     if (elemAllEvents.length > 0) {
         elemAllEvents.forEach(function (current) {
@@ -1518,7 +1546,7 @@ cog.eventHandler = function (event, elem) {
     }
 };
 cog.addEventListenerAll = function (target, listener, capture) {
-    if (capture == null) {capture = false;}
+    if (capture == null) { capture = false; }
     for (var key in target) {
         if (/^on/.test(key)) {
             target.addEventListener(key.substr(2), listener, capture);
@@ -1532,15 +1560,15 @@ cog.init = function () {
         set: function (elem, key) {
             var propData = cog.isJSON(elem.innerText);
             if (propData) {
-                cog.getRecursiveValue({act:"set", str:key, val:propData});
+                cog.getRecursiveValue({ act: "set", str: key, val: propData });
             }
         }
     });
     cog.newBind({
         name: "raw",
         set: function (elem, key) {
-            var propData = cog.eval("("+elem.innerText+")");
-            cog.getRecursiveValue({act:"set", str:key, val:propData, exec:false});
+            var propData = cog.eval("(" + elem.innerText + ")");
+            cog.getRecursiveValue({ act: "set", str: key, val: propData, exec: false });
         }
     });
     cog.newBind({
@@ -1551,7 +1579,7 @@ cog.init = function () {
         bind: function (elem, prop, props, propIndex) {
             var propData;
             propData = cog.replaceToken(prop.debug, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             });
             console.log(propData);
         }
@@ -1564,14 +1592,14 @@ cog.init = function () {
         bind: function (elem, prop, props, propIndex) {
             var propData;
             propData = cog.replaceToken(prop.text, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             });
             if (propData != null) {
                 elem.innerText = propData;
             }
         },
         set: function (elem, key) {
-            cog.getRecursiveValue({act:"set", str:key, val:elem.innerText});
+            cog.getRecursiveValue({ act: "set", str: key, val: elem.innerText });
         }
     });
     cog.newBind({
@@ -1581,16 +1609,16 @@ cog.init = function () {
         },
         bind: function (elem, prop, props, propIndex) {
             var propData;
-            if (prop.recursive == null) {prop.recursive = false;}
+            if (prop.recursive == null) { prop.recursive = false; }
             propData = cog.replaceToken(prop.html, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             }, cog.if(prop.recursive));
             if (propData != null) {
                 elem.innerHTML = propData;
             }
         },
         set: function (elem, key) {
-            cog.getRecursiveValue({act:"set", str:key, val:elem.innerHTML});
+            cog.getRecursiveValue({ act: "set", str: key, val: elem.innerHTML });
         }
     });
     cog.newBind({
@@ -1610,12 +1638,12 @@ cog.init = function () {
             if (prop.if == null || cog.if(prop.if)) {
                 Object.keys(prop.context).forEach(function (key) {
                     propContext = cog.replaceToken(key, function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                     propData = cog.replaceToken(prop.context[key], function (pure) {
                         pure = cog.normalizeKeys(pure);
                         if (!(cog.regex.normalizeCheck.test(pure))) {
-                            return "cog.getRecursiveValue({str:'"+pure+"'})";
+                            return "cog.getRecursiveValue({str:'" + pure + "'})";
                         } else {
                             return undefined;
                         }
@@ -1627,8 +1655,8 @@ cog.init = function () {
                 });
                 if (propCurrent != null) {
                     if (prop.current != null) {
-                        for (key in prop.current) {propCurrentMerged[key] = prop.current[key];}
-                        for (key in propCurrent) {propCurrentMerged[key] = propCurrent[key];}
+                        for (key in prop.current) { propCurrentMerged[key] = prop.current[key]; }
+                        for (key in propCurrent) { propCurrentMerged[key] = propCurrent[key]; }
                     } else {
                         propCurrentMerged = propCurrent;
                     }
@@ -1669,7 +1697,7 @@ cog.init = function () {
             }
             if (prop.if == null || cog.if(prop.if)) {
                 propData = cog.replaceToken(prop.class.trim(), function (pure) {
-                    return cog.getRecursiveValue({str:pure});
+                    return cog.getRecursiveValue({ str: pure });
                 });
                 if (propData != null) {
                     propData = cog.removeDuplicatesFromArray(propData.split(" ")).join(" ");
@@ -1682,7 +1710,7 @@ cog.init = function () {
                 }
                 if (propCurrent != null) {
                     if (prop.current != null) {
-                        propCurrentMerged = prop.current+" "+propCurrent;
+                        propCurrentMerged = prop.current + " " + propCurrent;
                         propCurrentMerged = cog.removeDuplicatesFromArray(propCurrentMerged.split(" ")).join(" ");
                     } else {
                         propCurrentMerged = propCurrent;
@@ -1710,10 +1738,10 @@ cog.init = function () {
             if (prop.if == null || cog.if(prop.if)) {
                 Object.keys(prop.attr).forEach(function (key) {
                     propAttr = cog.replaceToken(key, function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                     propData = cog.replaceToken(prop.attr[key], function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                     if (propAttr != null && propData != null) {
                         elem.setAttribute(propAttr, propData);
@@ -1722,8 +1750,8 @@ cog.init = function () {
                 });
                 if (propCurrent != null) {
                     if (prop.current != null) {
-                        for (key in prop.current) {propCurrentMerged[key] = prop.current[key];}
-                        for (key in propCurrent) {propCurrentMerged[key] = propCurrent[key];}
+                        for (key in prop.current) { propCurrentMerged[key] = prop.current[key]; }
+                        for (key in propCurrent) { propCurrentMerged[key] = propCurrent[key]; }
                     } else {
                         propCurrentMerged = propCurrent;
                     }
@@ -1747,12 +1775,12 @@ cog.init = function () {
             if (prop.if == null || cog.if(prop.if)) {
                 Object.keys(prop.event).forEach(function (key) {
                     propEvent = cog.replaceToken(key, function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                     propData = cog.replaceToken(prop.event[key], function (pure) {
                         pure = cog.normalizeKeys(pure);
                         if (!(cog.regex.normalizeCheck.test(pure))) {
-                            return "cog.getRecursiveValue({str:'"+pure+"'})";
+                            return "cog.getRecursiveValue({str:'" + pure + "'})";
                         } else {
                             return undefined;
                         }
@@ -1786,21 +1814,21 @@ cog.init = function () {
                 propEvent = "change";
                 propData = "event.target.value";
                 propToken = cog.replaceToken(prop.live, function (pure) {
-                    return cog.getRecursiveValue({str:pure});
+                    return cog.getRecursiveValue({ str: pure });
                 });
                 if (prop.event != null) {
                     propEvent = cog.replaceToken(prop.event, function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                 }
                 if (prop.data != null) {
                     propData = cog.replaceToken(prop.data, function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                 }
                 propToken = cog.normalizeKeys(propToken);
                 if (propToken != null) {
-                    propCurrent[propEvent] = "cog.alter('"+propToken+"', "+propData+")";
+                    propCurrent[propEvent] = "cog.alter('" + propToken + "', " + propData + ")";
                     if (typeof prop[cog.keyword.prevent] !== 'undefined') {
                         propCurrent[cog.keyword.prevent] = prop[cog.keyword.prevent];
                     }
@@ -1829,10 +1857,10 @@ cog.init = function () {
             if (prop.if == null || cog.if(prop.if)) {
                 Object.keys(prop.style).forEach(function (key) {
                     propStyle = cog.replaceToken(key, function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                     propData = cog.replaceToken(prop.style[key], function (pure) {
-                        return cog.getRecursiveValue({str:pure});
+                        return cog.getRecursiveValue({ str: pure });
                     });
                     if (propStyle != null && propData != null) {
                         elem.style[propStyle] = propData;
@@ -1841,8 +1869,8 @@ cog.init = function () {
                 });
                 if (propCurrent != null) {
                     if (prop.current != null) {
-                        for (key in prop.current) {propCurrentMerged[key] = prop.current[key];}
-                        for (key in propCurrent) {propCurrentMerged[key] = propCurrent[key];}
+                        for (key in prop.current) { propCurrentMerged[key] = prop.current[key]; }
+                        for (key in propCurrent) { propCurrentMerged[key] = propCurrent[key]; }
                     } else {
                         propCurrentMerged = propCurrent;
                     }
@@ -1860,16 +1888,16 @@ cog.init = function () {
         bind: function (elem, prop, props, propIndex) {
             var template;
             if (prop.data != null) {
-                template = cog.template({id:prop.temp, elem:elem, data:prop.data, bind:false});
+                template = cog.template({ id: prop.temp, elem: elem, data: prop.data, bind: false });
             } else {
-                template = cog.template({id:prop.temp, elem:elem, bind:false});
+                template = cog.template({ id: prop.temp, elem: elem, bind: false });
             }
             if (template != null) {
                 elem.innerHTML = template.innerHTML;
             }
         },
         set: function (elem, key) {
-            cog.template({id:key, elem:elem, bind:false});
+            cog.template({ id: key, elem: elem, bind: false });
         }
     });
     cog.newBind({
@@ -1879,24 +1907,24 @@ cog.init = function () {
         },
         bind: function (elem, prop, props, propIndex) {
             var propData, propPage, propLimit, propOffset, propOrder, propDatasIterate, template, repeatVal, i, index, row, key, parent = cog.normalizeKeys(cog.purifyToken(prop.repeat.split(" ")[0])), alias = prop.repeat.split(" ")[2];
-            propData = cog.getRecursiveValue({str:parent});
-            cog.template({id:prop.temp, elem:elem, bind:false});
+            propData = cog.getRecursiveValue({ str: parent });
+            cog.template({ id: prop.temp, elem: elem, bind: false });
             if (typeof propData === 'object' && !Array.isArray(propData)) {
                 propDatasIterate = Object.keys(propData);
             } else {
                 propDatasIterate = propData;
             }
             propPage = cog.replaceToken(prop.page, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             });
             propLimit = cog.replaceToken(prop.limit, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             });
             propOffset = cog.replaceToken(prop.offset, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             });
             propOrder = cog.replaceToken(prop.order, function (pure) {
-                return cog.getRecursiveValue({str:pure});
+                return cog.getRecursiveValue({ str: pure });
             });
             if (typeof propPage === 'string') {
                 propPage = parseInt(propPage);
@@ -1915,27 +1943,27 @@ cog.init = function () {
             }
             if (propLimit != null) {
                 if (propOffset == null) {
-                    propOffset = propLimit*(propPage-1);
+                    propOffset = propLimit * (propPage - 1);
                 }
                 if (propOffset >= propDatasIterate.length) {
                     if (propDatasIterate.length % propLimit == 0) {
-                        propPage = propDatasIterate.length/propLimit;
+                        propPage = propDatasIterate.length / propLimit;
                     } else {
-                        propPage = (propDatasIterate.length/propLimit)+1;
+                        propPage = (propDatasIterate.length / propLimit) + 1;
                     }
-                    propOffset = propLimit*(propPage-1);
+                    propOffset = propLimit * (propPage - 1);
                 }
                 if (propOffset < 0) {
-                    propOffset = propDatasIterate.length+propOffset;
+                    propOffset = propDatasIterate.length + propOffset;
                 }
             }
             repeatVal = "";
             if (propData != null) {
                 row = 1;
-                for (i = 0;i < propDatasIterate.length;i++) {
+                for (i = 0; i < propDatasIterate.length; i++) {
                     if (propLimit == null || (row <= propLimit && i >= propOffset)) {
                         if (propOrder == "desc") {
-                            index = (propDatasIterate.length-1)-i;
+                            index = (propDatasIterate.length - 1) - i;
                         } else {
                             index = i;
                         }
@@ -1956,10 +1984,10 @@ cog.init = function () {
                                     pureSplit.splice(0, 0, parent, key);
                                     result = cog.normalizeKeys(pureSplit);
                                 }
-                                if (pure == alias+'.'+cog.keyword.index) {
+                                if (pure == alias + '.' + cog.keyword.index) {
                                     result = index;
                                 }
-                                if (pure == alias+'.'+cog.keyword.row) {
+                                if (pure == alias + '.' + cog.keyword.row) {
                                     result = row;
                                 }
                                 return result;
@@ -1984,7 +2012,7 @@ cog.render = function (layoutSrc) {
                 layout = xhr.responseText;
                 step_design();
             }
-        }, {method:"GET"});
+        }, { method: "GET" });
     }
     function step_design() {
         while (document.getElementsByTagName('script').length > 0) {
@@ -1994,7 +2022,7 @@ cog.render = function (layoutSrc) {
             document.head.innerHTML += layout.match(cog.regex.head)[1];
         }
         if ((/\<\/body\>/).test(layout)) {
-            document.documentElement.innerHTML = document.documentElement.innerHTML.replace("<body", "<body"+layout.match("<body" + "(.*)" + ">")[1]);
+            document.documentElement.innerHTML = document.documentElement.innerHTML.replace("<body", "<body" + layout.match("<body" + "(.*)" + ">")[1]);
             document.body.innerHTML += layout.match(cog.regex.body)[1];
         }
         if (!(/\<\/head\>/).test(layout) && !(/\<\/body\>/).test(layout)) {
@@ -2022,7 +2050,7 @@ cog.render = function (layoutSrc) {
         }, 0);
     }
     function step_scripts() {
-        cog.loadScriptsNS(document.querySelectorAll("script:not(["+cog.label.skip+"])"), function () {
+        cog.loadScriptsNS(document.querySelectorAll("script:not([" + cog.label.skip + "])"), function () {
             step_finish();
         });
     }
@@ -2037,12 +2065,12 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.encodeHTML = function (str) {
-    if (str == null) {return;}
+    if (str == null) { return; }
     str = cog.replaceAll(cog.replaceAll(str, "'", "&#39;"), '"', "&#34;");
     return str;
 };
 cog.decodeHTML = function (str) {
-    if (str == null) {return;}
+    if (str == null) { return; }
     str = cog.replaceAll(cog.replaceAll(str, "&#39;", "'"), "&#34;", '"');
     return str;
 };
@@ -2057,12 +2085,12 @@ cog.isJSON = function (str) {
             return o;
         }
     }
-    catch (e) {}
+    catch (e) { }
     return false;
 };
 cog.replaceAll = function (str, find, replace, options) {
-    if (str == null) {return;}
-    if (options == null) {options = 'gim';}
+    if (str == null) { return; }
+    if (options == null) { options = 'gim'; }
     function escape_regex(string) {
         return string.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
     }
@@ -2071,11 +2099,11 @@ cog.replaceAll = function (str, find, replace, options) {
 cog.removeDuplicatesFromArray = function (arr) {
     var m = {}, newArr = [], i, v;
     if (arr) {
-        for (i = 0;i < arr.length;i++) {
+        for (i = 0; i < arr.length; i++) {
             v = arr[i];
             if (!m[v] && v != "") {
                 newArr.push(v);
-                m[v]=true;
+                m[v] = true;
             }
         }
     }
@@ -2083,7 +2111,7 @@ cog.removeDuplicatesFromArray = function (arr) {
 };
 cog.loadContents = function (callback) {
     var node, src, method, data, dataJSON, type, cache;
-    node = document.querySelector("["+cog.label.source+"]:not(["+cog.label.sourceAwait+"]):not(["+cog.label.skip+"])");
+    node = document.querySelector("[" + cog.label.source + "]:not([" + cog.label.sourceAwait + "]):not([" + cog.label.skip + "])");
     if (node) {
         src = node.getAttribute(cog.label.source);
         method = node.getAttribute(cog.label.sourceMethod);
@@ -2102,9 +2130,9 @@ cog.loadContents = function (callback) {
                 dataJSON = cog.isJSON(data);
                 if (!dataJSON) {
                     if (data.trim().indexOf("{") === 0) {
-                        data = cog.eval("("+data+")");
+                        data = cog.eval("(" + data + ")");
                     } else {
-                        data = cog.eval("({"+data+"})");
+                        data = cog.eval("({" + data + "})");
                     }
                 } else {
                     data = dataJSON;
@@ -2115,12 +2143,12 @@ cog.loadContents = function (callback) {
                 if (xhr.status == 200) {
                     node.outerHTML = xhr.responseText;
                 }
-            }, {method:method, data:data, type:type, cache:cache});
+            }, { method: method, data: data, type: type, cache: cache });
             cog.loadContents(callback);
         }
     } else {
         if (typeof callback === 'function') {
-            if (!document.querySelector("["+cog.label.sourceAwait+"]:not(["+cog.label.skip+"])")) {
+            if (!document.querySelector("[" + cog.label.sourceAwait + "]:not([" + cog.label.skip + "])")) {
                 callback();
             } else {
                 setTimeout(function () {
@@ -2131,8 +2159,8 @@ cog.loadContents = function (callback) {
     }
 };
 cog.loadScriptsNS = function (node, callback, i) {
-    if (node == null) {node = document.getElementsByTagName("script");}
-    if (i == null) {i = 0;}
+    if (node == null) { node = document.getElementsByTagName("script"); }
+    if (i == null) { i = 0; }
     var len = node.length;
     if (len > 0 && i < len) {
         if (node[i].type != "text/html") {
@@ -2161,7 +2189,7 @@ cog.getUrlParams = function (url) {
     queryString = query_string();
     if (queryString) {
         keyValuePairs = queryString.split('&');
-        for (i = 0;i < keyValuePairs.length;i++) {
+        for (i = 0; i < keyValuePairs.length; i++) {
             keyValuePair = keyValuePairs[i].split('=');
             paramName = keyValuePair[0];
             if (keyValuePair[1]) {
@@ -2201,12 +2229,12 @@ cog.urlEncode = function (obj) {
     return result;
 };
 cog.xhr = function (url, callback, arg) {
-    if (arg == null) {arg = {};}
-    if (arg.cache == null) {arg.cache = cog.cache;}
-    if (arg.method == null) {arg.method = 'GET';}
-    if (arg.type == null) {arg.type = '';}
-    if (arg.data == null) {arg.data = '';}
-    if (arg.async == null) {arg.async = true;}
+    if (arg == null) { arg = {}; }
+    if (arg.cache == null) { arg.cache = cog.cache; }
+    if (arg.method == null) { arg.method = 'GET'; }
+    if (arg.type == null) { arg.type = ''; }
+    if (arg.data == null) { arg.data = ''; }
+    if (arg.async == null) { arg.async = true; }
     var xhr, guid, cacheUrl, hashUrl, key, mergedObj, urlObj;
     arg.method = arg.method.toUpperCase();
     xhr = new XMLHttpRequest();
@@ -2220,16 +2248,16 @@ cog.xhr = function (url, callback, arg) {
         guid = Date.now();
         cacheUrl = url.replace(/#.*$/, "");
         hashUrl = url.slice(cacheUrl.length);
-        cacheUrl = cacheUrl.replace(/([?&])_=[^&]*/, function (m1, m2) {return m2;});
+        cacheUrl = cacheUrl.replace(/([?&])_=[^&]*/, function (m1, m2) { return m2; });
         hashUrl = ((/\?/).test(cacheUrl) ? "&" : "?") + "_=" + (guid++) + hashUrl;
         url = cacheUrl + hashUrl;
     }
     if (arg.method == 'GET' && arg.data != '') {
         mergedObj = {};
         urlObj = cog.getUrlParams(url);
-        for (key in urlObj) {mergedObj[key] = urlObj[key];}
-        for (key in arg.data) {mergedObj[key] = arg.data[key];}
-        url = url.split(/[?#]/)[0]+'?'+cog.urlEncode(mergedObj);
+        for (key in urlObj) { mergedObj[key] = urlObj[key]; }
+        for (key in arg.data) { mergedObj[key] = arg.data[key]; }
+        url = url.split(/[?#]/)[0] + '?' + cog.urlEncode(mergedObj);
     }
     xhr.open(arg.method, url, arg.async);
     if (arg.method == 'GET') {
@@ -2260,6 +2288,6 @@ cog.getScript = function (url, callback) {
                 callback(xhr);
             }, 0);
         }
-    }, {method:"GET"});
+    }, { method: "GET" });
 };
 cog.init();
