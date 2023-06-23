@@ -12,10 +12,9 @@
 </style>
 </head>
 <body>
-    <em><strong>Note:</strong> Look in the console.</em>
 
     <div id="app">
-        <div data-set="temp:card">
+        <div cog-set="temp:card">
             <h3 #style="color:{{pep.color}};">{{pep.name}}</h3>
         </div>
         <h1 class="title" cog-style="color:{{color}};background-color:{{bg}};">Hello, {{world}}  {{name}}!</h1>
@@ -23,6 +22,9 @@
         <p id="subtitle" cog-event="mouseover:'eFunc'" data-attribute="be friendly">
             <strong cog-if="{{bool}}" cog-class="{{greet}}">How are you {{world}} today?</strong>
         </p>
+        <div cog-temp="card,temp,pep">
+
+        </div>
         <input id="input" cog-context="value:'{{input}}'" cog-live="live:'input', event:'input'">
         <p>{{input}}</p>
         <ul cog-repeat="names,tname,names">
@@ -36,23 +38,18 @@
         
         I'm doing pretty good, thanks {{greetName}} !
         <div>
-            <button onclick='cog.alter2("names", function(val){val.unshift("josh");return val;})'>CHANGE</button>
+            <button onclick='cog.alter("names", function(val){val.unshift("josh");return val;})'>CHANGE</button>
         </div>
     </div>
     <script src="dist/cog.js"></script>
     <script>
-        // Get the #app element
+
         var app = document.querySelector('#app');
-        // Create a map of it's elements
+
         var map = cog.createDOMMap(app);
-        //console.log(map);
-        //map[1].children[0].node.parentNode.replaceChild(document.createTextNode("testinnnggggggg"),map[1].children[0].node );
+
         var map2 = cog.createDOMMap(app);
 
-        //console.log(deepDiffMapper.mapAlt({type:function(){return 1;}, data:"wow"}, {type:function(){return 1;}}));
-        //console.log(cog.deepDiffMapper.mapAlt([{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
-        //console.log(deepDiffMapper.mapAlt([{name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}], [{name:"alex", title:"CEO"}, {name:"perry", title:"CFO"}, {name:"jerry", title:"CFO"}]));
-        
         cog.data.world=function(){
             return cog.get("greet")+" "+cog.get("name");
         };
@@ -63,18 +60,17 @@
         cog.data.greet = "hello";
         cog.data.name="Jack";
         cog.data.input = "test"
-        cog.data.greetName = function () {return cog.get2("greet")+" "+cog.get2("name")};
+        cog.data.greetName = function () {return cog.get("greet")+" "+cog.get("name")};
         cog.bound["greetName"] = ["greet", "name"];
         cog.data.names = ["alex", "john", "brock"];
         cog.data.color="red";
         cog.data.bg="yellow";
         cog.data.temp = {name:"Alex", color:"#9f4"};
         cog.data.elem = document.getElementById("subtitle");
-        cog.set2(null, null, {setElems: true});
-        var testTemp = cog.template2({id:"card", data:"temp,pep"});
+        var testTemp = cog.template({id:"card", data:"temp,pep"});
         //document.body.appendChild(testTemp);
         //console.log(document.body.contains(testTemp));
-        cog.render2();
+        cog.render();
     </script>
 </body>
 </html>
