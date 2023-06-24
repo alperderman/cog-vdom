@@ -312,7 +312,9 @@ cog.bind = function (dom, arg) {
                             newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
                         }
                     }
-                    obj.node.parentNode.replaceChild(newNode, obj.node);
+                    if (obj.node.parentNode) {
+                        obj.node.parentNode.replaceChild(newNode, obj.node);
+                    }
                 }
             }
         }
@@ -330,10 +332,10 @@ cog.bind = function (dom, arg) {
     }
     while (repeatNode = document.querySelector("[" + cog.label.repeat + "]")) {
         repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
-        repeatAttrToken = cog.normalizeKeys(repeatAttr[0].trim());
+        repeatAttrToken = cog.normalizeKeys(repeatAttr[1].trim());
         repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
-        repeatAttrAlias = repeatAttr[1].trim();
-        repeatAttrTemp = repeatAttr[2].trim();
+        repeatAttrAlias = repeatAttr[2].trim();
+        repeatAttrTemp = repeatAttr[0].trim();
         repeatNode.removeAttribute(cog.label.repeat);
         if (!cog.templates.hasOwnProperty(repeatAttrTemp)) {
             cog.template({ id: repeatAttrTemp, elem: repeatNode });
@@ -365,8 +367,9 @@ cog.bind = function (dom, arg) {
     }
     return dom;
 };
-cog.rebind = function (key) {
+cog.rebind = function (key, boundArr) {
     var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({ str: token }), attrContentObj, repeatTemp, repeatsArrNodes, repeatsLength;
+    if (boundArr == null) {boundArr = [];}
     if (cog.nodes.hasOwnProperty(token)) {
         for (i = 0; i < cog.nodes[token].length; i++) {
             if (cog.nodes[token][i].textContent != content) {
@@ -453,8 +456,9 @@ cog.rebind = function (key) {
         }
     }
     for (i = 0; i < Object.keys(cog.nodes).length; i++) {
-        if (token != cog.normalizeKeys(Object.keys(cog.nodes)[i]) && cog.checkKeys(token, Object.keys(cog.nodes)[i])) {
-            cog.rebind(Object.keys(cog.nodes)[i]);
+        if (token != cog.normalizeKeys(Object.keys(cog.nodes)[i]) && cog.checkKeys(token, Object.keys(cog.nodes)[i]) && boundArr.indexOf(cog.normalizeKeys(Object.keys(cog.nodes)[i])) === -1) {
+            boundArr.push(token);
+            cog.rebind(Object.keys(cog.nodes)[i], boundArr);
         }
     }
     rebound();
@@ -466,13 +470,15 @@ cog.rebind = function (key) {
             boundKeys = cog.bound[rebindKey];
             if (typeof boundKeys === 'string') {
                 boundKey = boundKeys;
-                if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey)) {
+                if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey) && boundArr.indexOf(cog.normalizeKeys(rebindKey)) === -1) {
+                    boundArr.push(token);
                     cog.rebind(rebindKey);
                 }
             } else if (Array.isArray(boundKeys)) {
                 for (ii = 0; ii < boundKeys.length; ii++) {
                     boundKey = boundKeys[ii];
-                    if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey)) {
+                    if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey) && boundArr.indexOf(cog.normalizeKeys(rebindKey)) === -1) {
+                        boundArr.push(token);
                         cog.rebind(rebindKey);
                         break;
                     }
