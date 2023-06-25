@@ -17,15 +17,15 @@
         <div cog-set="temp:card">
             <h3 #style="color:{{pep.color}};">{{pep.name}}</h3>
         </div>
-        <h1 class="title" cog-style="color:{{color}};background-color:{{bg}};">Hello, {{world}}  {{name}}!</h1>
+        <h1 class="title" cog-prop="style:{color:'{{color}}',backgroundColor:'{{bg}}'}, if:'{{colorIf}}'">Hello, {{world}}  {{name}}!</h1>
 
         <p id="subtitle" cog-event="mouseover:'eFunc'" data-attribute="be friendly">
-            <strong cog-if="{{bool}}" cog-class="{{greet}}">How are you {{world}} today?</strong>
+            <strong cog-if="{{bool}}" cog-prop="class:'{{greet}}'" cog-prop2="style:{backgroundColor:'{{bg}}'}">How are you {{world}} today?</strong>
         </p>
         <div cog-temp="card,temp,pep">
 
         </div>
-        <input id="input" cog-context="value:'{{input}}'" cog-live="live:'input', event:'input'">
+        <input id="input" cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input', if:'{{bool}}'">
         <p>{{input}}</p>
         <ul cog-repeat="names,names,tname">
             <li>{{tname}}</li>
@@ -56,10 +56,11 @@
         cog.data.eFunc = function (){
             console.log("etst");
         };
-        cog.data.bool = false;
+        cog.data.bool = true;
         cog.data.greet = "hello";
         cog.data.name="Jack";
-        cog.data.input = "test"
+        cog.data.input = "test";
+        cog.data.colorIf = false;
         cog.data.greetName = function () {return cog.get("greet")+" "+cog.get("name")};
         cog.bound["greetName"] = ["greet", "name"];
         cog.data.names = ["alex", "john", "brock"];
