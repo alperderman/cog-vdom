@@ -62,14 +62,11 @@ cog.render = function (layoutSrc) {
                 }
             }, { method: "GET" });
         } else {
-            cog.set(null, null, {
-                setElems: true,
-                callback: function () {
-                    if (cog.isElement(layoutSrc)) {
-                        cog.bind(layoutSrc);
-                    } else {
-                        cog.bind();
-                    }
+            cog.setElems(function () {
+                if (cog.isElement(layoutSrc)) {
+                    cog.bind(layoutSrc);
+                } else {
+                    cog.bind();
                 }
             });
         }
@@ -89,11 +86,8 @@ cog.render = function (layoutSrc) {
             document.body.innerHTML += layout;
         }
         setTimeout(function () {
-            cog.set(null, null, {
-                setElems: true,
-                callback: function () {
-                    step_bind();
-                }
+            cog.setElems(function () {
+                step_bind();
             });
         }, 0);
     }
@@ -180,7 +174,6 @@ cog.bind = function (dom, arg) {
                 for (i = 0; i < obj.attrs.length; i++) {
                     attrKey = obj.attrs[i].attr;
                     attrVal = obj.attrs[i].value;
-
                     tokens = cog.removeDuplicatesFromArray(attrVal.match(cog.regex.token));
                     if (tokens.length > 0 || (attrKey.indexOf(cog.label.prop) === 0 || attrKey == cog.label.if)) {
                         if (attrKey.substring(0, cog.label.escape.length) == cog.label.escape) {
@@ -204,7 +197,6 @@ cog.bind = function (dom, arg) {
                                     }
                                 }
                             }
-
                         }
                         nodeRegexMatches = [];
                         nodeRegexString = "";
@@ -328,7 +320,6 @@ cog.bind = function (dom, arg) {
                             nodeRegexMatches.push(nodeRegexMatch[1]);
                             nodeRegexString = nodeRegexString + nodeRegexMatch[1];
                         }
-
                         tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
                         if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
                             tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
@@ -443,6 +434,12 @@ cog.rebind = function (key, boundArr) {
                                     if (attrContentObjProp[iii] != null) {
                                         cog.props[i].node.classList.remove(attrContentObjProp[iii]);
                                     }
+                                }
+                            }
+                            if (cog.props[i].old.hasOwnProperty("context")) {
+                                attrContentObjProp = cog.props[i].old["context"];
+                                for (iii = 0; iii < Object.keys(attrContentObjProp).length; iii++) {
+                                    cog.props[i].node[Object.keys(attrContentObjProp)[iii]] = "";
                                 }
                             }
                         }
@@ -720,50 +717,7 @@ cog.get = function (key, arg) {
 cog.set = function (key, set, arg) {
     if (arg == null) { arg = {}; }
     if (arg.alter == null) { arg.alter = false; }
-    if (arg.setElems == null) { arg.setElems = false; }
-    if (arg.setElems) {
-        cog.loadContents(function () {
-            var setElem, setAttr, setType, setKey, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
-            while (setElem = document.querySelector("[" + cog.label.set + "]")) {
-                setAttr = setElem.getAttribute(cog.label.set);
-                setType = cog.parseSet(setAttr)[0];
-                setKey = cog.parseSet(setAttr)[1].trim();
-                if (setType == "json") {
-                    propData = cog.isJSON(setElem.innerText);
-                    if (propData) {
-                        cog.getRecursiveValue({ act: "set", str: setKey, val: propData });
-                    }
-                }
-                if (setType == "raw") {
-                    propData = cog.eval("(" + setElem.innerText + ")");
-                    cog.getRecursiveValue({ act: "set", str: setKey, val: propData, exec: false });
-                }
-                if (setType == "text") {
-                    cog.getRecursiveValue({ act: "set", str: setKey, val: setElem.innerText });
-                }
-                if (setType == "html") {
-                    cog.getRecursiveValue({ act: "set", str: setKey, val: setElem.innerHTML });
-                }
-                if (setType == "temp") {
-                    cog.template({ id: setKey, elem: setElem });
-                }
-                setElem.parentNode.removeChild(setElem);
-            }
-            for (i = 0; i < links.length; i++) {
-                link = links[i];
-                document.head.appendChild(link);
-                link.href = link.href;
-            }
-            for (i = 0; i < heads.length; i++) {
-                head = heads[i];
-                head.removeAttribute("head");
-                document.head.appendChild(head);
-            }
-            if (typeof arg.callback === 'function') {
-                arg.callback();
-            }
-        });
-    } else if (arg.alter && typeof set === 'function') {
+    if (arg.alter && typeof set === 'function') {
         cog.get(key, {
             action: "set",
             set: set,
@@ -786,10 +740,57 @@ cog.set = function (key, set, arg) {
         });
     }
 };
+cog.setElems = function (callback) {
+    cog.loadContents(function () {
+        var setElem, setAttr, setType, setKey, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
+        while (setElem = document.querySelector("[" + cog.label.set + "]")) {
+            setAttr = setElem.getAttribute(cog.label.set);
+            setType = cog.parseSet(setAttr)[0];
+            setKey = cog.parseSet(setAttr)[1].trim();
+            if (setType == "json") {
+                propData = cog.isJSON(setElem.innerText);
+                if (propData) {
+                    cog.getRecursiveValue({ act: "set", str: setKey, val: propData });
+                }
+            }
+            if (setType == "raw") {
+                propData = cog.eval("(" + setElem.innerText + ")");
+                cog.getRecursiveValue({ act: "set", str: setKey, val: propData, exec: false });
+            }
+            if (setType == "text") {
+                cog.getRecursiveValue({ act: "set", str: setKey, val: setElem.innerText });
+            }
+            if (setType == "html") {
+                cog.getRecursiveValue({ act: "set", str: setKey, val: setElem.innerHTML });
+            }
+            if (setType == "temp") {
+                cog.template({ id: setKey, elem: setElem });
+            }
+            setElem.parentNode.removeChild(setElem);
+        }
+        for (i = 0; i < links.length; i++) {
+            link = links[i];
+            document.head.appendChild(link);
+            link.href = link.href;
+        }
+        for (i = 0; i < heads.length; i++) {
+            head = heads[i];
+            head.removeAttribute("head");
+            document.head.appendChild(head);
+        }
+        if (typeof callback === 'function') {
+            callback();
+        }
+    });
+};
 cog.alter = function (key, set, arg) {
     if (arg == null) { arg = {}; }
     arg.alter = true;
     cog.set(key, set, arg);
+};
+cog.isNodeList = function (nodes) {
+    var stringRepr = Object.prototype.toString.call(nodes);
+    return typeof nodes === 'object' && /^\[object (HTMLCollection|NodeList|Object)\]$/.test(stringRepr) && (typeof nodes.length === 'number') && (nodes.length === 0 || (typeof nodes[0] === "object" && nodes[0].nodeType > 0));
 };
 cog.iterate = function (obj, arg) {
     if (arg == null) {
@@ -801,7 +802,7 @@ cog.iterate = function (obj, arg) {
     if (arg.item == null) {
         arg.item = false;
     }
-    var stack = [obj];
+    var stack = [obj], i;
     var _loop = function _loop() {
         var currentObj = stack.pop();
         if (typeof arg.obj === "function") {
@@ -812,7 +813,13 @@ cog.iterate = function (obj, arg) {
                 arg.item(key, currentObj[key]);
             }
             if (typeof currentObj[key] === "object" && currentObj[key] !== null) {
-                stack.push(currentObj[key]);
+                if (cog.isNodeList(currentObj[key])) {
+                    for (i = 0; i < currentObj[key].length; i++) {
+                        stack.push(currentObj[key][i]);
+                    }
+                } else {
+                    stack.push(currentObj[key]);
+                }
             }
         });
     };
