@@ -8,7 +8,7 @@ cog.nodes = {};
 cog.props = [];
 cog.repeats = {};
 cog.templates = {};
-cog.bound = {};
+cog.bound = [];
 cog.encapVar = null;
 cog.cache = true;
 cog.label = {
@@ -22,7 +22,7 @@ cog.label = {
     if: "cog-if",
     live: "cog-live",
     event: "cog-event",
-    sourceAwait: "cog-await"
+    await: "cog-await"
 };
 cog.event = {
     beforeData: "COGBeforeData",
@@ -63,11 +63,15 @@ cog.render = function (layoutSrc) {
             }, { method: "GET" });
         } else {
             cog.setElems(function () {
+                document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
                 if (cog.isElement(layoutSrc)) {
                     cog.bind(layoutSrc);
                 } else {
                     cog.bind();
                 }
+                setTimeout(function () {
+                    document.dispatchEvent(new CustomEvent(cog.event.afterRender));
+                }, 0);
             });
         }
     }
@@ -117,14 +121,11 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bind = function (dom, arg) {
-    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, repeatNode, repeatsArr, repeatsArrKey, repeatsArrNodes, repeatTemp, repeatAttr, repeatAttrToken, repeatAttrTokenArr, repeatAttrAlias, repeatAttrTemp, attrKey, attrVal, attrNode, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
-    if (dom == null) {
-        dom = document.body;
-    }
-    if (arg == null) {
-        arg = {};
-    }
-    while (tempNode = document.querySelector("[" + cog.label.temp + "]")) {
+    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    if (dom == null) { dom = document.body; }
+    if (arg == null) { arg = {}; }
+    if (arg.global == null) { arg.global = true; }
+    while (tempNode = dom.querySelector("[" + cog.label.temp + "]")) {
         tempAttr = tempNode.getAttribute(cog.label.temp).split(",");
         tempId = cog.normalizeKeys(tempAttr[0].trim())
         tempToken = cog.normalizeKeys(tempAttr[1].trim());
@@ -135,38 +136,7 @@ cog.bind = function (dom, arg) {
             tempNode.parentNode.replaceChild(tempRender, tempNode);
         }
     }
-    while (repeatNode = document.querySelector("[" + cog.label.repeat + "]")) {
-        repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
-        repeatAttrToken = cog.normalizeKeys(repeatAttr[1].trim());
-        repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
-        repeatAttrAlias = repeatAttr[2].trim();
-        repeatAttrTemp = repeatAttr[0].trim();
-        repeatNode.removeAttribute(cog.label.repeat);
-        if (!cog.templates.hasOwnProperty(repeatAttrTemp)) {
-            cog.template({ id: repeatAttrTemp, elem: repeatNode });
-        }
-        repeatNode.innerHTML = "";
-        if (Array.isArray(repeatAttrTokenArr)) {
-            repeatsArr = [];
-            for (i = 0; i < repeatAttrTokenArr.length; i++) {
-                repeatsArrNodes = [];
-                repeatTemp = cog.template({ id: repeatAttrTemp, data: repeatAttrToken + "." + i + "," + repeatAttrAlias, fragment: true });
-                for (ii = 0; ii < repeatTemp.childNodes.length; ii++) {
-                    repeatsArrNodes.push(repeatTemp.childNodes[ii]);
-                }
-                repeatsArr.push(repeatsArrNodes);
-            }
-            if (!cog.repeats.hasOwnProperty(repeatAttrToken)) {
-                cog.repeats[repeatAttrToken] = [];
-            }
-            repeatsArrKey = cog.repeats[repeatAttrToken].push({ nodes: repeatsArr, parent: repeatNode, token: repeatAttrToken, alias: repeatAttrAlias, temp: repeatAttrTemp }) - 1;
-            for (i = 0; i < cog.repeats[repeatAttrToken][repeatsArrKey].nodes.length; i++) {
-                for (ii = 0; ii < cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i].length; ii++) {
-                    repeatNode.appendChild(cog.repeats[repeatAttrToken][repeatsArrKey].nodes[i][ii]);
-                }
-            }
-        }
-    }
+    cog.renderRepeats(dom);
     dommap = cog.createDOMMap(dom);
     cog.iterate(dommap, {
         obj: function (obj) {
@@ -192,7 +162,7 @@ cog.bind = function (dom, arg) {
                                 tokenContent = cog.getRecursiveValue({ str: tokenPure });
                                 if (typeof tokenContent !== "undefined") {
                                     tokenContents[tokenPure] = tokenContent;
-                                    if (!cog.nodes.hasOwnProperty(tokenPure)) {
+                                    if (!cog.nodes.hasOwnProperty(tokenPure) && arg.global) {
                                         cog.nodes[tokenPure] = [];
                                     }
                                 }
@@ -228,8 +198,12 @@ cog.bind = function (dom, arg) {
                                 tokenPure = arg.token + tokenPure.substring(arg.alias.length, tokenPure.length);
                             }
                             if (tokenContents.hasOwnProperty(tokenPure)) {
-                                newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
-                                newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                                if (arg.global) {
+                                    newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
+                                    newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                                } else {
+                                    newNode.appendChild(document.createTextNode(tokenContents[tokenPure]));
+                                }
                                 attrTokens.push(tokenPure);
                             } else {
                                 newNode.appendChild(document.createTextNode(nodeRegexMatches[ii]));
@@ -272,7 +246,9 @@ cog.bind = function (dom, arg) {
                                     }
                                 }
                             }
-                            cog.props.push({ node: obj.node, type: "prop", content: attrContent, tokens: attrTokens, old: attrContentObj });
+                            if (arg.global) {
+                                cog.props.push({ node: obj.node, type: "prop", content: attrContent, tokens: attrTokens, old: attrContentObj });
+                            }
                             obj.node.removeAttribute(attrKey);
                         } else if (attrKey == cog.label.if) {
                             attrContentObj = attrContent.innerHTML;
@@ -281,13 +257,15 @@ cog.bind = function (dom, arg) {
                             } else {
                                 obj.node.style.display = "none";
                             }
-                            cog.props.push({ node: obj.node, type: "if", content: attrContent, tokens: attrTokens });
+                            if (arg.global) {
+                                cog.props.push({ node: obj.node, type: "if", content: attrContent, tokens: attrTokens });
+                            }
                             obj.node.removeAttribute(attrKey);
                         } else {
-                            attrNode = document.createAttribute(attrKey);
-                            attrNode.value = attrContent.innerHTML;
                             obj.node.setAttribute(attrKey, attrContent.innerHTML);
-                            cog.props.push({ node: obj.node, type: "attr", attr: attrKey, content: attrContent, tokens: attrTokens });
+                            if (arg.global) {
+                                cog.props.push({ node: obj.node, type: "attr", attr: attrKey, content: attrContent, tokens: attrTokens });
+                            }
                         }
                     }
                 }
@@ -307,7 +285,7 @@ cog.bind = function (dom, arg) {
                             tokenContent = cog.getRecursiveValue({ str: tokenPure });
                             if (typeof tokenContent !== "undefined") {
                                 tokenContents[tokenPure] = tokenContent;
-                                if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement(tokenContent)) {
+                                if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement(tokenContent) && arg.global) {
                                     cog.nodes[tokenPure] = [];
                                 }
                             }
@@ -343,11 +321,14 @@ cog.bind = function (dom, arg) {
                         }
                         if (tokenContents.hasOwnProperty(tokenPure)) {
                             if (!cog.isElement(tokenContents[tokenPure])) {
-                                newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
-                                newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                                if (arg.global) {
+                                    newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
+                                    newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                                } else {
+                                    newNode.appendChild(document.createTextNode(tokenContents[tokenPure]));
+                                }
                             } else {
                                 cloneNode = cog.bind(tokenContents[tokenPure].cloneNode(true));
-
                                 newNode.appendChild(cloneNode);
                             }
                         } else {
@@ -366,9 +347,88 @@ cog.bind = function (dom, arg) {
     }
     return dom;
 };
+cog.renderRepeats = function (dom, tokens) {
+    var i, repeatNode, repeatTemp, repeatAttr, repeatAttrToken, repeatAttrTokenArr, repeatAttrAlias, repeatAttrTemp, checkRepeat;
+    if (tokens == null) { tokens = []; }
+    while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
+        repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
+        repeatAttrToken = cog.normalizeKeys(repeatAttr[1].trim());
+        repeatNode.setAttribute(cog.label.await, "");
+        checkRepeat = false;
+        if (tokens.length == 0) {
+            checkRepeat = true;
+        } else {
+            for (i = 0; i < tokens.length; i++) {
+                if (cog.checkKeys(tokens[i], repeatAttrToken)) {
+                    checkRepeat = true;
+                    break;
+                }
+            }
+        }
+        if (checkRepeat) {
+            repeatAttrAlias = repeatAttr[2].trim();
+            repeatAttrTemp = repeatAttr[0].trim();
+            if (!cog.templates.hasOwnProperty(repeatAttrTemp)) {
+                cog.template({ id: repeatAttrTemp, elem: repeatNode });
+            }
+            repeatNode.innerHTML = "";
+            if (!cog.repeats.hasOwnProperty(repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias)) {
+                repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
+                if (Array.isArray(repeatAttrTokenArr)) {
+                    for (i = 0; i < repeatAttrTokenArr.length; i++) {
+                        repeatTemp = cog.template({ id: repeatAttrTemp, data: repeatAttrToken + "." + i + "," + repeatAttrAlias, fragment: true, global: false });
+                        repeatNode.appendChild(repeatTemp);
+                    }
+
+                }
+                cog.repeats[repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias] = repeatNode;
+            } else {
+                repeatNode.appendChild(cog.elemFragment(cog.repeats[repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias].cloneNode(true)));
+            }
+        }
+    }
+    while (repeatNode = dom.querySelector("[" + cog.label.repeat + "][" + cog.label.await + "]")) {
+        repeatNode.removeAttribute(cog.label.await);
+    }
+    cog.repeats = {};
+};
 cog.rebind = function (key, boundArr) {
-    var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({ str: token }), attrContentObj, attrContentObjProp, attrContentObjIf, repeatTemp, repeatsArrNodes, repeatsLength;
+    var token = cog.normalizeKeys(key), i;
     if (boundArr == null) { boundArr = []; }
+    cog.renderNodes(token);
+    boundArr.push(token);
+    for (i = 0; i < Object.keys(cog.nodes).length; i++) {
+        if (token != Object.keys(cog.nodes)[i] && cog.checkKeys(token, Object.keys(cog.nodes)[i]) && boundArr.indexOf(Object.keys(cog.nodes)[i]) === -1) {
+            cog.renderNodes(Object.keys(cog.nodes)[i]);
+            boundArr.push(Object.keys(cog.nodes)[i]);
+        }
+    }
+    rebound();
+    cog.renderRepeats(document, boundArr);
+    cog.collectGarbage();
+    function rebound() {
+        var i, ii, check;
+        for (i = 0; i < cog.bound.length; i++) {
+            check = false;
+            for (ii = 0; ii < cog.bound[i].length; ii++) {
+                if (cog.checkKeys(token, cog.bound[i][ii])) {
+                    check = true;
+                    break;
+                }
+            }
+            if (check) {
+                for (ii = 0; ii < cog.bound[i].length; ii++) {
+                    if (boundArr.indexOf(cog.bound[i][ii]) === -1) {
+                        cog.renderNodes(cog.bound[i][ii]);
+                        boundArr.push(cog.bound[i][ii]);
+                    }
+                }
+            }
+        }
+    }
+};
+cog.renderNodes = function (key) {
+    var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({ str: token }), attrContentObj, attrContentObjProp, attrContentObjIf;
     if (cog.nodes.hasOwnProperty(token)) {
         for (i = 0; i < cog.nodes[token].length; i++) {
             if (cog.nodes[token][i].textContent != content) {
@@ -451,66 +511,6 @@ cog.rebind = function (key, boundArr) {
                         } else {
                             cog.props[i].node.style.display = "none";
                         }
-                    }
-                }
-            }
-        }
-    }
-    if (cog.repeats.hasOwnProperty(token) && cog.repeats[token][0].nodes.length != content.length) {
-        repeatsLength = cog.repeats[token][0].nodes.length;
-        if (cog.repeats[token][0].nodes.length > content.length) {
-            for (i = 0; i < cog.repeats[token].length; i++) {
-                for (ii = content.length; ii < cog.repeats[token][i].nodes.length; ii++) {
-                    for (iii = 0; iii < cog.repeats[token][i].nodes[ii].length; iii++) {
-                        cog.repeats[token][i].nodes[ii][iii].parentNode.removeChild(cog.repeats[token][i].nodes[ii][iii]);
-                    }
-                }
-                cog.repeats[token][i].nodes.splice(content.length, repeatsLength - content.length);
-            }
-        } else {
-            for (i = 0; i < cog.repeats[token].length; i++) {
-                for (ii = cog.repeats[token][i].nodes.length; ii < content.length; ii++) {
-                    repeatsArrNodes = [];
-                    repeatTemp = cog.template({ id: cog.repeats[token][i].temp, data: cog.repeats[token][i].token + "." + ii + "," + cog.repeats[token][i].alias, fragment: true });
-                    for (iii = 0; iii < repeatTemp.childNodes.length; iii++) {
-                        repeatsArrNodes.push(repeatTemp.childNodes[iii]);
-                    }
-                    cog.repeats[token][i].nodes.push(repeatsArrNodes);
-                }
-                for (ii = repeatsLength; ii < cog.repeats[token][i].nodes.length; ii++) {
-                    for (iii = 0; iii < cog.repeats[token][i].nodes[ii].length; iii++) {
-                        cog.repeats[token][i].parent.appendChild(cog.repeats[token][i].nodes[ii][iii]);
-                    }
-                }
-            }
-        }
-    }
-    for (i = 0; i < Object.keys(cog.nodes).length; i++) {
-        if (token != cog.normalizeKeys(Object.keys(cog.nodes)[i]) && cog.checkKeys(token, Object.keys(cog.nodes)[i]) && boundArr.indexOf(cog.normalizeKeys(Object.keys(cog.nodes)[i])) === -1) {
-            boundArr.push(token);
-            cog.rebind(Object.keys(cog.nodes)[i], boundArr);
-        }
-    }
-    rebound();
-    cog.collectGarbage();
-    function rebound() {
-        var i, ii, rebindKey, boundKeys, boundKey;
-        for (i = 0; i < Object.keys(cog.bound).length; i++) {
-            rebindKey = Object.keys(cog.bound)[i];
-            boundKeys = cog.bound[rebindKey];
-            if (typeof boundKeys === 'string') {
-                boundKey = boundKeys;
-                if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey) && boundArr.indexOf(cog.normalizeKeys(rebindKey)) === -1) {
-                    boundArr.push(token);
-                    cog.rebind(rebindKey);
-                }
-            } else if (Array.isArray(boundKeys)) {
-                for (ii = 0; ii < boundKeys.length; ii++) {
-                    boundKey = boundKeys[ii];
-                    if (token != cog.normalizeKeys(rebindKey) && cog.checkKeys(token, boundKey) && boundArr.indexOf(cog.normalizeKeys(rebindKey)) === -1) {
-                        boundArr.push(token);
-                        cog.rebind(rebindKey);
-                        break;
                     }
                 }
             }
@@ -651,7 +651,7 @@ cog.template = function (arg) {
     if (arg.data != null && template != null) {
         token = cog.normalizeKeys(arg.data.split(",")[0].trim());
         alias = arg.data.split(",")[1].trim();
-        cog.bind(template, { token: token, alias: alias });
+        cog.bind(template, { token: token, alias: alias, global: arg.global });
     }
     if (arg.fragment) {
         template = cog.elemFragment(template);
@@ -679,8 +679,7 @@ cog.strToObj = function (json, type) {
         .replace(/'/g, '"')
         .replace(/,\s*([\]}])/g, '$1')
         .replace(/([{\[,])\s*$/, '$1')
-        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3')
-        .replace(/\\\"/g, '"');
+        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3');
     return JSON.parse(fixedJSON);
 };
 cog.get = function (key, arg) {
@@ -929,6 +928,11 @@ cog.normalizeKeys = function (val) {
     }
     return result;
 };
+cog.decodeHTML = function (str) {
+    var txt = document.createElement("textarea");
+    txt.innerHTML = str;
+    return txt.value;
+};
 cog.checkKeys = function (key1, key2) {
     var result = false, i, keys1, keys2, keysLong, keyShort, keyLong = "";
     key1 = cog.normalizeKeys(key1);
@@ -972,7 +976,7 @@ cog.encapEval = function () {
 };
 cog.if = function (str) {
     if (typeof str === 'string') {
-        cog.encapVar = str;
+        cog.encapVar = cog.decodeHTML(str);
         if (cog.encapEval()) {
             return true;
         } else {
@@ -1018,7 +1022,7 @@ cog.removeDuplicatesFromArray = function (arr) {
 };
 cog.loadContents = function (callback) {
     var node, srcObj;
-    node = document.querySelector("[" + cog.label.source + "]:not([" + cog.label.sourceAwait + "])");
+    node = document.querySelector("[" + cog.label.source + "]:not([" + cog.label.await + "])");
     if (node) {
         srcObj = cog.strToObj(node.getAttribute(cog.label.source));
         if (srcObj == null) {
@@ -1032,7 +1036,7 @@ cog.loadContents = function (callback) {
             }
         }
         if (srcObj.url != null) {
-            node.setAttribute(cog.label.sourceAwait, "");
+            node.setAttribute(cog.label.await, "");
             cog.xhr(srcObj.url, function (xhr) {
                 if (xhr.status == 200) {
                     node.outerHTML = xhr.responseText;
@@ -1042,7 +1046,7 @@ cog.loadContents = function (callback) {
         }
     } else {
         if (typeof callback === 'function') {
-            if (!document.querySelector("[" + cog.label.sourceAwait + "]")) {
+            if (!document.querySelector("[" + cog.label.await + "]")) {
                 callback();
             } else {
                 setTimeout(function () {
@@ -1126,13 +1130,14 @@ cog.xhr = function (url, callback, arg) {
     if (arg == null) { arg = {}; }
     if (arg.cache == null) { arg.cache = cog.cache; }
     if (arg.method == null) { arg.method = 'GET'; }
-    if (arg.type == null) { arg.type = ''; }
     if (arg.data == null) { arg.data = ''; }
     if (arg.async == null) { arg.async = true; }
     var xhr, guid, cacheUrl, hashUrl, key, mergedObj, urlObj;
     arg.method = arg.method.toUpperCase();
     xhr = new XMLHttpRequest();
-    xhr.responseType = arg.type;
+    if (arg.type != null) {
+        xhr.responseType = arg.type;
+    }
     xhr.onreadystatechange = function () {
         if (xhr.readyState == 4) {
             callback(xhr);

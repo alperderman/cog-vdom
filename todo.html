@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TODO</title>
+
+</head>
+<body>
+    <input cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input'" type="text">
+    <button cog-event="click:'addToList'">Add</button>
+    <div cog-repeat="todo,list,item">
+        <p>
+            <span cog-prop="style:{textDecoration: 'line-through'}, if:'!{{item.active}}'">{{item.text}}</span>
+            <button data-id="{{item._key}}" cog-event="click:'removeFromList'">Delete</button>
+            <button data-id="{{item._key}}" cog-event="click:'strikeItem'">Complete</button>
+        </p>
+    </div>
+    <script src="dist/cog.js"></script>
+    <script>
+        cog.data.input = "";
+        cog.data.list = [{text:"hey", active:true}];
+        cog.data.addToList = function () {
+            if (cog.get("input") != "") {
+                cog.alter("list", function(arr){
+                    arr.push({text:cog.get("input"), active:true});
+                    return arr;
+                });
+                cog.set("input", "");
+            }
+        };
+        cog.data.removeFromList = function() {
+            var id = event.target.getAttribute("data-id");
+            cog.alter("list", function(arr){
+                arr.splice(id, 1);
+                return arr;
+            });
+        };
+        cog.data.strikeItem = function() {
+            var id = event.target.getAttribute("data-id");
+            if (cog.get("list."+id+".active")) {
+                cog.set("list."+id+".active", false);
+            } else {
+                cog.set("list."+id+".active", true);
+            }
+        };
+        cog.render();
+    </script>
+</body>
+</html>

@@ -62,7 +62,7 @@
         cog.data.input = "test";
         cog.data.colorIf = false;
         cog.data.greetName = function () {return cog.get("greet")+" "+cog.get("name")};
-        cog.bound["greetName"] = ["greet", "name"];
+        cog.bound.push(["greetName", "greet", "name"]);
         cog.data.names = ["alex", "john", "brock"];
         cog.data.color="red";
         cog.data.bg="yellow";

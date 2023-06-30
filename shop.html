@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHOP</title>
+
+</head>
+<body>
+    <div>{{products.0.title}}</div>
+    <hr>
+    <div>{{name}}</div>
+    <hr>
+    <table>
+        <tbody cog-repeat="table,products,i">
+            <tr>
+                <td cog-prop="style:{color:'{{colors}}'}">{{i.title}} {{colors}}</td>
+                <td>{{i.description}}</td>
+                <td>{{i.price}} $</td>
+                <td>{{i.rating}}</td>
+                <td>{{i.category}}</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <button cog-event="click:'add'">PUSH</button>
+    <script src="dist/cog.js"></script>
+    <script>
+        cog.data.colors = "#4f8";
+        cog.data.name = "TESTING OUT NOWWWWWWW!!!!!!!! WOOOHOOOO";
+        cog.bound.push(["colors", "products"]);
+        cog.data.add = function() {
+            cog.alter("products", function(obj){
+                obj.unshift({
+                "title": "WOOWOWOWPHONE 10213",
+                "description": "An apple mobile which is nothing like apple",
+                "price": 549,
+                "rating": 4.69,
+                "category": "smartphones",
+                });
+                return obj;
+            });
+        };
+        cog.xhr("products.json", function(xhr) {
+          cog.data.products = JSON.parse(xhr.responseText).products;
+          cog.data.products = cog.data.products.concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products);
+          cog.render();
+        });
+        
+    </script>
+</body>
+</html>
