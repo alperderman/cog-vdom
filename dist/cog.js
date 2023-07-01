@@ -121,7 +121,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bind = function (dom, arg) {
-    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.global == null) { arg.global = true; }
@@ -136,7 +136,6 @@ cog.bind = function (dom, arg) {
             tempNode.parentNode.replaceChild(tempRender, tempNode);
         }
     }
-    cog.renderRepeats(dom);
     dommap = cog.createDOMMap(dom);
     cog.iterate(dommap, {
         obj: function (obj) {
@@ -225,8 +224,9 @@ cog.bind = function (dom, arg) {
                                 if (attrContentObj.hasOwnProperty("style")) {
                                     attrContentObjProp = attrContentObj["style"];
                                     if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
-                                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
-                                            obj.node.style[Object.keys(attrContentObjProp)[ii]] = attrContentObjProp[Object.keys(attrContentObjProp)[ii]];
+                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                                            obj.node.style[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
                                         }
                                     }
                                 }
@@ -245,8 +245,9 @@ cog.bind = function (dom, arg) {
                                 if (attrContentObj.hasOwnProperty("context")) {
                                     attrContentObjProp = attrContentObj["context"];
                                     if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
-                                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
-                                            obj.node[Object.keys(attrContentObjProp)[ii]] = attrContentObjProp[Object.keys(attrContentObjProp)[ii]];
+                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                                            obj.node[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
                                         }
                                     }
                                 }
@@ -347,13 +348,14 @@ cog.bind = function (dom, arg) {
             }
         }
     });
+    cog.renderRepeats(dom);
     if (typeof arg.callback === 'function') {
         arg.callback();
     }
     return dom;
 };
 cog.renderRepeats = function (dom, boundArr) {
-    var i, repeatNode, repeatTemp, repeatAttr, repeatAttrToken, repeatAttrTokenArr, repeatAttrAlias, repeatAttrTemp, checkRepeat;
+    var i, repeatNode, repeatTemp, repeatAttr, repeatAttrToken, repeatAttrTokenArr, repeatAttrAlias, repeatAttrTemp, checkRepeat, repeatAttrTokenArrKeys;
     if (boundArr == null) { boundArr = []; }
     while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
         repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
@@ -379,12 +381,10 @@ cog.renderRepeats = function (dom, boundArr) {
             repeatNode.innerHTML = "";
             if (!cog.repeats.hasOwnProperty(repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias)) {
                 repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
-                if (Array.isArray(repeatAttrTokenArr)) {
-                    for (i = 0; i < repeatAttrTokenArr.length; i++) {
-                        repeatTemp = cog.template({ id: repeatAttrTemp, data: repeatAttrToken + "." + i + "," + repeatAttrAlias, fragment: true, global: false });
-                        repeatNode.appendChild(repeatTemp);
-                    }
-
+                repeatAttrTokenArrKeys = Object.keys(repeatAttrTokenArr);
+                for (i = 0; i < repeatAttrTokenArrKeys.length; i++) {
+                    repeatTemp = cog.template({ id: repeatAttrTemp, data: repeatAttrToken + "." + repeatAttrTokenArrKeys[i] + "," + repeatAttrAlias, fragment: true, global: false });
+                    repeatNode.appendChild(repeatTemp);
                 }
                 cog.repeats[repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias] = repeatNode;
             } else {
@@ -398,14 +398,15 @@ cog.renderRepeats = function (dom, boundArr) {
     cog.repeats = {};
 };
 cog.rebind = function (key, boundArr) {
-    var token = cog.normalizeKeys(key), i;
+    var token = cog.normalizeKeys(key), i, nodesKeys;
     if (boundArr == null) { boundArr = []; }
     cog.renderNodes(token);
     boundArr.push(token);
-    for (i = 0; i < Object.keys(cog.nodes).length; i++) {
-        if (token != Object.keys(cog.nodes)[i] && cog.checkKeys(token, Object.keys(cog.nodes)[i]) && boundArr.indexOf(Object.keys(cog.nodes)[i]) === -1) {
-            cog.renderNodes(Object.keys(cog.nodes)[i]);
-            boundArr.push(Object.keys(cog.nodes)[i]);
+    nodesKeys = Object.keys(cog.nodes);
+    for (i = 0; i < nodesKeys.length; i++) {
+        if (token != nodesKeys[i] && cog.checkKeys(token, nodesKeys[i]) && boundArr.indexOf(nodesKeys[i]) === -1) {
+            cog.renderNodes(nodesKeys[i]);
+            boundArr.push(nodesKeys[i]);
         }
     }
     rebound();
@@ -444,7 +445,7 @@ cog.isIntersects = function (arr1, arr2) {
     return result;
 }
 cog.renderProps = function (boundArr) {
-    var i, ii, attrContentObj, attrContentObjProp, attrContentObjIf;
+    var i, ii, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf;
     for (i = 0; i < cog.props.length; i++) {
         if (cog.isIntersects(boundArr, cog.props[i].tokens)) {
             if (cog.props[i].type == "attr" && cog.props[i].node.getAttribute(cog.props[i].attr) != cog.props[i].content.innerHTML) {
@@ -458,9 +459,10 @@ cog.renderProps = function (boundArr) {
                 if (attrContentObjIf || typeof attrContentObjIf === "undefined") {
                     if (attrContentObj.hasOwnProperty("style")) {
                         attrContentObjProp = attrContentObj["style"];
-                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
-                            if (attrContentObjProp[Object.keys(attrContentObjProp)[ii]] != cog.props[i].node.style[Object.keys(attrContentObjProp)[ii]]) {
-                                cog.props[i].node.style[Object.keys(attrContentObjProp)[ii]] = attrContentObjProp[Object.keys(attrContentObjProp)[ii]];
+                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                            if (attrContentObjProp[attrContentObjPropKeys[ii]] != cog.props[i].node.style[attrContentObjPropKeys[ii]]) {
+                                cog.props[i].node.style[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
                             }
                         }
                     }
@@ -482,17 +484,19 @@ cog.renderProps = function (boundArr) {
                     }
                     if (attrContentObj.hasOwnProperty("context")) {
                         attrContentObjProp = attrContentObj["context"];
-                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
-                            if (attrContentObjProp[Object.keys(attrContentObjProp)[ii]] != cog.props[i].node[Object.keys(attrContentObjProp)[ii]]) {
-                                cog.props[i].node[Object.keys(attrContentObjProp)[ii]] = attrContentObjProp[Object.keys(attrContentObjProp)[ii]];
+                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                            if (attrContentObjProp[attrContentObjPropKeys[ii]] != cog.props[i].node[attrContentObjPropKeys[ii]]) {
+                                cog.props[i].node[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
                             }
                         }
                     }
                 } else {
                     if (cog.props[i].old.hasOwnProperty("style")) {
                         attrContentObjProp = cog.props[i].old["style"];
-                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
-                            cog.props[i].node.style[Object.keys(attrContentObjProp)[ii]] = "";
+                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                            cog.props[i].node.style[attrContentObjPropKeys[ii]] = "";
                         }
                     }
                     if (cog.props[i].old.hasOwnProperty("class")) {
@@ -505,8 +509,9 @@ cog.renderProps = function (boundArr) {
                     }
                     if (cog.props[i].old.hasOwnProperty("context")) {
                         attrContentObjProp = cog.props[i].old["context"];
-                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
-                            cog.props[i].node[Object.keys(attrContentObjProp)[ii]] = "";
+                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                            cog.props[i].node[attrContentObjPropKeys[ii]] = "";
                         }
                     }
                 }
@@ -535,18 +540,19 @@ cog.renderNodes = function (key) {
     }
 };
 cog.collectGarbage = function () {
-    var i, ii, iii, excludeAttrs = [], checkAttr, removeRepeats = [], removeAttrs = [], removeNodes = [], removeNode;
-    for (i = 0; i < Object.keys(cog.repeats).length; i++) {
-        for (ii = 0; ii < cog.repeats[Object.keys(cog.repeats)[i]].length; ii++) {
-            if (!document.body.contains(cog.repeats[Object.keys(cog.repeats)[i]][ii].parent)) {
+    var i, ii, iii, excludeAttrs = [], checkAttr, repeatsKeys, nodesKeys, removeRepeats = [], removeAttrs = [], removeNodes = [], removeNode;
+    repeatsKeys = Object.keys(cog.repeats);
+    for (i = 0; i < repeatsKeys.length; i++) {
+        for (ii = 0; ii < cog.repeats[repeatsKeys[i]].length; ii++) {
+            if (!document.body.contains(cog.repeats[repeatsKeys[i]][ii].parent)) {
                 removeRepeats.push({ k: i, kk: ii });
             }
         }
     }
     for (i = removeRepeats.length - 1; i >= 0; i--) {
-        cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]].splice(removeRepeats[i].kk, 1);
-        if (cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]].length == 0) {
-            delete cog.repeats[Object.keys(cog.repeats)[removeRepeats[i].k]];
+        cog.repeats[repeatsKeys[removeRepeats[i].k]].splice(removeRepeats[i].kk, 1);
+        if (cog.repeats[repeatsKeys[removeRepeats[i].k]].length == 0) {
+            delete cog.repeats[repeatsKeys[removeRepeats[i].k]];
         }
     }
     for (i = 0; i < cog.props.length; i++) {
@@ -561,23 +567,24 @@ cog.collectGarbage = function () {
     for (i = removeAttrs.length - 1; i >= 0; i--) {
         cog.props.splice(removeAttrs[i], 1);
     }
-    for (i = 0; i < Object.keys(cog.nodes).length; i++) {
-        for (ii = 0; ii < cog.nodes[Object.keys(cog.nodes)[i]].length; ii++) {
-            if (!document.body.contains(cog.nodes[Object.keys(cog.nodes)[i]][ii].parentNode)) {
+    nodesKeys = Object.keys(cog.nodes);
+    for (i = 0; i < nodesKeys.length; i++) {
+        for (ii = 0; ii < cog.nodes[nodesKeys[i]].length; ii++) {
+            if (!document.body.contains(cog.nodes[nodesKeys[i]][ii].parentNode)) {
                 removeNode = true;
                 for (iii = 0; iii < excludeAttrs.length; iii++) {
-                    if (cog.nodes[Object.keys(cog.nodes)[i]][ii].parentNode === excludeAttrs[iii]) {
+                    if (cog.nodes[nodesKeys[i]][ii].parentNode === excludeAttrs[iii]) {
                         removeNode = false;
                         break;
                     }
                 }
                 if (removeNode) {
-                    removeNodes.push({ k: Object.keys(cog.nodes)[i], kk: ii });
+                    removeNodes.push({ k: nodesKeys[i], kk: ii });
                 }
             }
         }
-        if (cog.nodes[Object.keys(cog.nodes)[i]].length == 0) {
-            delete cog.nodes[Object.keys(cog.nodes)[i]];
+        if (cog.nodes[nodesKeys[i]].length == 0) {
+            delete cog.nodes[nodesKeys[i]];
         }
     }
     for (i = removeNodes.length - 1; i >= 0; i--) {
@@ -603,9 +610,10 @@ cog.eventListener = function (event) {
 cog.eventHandler = function (event, elem) {
     if (!elem) { elem = event.target; }
     if (typeof elem.getAttribute !== 'function') { return; }
-    var elemAllEvents = cog.getElementAllEvents(elem), prevent = false, checkIf;
+    var elemAllEvents = cog.getElementAllEvents(elem), prevent = false, checkIf, i, ii, objKeys, e;
     if (elemAllEvents.length > 0) {
-        elemAllEvents.forEach(function (obj) {
+        for (i = 0;i< elemAllEvents.length;i++) {
+            obj = elemAllEvents[i];
             checkIf = true;
             if (obj.hasOwnProperty("if")) {
                 checkIf = cog.if(obj["if"]);
@@ -625,17 +633,19 @@ cog.eventHandler = function (event, elem) {
                         cog.set(obj.live, elem[obj.data]);
                     }
                 } else {
-                    Object.keys(obj).forEach(function (e) {
+                    objKeys = Object.keys(obj);
+                    for (ii = 0;ii < objKeys.length;ii++) {
+                        e = objKeys[ii];
                         if (e == event.type && e != "if") {
                             cog.get(obj[e])(event);
                         }
-                    });
+                    }
                 }
                 if (obj.hasOwnProperty(cog.keyword.prevent) && cog.if(obj[cog.keyword.prevent])) {
                     prevent = true;
                 }
             }
-        });
+        }
     }
     if (!prevent && elem.parentNode) {
         cog.eventHandler(event, elem.parentNode);
@@ -815,26 +825,28 @@ cog.iterate = function (obj, arg) {
     if (arg.item == null) {
         arg.item = false;
     }
-    var stack = [obj], i;
+    var stack = [obj], currentObj, currentObjKeys, i, ii, key;
     var _loop = function _loop() {
-        var currentObj = stack.pop();
+        currentObj = stack.pop();
         if (typeof arg.obj === "function") {
             arg.obj(currentObj);
         }
-        Object.keys(currentObj).forEach(function (key) {
+        currentObjKeys = Object.keys(currentObj)
+        for (i = 0;i < currentObjKeys.length;i++) {
+            key = currentObjKeys[i];
             if (typeof arg.item === "function") {
                 arg.item(key, currentObj[key]);
             }
             if (typeof currentObj[key] === "object" && currentObj[key] !== null) {
                 if (cog.isNodeList(currentObj[key])) {
-                    for (i = 0; i < currentObj[key].length; i++) {
-                        stack.push(currentObj[key][i]);
+                    for (ii = 0; ii < currentObj[key].length; ii++) {
+                        stack.push(currentObj[key][ii]);
                     }
                 } else {
                     stack.push(currentObj[key]);
                 }
             }
-        });
+        }
     };
     while ((stack === null || stack === void 0 ? void 0 : stack.length) > 0) {
         _loop();
