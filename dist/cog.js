@@ -121,7 +121,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bind = function (dom, arg) {
-    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.global == null) { arg.global = true; }
@@ -198,11 +198,16 @@ cog.bind = function (dom, arg) {
                                 tokenPure = arg.token + tokenPure.substring(arg.alias.length, tokenPure.length);
                             }
                             if (tokenContents.hasOwnProperty(tokenPure)) {
+                                if (typeof tokenContents[tokenPure] === "string") {
+                                    tokenContentEscaped = cog.replaceAll(cog.replaceAll(tokenContents[tokenPure], '"', "\\" + "\\" + '\\"'), "'", "\\" + "\\" + "\\'");
+                                } else {
+                                    tokenContentEscaped = tokenContents[tokenPure];
+                                }
                                 if (arg.global) {
-                                    newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContents[tokenPure]));
+                                    newNodeLength = cog.nodes[tokenPure].push(document.createTextNode(tokenContentEscaped));
                                     newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
                                 } else {
-                                    newNode.appendChild(document.createTextNode(tokenContents[tokenPure]));
+                                    newNode.appendChild(document.createTextNode(tokenContentEscaped));
                                 }
                                 attrTokens.push(tokenPure);
                             } else {
@@ -658,14 +663,6 @@ cog.template = function (arg) {
     }
     return template;
 };
-cog.cssToObj = function (css) {
-    var obj = {}, s = css.toLowerCase().replace(/-(.)/g, function (m, g) {
-        return g.toUpperCase();
-    }).replace(/;\s?$/g, "").split(/:|;/g);
-    for (var i = 0; i < s.length; i += 2)
-        obj[s[i].replace(/\s/g, "")] = s[i + 1].replace(/^\s+|\s+$/g, "");
-    return obj;
-};
 cog.strToObj = function (json, type) {
     if (typeof json === "object") { return json; }
     fixedJSON = json.trim();
@@ -676,10 +673,15 @@ cog.strToObj = function (json, type) {
         fixedJSON = "[" + fixedJSON + "]";
     }
     var fixedJSON = fixedJSON
-        .replace(/'/g, '"')
         .replace(/,\s*([\]}])/g, '$1')
         .replace(/([{\[,])\s*$/, '$1')
-        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3');
+        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3')
+        .replace(/"([^"\\]*(\\.[^"\\]*)*)"|\'([^\'\\]*(\\.[^\'\\]*)*)\'/g, function (match) {
+            match = match.substring(1, match.length - 1);
+            match = cog.replaceAll(match, "\\'", "\'");
+            match = cog.replaceAll(match, '\\"', '\"');
+            return '"' + match + '"';
+        });
     return JSON.parse(fixedJSON);
 };
 cog.get = function (key, arg) {
@@ -928,10 +930,13 @@ cog.normalizeKeys = function (val) {
     }
     return result;
 };
-cog.decodeHTML = function (str) {
-    var txt = document.createElement("textarea");
-    txt.innerHTML = str;
-    return txt.value;
+cog.replaceAll = function (str, find, replace, options) {
+    if (str == null) { return; }
+    if (options == null) { options = 'gim'; }
+    function escape_regex(string) {
+        return string.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
+    }
+    return str.replace(new RegExp(escape_regex(find), options), replace);
 };
 cog.checkKeys = function (key1, key2) {
     var result = false, i, keys1, keys2, keysLong, keyShort, keyLong = "";
@@ -976,7 +981,7 @@ cog.encapEval = function () {
 };
 cog.if = function (str) {
     if (typeof str === 'string') {
-        cog.encapVar = cog.decodeHTML(str);
+        cog.encapVar = str;
         if (cog.encapEval()) {
             return true;
         } else {

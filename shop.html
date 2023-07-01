@@ -15,7 +15,7 @@
     <table>
         <tbody cog-repeat="table,products,i">
             <tr>
-                <td cog-prop="style:{color:'{{colors}}'}">{{i.title}} {{colors}}</td>
+                <td cog-prop="style:{color:'{{colors}}'}, if:'\'{{i.title}}\' == \'women\\\'s shoes\''">{{i.title}} {{colors}}</td>
                 <td>{{i.description}}</td>
                 <td>{{i.price}} $</td>
                 <td>{{i.rating}}</td>
