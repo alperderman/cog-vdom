@@ -352,19 +352,19 @@ cog.bind = function (dom, arg) {
     }
     return dom;
 };
-cog.renderRepeats = function (dom, tokens) {
+cog.renderRepeats = function (dom, boundArr) {
     var i, repeatNode, repeatTemp, repeatAttr, repeatAttrToken, repeatAttrTokenArr, repeatAttrAlias, repeatAttrTemp, checkRepeat;
-    if (tokens == null) { tokens = []; }
+    if (boundArr == null) { boundArr = []; }
     while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
         repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
         repeatAttrToken = cog.normalizeKeys(repeatAttr[1].trim());
         repeatNode.setAttribute(cog.label.await, "");
         checkRepeat = false;
-        if (tokens.length == 0) {
+        if (boundArr.length == 0) {
             checkRepeat = true;
         } else {
-            for (i = 0; i < tokens.length; i++) {
-                if (cog.checkKeys(tokens[i], repeatAttrToken)) {
+            for (i = 0; i < boundArr.length; i++) {
+                if (cog.checkKeys(boundArr[i], repeatAttrToken)) {
                     checkRepeat = true;
                     break;
                 }
@@ -409,6 +409,7 @@ cog.rebind = function (key, boundArr) {
         }
     }
     rebound();
+    cog.renderProps(boundArr);
     cog.renderRepeats(document, boundArr);
     cog.collectGarbage();
     function rebound() {
@@ -432,92 +433,103 @@ cog.rebind = function (key, boundArr) {
         }
     }
 };
+cog.isIntersects = function (arr1, arr2) {
+    var i, result = false;
+    for (i = 0; i < arr2.length; i++) {
+        if (arr1.indexOf(arr2[i]) !== -1) {
+            result = true;
+            break;
+        }
+    }
+    return result;
+}
+cog.renderProps = function (boundArr) {
+    var i, ii, attrContentObj, attrContentObjProp, attrContentObjIf;
+    for (i = 0; i < cog.props.length; i++) {
+        if (cog.isIntersects(boundArr, cog.props[i].tokens)) {
+            if (cog.props[i].type == "attr" && cog.props[i].node.getAttribute(cog.props[i].attr) != cog.props[i].content.innerHTML) {
+                cog.props[i].node.setAttribute(cog.props[i].attr, cog.props[i].content.innerHTML);
+            } else if (cog.props[i].type == "prop") {
+                attrContentObj = cog.strToObj(cog.props[i].content.innerHTML);
+                attrContentObjIf = undefined;
+                if (attrContentObj.hasOwnProperty("if")) {
+                    attrContentObjIf = cog.if(attrContentObj.if);
+                }
+                if (attrContentObjIf || typeof attrContentObjIf === "undefined") {
+                    if (attrContentObj.hasOwnProperty("style")) {
+                        attrContentObjProp = attrContentObj["style"];
+                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
+                            if (attrContentObjProp[Object.keys(attrContentObjProp)[ii]] != cog.props[i].node.style[Object.keys(attrContentObjProp)[ii]]) {
+                                cog.props[i].node.style[Object.keys(attrContentObjProp)[ii]] = attrContentObjProp[Object.keys(attrContentObjProp)[ii]];
+                            }
+                        }
+                    }
+                    if (attrContentObj.hasOwnProperty("class")) {
+                        if (cog.props[i].old.hasOwnProperty("class")) {
+                            attrContentObjProp = cog.props[i].old["class"];
+                            for (ii = 0; ii < attrContentObjProp.length; ii++) {
+                                if (attrContentObjProp[ii] != null) {
+                                    cog.props[i].node.classList.remove(attrContentObjProp[ii]);
+                                }
+                            }
+                        }
+                        attrContentObjProp = attrContentObj["class"];
+                        for (ii = 0; ii < attrContentObjProp.length; ii++) {
+                            if (attrContentObjProp[ii] != null) {
+                                cog.props[i].node.classList.add(attrContentObjProp[ii]);
+                            }
+                        }
+                    }
+                    if (attrContentObj.hasOwnProperty("context")) {
+                        attrContentObjProp = attrContentObj["context"];
+                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
+                            if (attrContentObjProp[Object.keys(attrContentObjProp)[ii]] != cog.props[i].node[Object.keys(attrContentObjProp)[ii]]) {
+                                cog.props[i].node[Object.keys(attrContentObjProp)[ii]] = attrContentObjProp[Object.keys(attrContentObjProp)[ii]];
+                            }
+                        }
+                    }
+                } else {
+                    if (cog.props[i].old.hasOwnProperty("style")) {
+                        attrContentObjProp = cog.props[i].old["style"];
+                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
+                            cog.props[i].node.style[Object.keys(attrContentObjProp)[ii]] = "";
+                        }
+                    }
+                    if (cog.props[i].old.hasOwnProperty("class")) {
+                        attrContentObjProp = cog.props[i].old["class"];
+                        for (ii = 0; ii < attrContentObjProp.length; ii++) {
+                            if (attrContentObjProp[ii] != null) {
+                                cog.props[i].node.classList.remove(attrContentObjProp[ii]);
+                            }
+                        }
+                    }
+                    if (cog.props[i].old.hasOwnProperty("context")) {
+                        attrContentObjProp = cog.props[i].old["context"];
+                        for (ii = 0; ii < Object.keys(attrContentObjProp).length; ii++) {
+                            cog.props[i].node[Object.keys(attrContentObjProp)[ii]] = "";
+                        }
+                    }
+                }
+                cog.props[i].old = attrContentObj;
+            } else if (cog.props[i].type == "if") {
+                attrContentObj = cog.props[i].content.innerHTML;
+                if (cog.if(attrContentObj)) {
+                    cog.props[i].node.style.display = "";
+                } else {
+                    cog.props[i].node.style.display = "none";
+                }
+            }
+        }
+    }
+};
 cog.renderNodes = function (key) {
-    var token = cog.normalizeKeys(key), i, ii, iii, newNode, content = cog.getRecursiveValue({ str: token }), attrContentObj, attrContentObjProp, attrContentObjIf;
+    var token = cog.normalizeKeys(key), i, newNode, content = cog.getRecursiveValue({ str: token });
     if (cog.nodes.hasOwnProperty(token)) {
         for (i = 0; i < cog.nodes[token].length; i++) {
             if (cog.nodes[token][i].textContent != content) {
                 newNode = document.createTextNode(content);
                 cog.nodes[token][i].parentNode.replaceChild(newNode, cog.nodes[token][i]);
                 cog.nodes[token][i] = newNode;
-            }
-        }
-        for (i = 0; i < cog.props.length; i++) {
-            for (ii = 0; ii < cog.props[i].tokens.length; ii++) {
-                if (token == cog.props[i].tokens[ii]) {
-                    if (cog.props[i].type == "attr" && cog.props[i].node.getAttribute(cog.props[i].attr) != cog.props[i].content.innerHTML) {
-                        cog.props[i].node.setAttribute(cog.props[i].attr, cog.props[i].content.innerHTML);
-                    } else if (cog.props[i].type == "prop") {
-                        attrContentObj = cog.strToObj(cog.props[i].content.innerHTML);
-                        attrContentObjIf = undefined;
-                        if (attrContentObj.hasOwnProperty("if")) {
-                            attrContentObjIf = cog.if(attrContentObj.if);
-                        }
-                        if (attrContentObjIf || typeof attrContentObjIf === "undefined") {
-                            if (attrContentObj.hasOwnProperty("style")) {
-                                attrContentObjProp = attrContentObj["style"];
-                                for (iii = 0; iii < Object.keys(attrContentObjProp).length; iii++) {
-                                    if (attrContentObjProp[Object.keys(attrContentObjProp)[iii]] != cog.props[i].node.style[Object.keys(attrContentObjProp)[iii]]) {
-                                        cog.props[i].node.style[Object.keys(attrContentObjProp)[iii]] = attrContentObjProp[Object.keys(attrContentObjProp)[iii]];
-                                    }
-                                }
-                            }
-                            if (attrContentObj.hasOwnProperty("class")) {
-                                if (cog.props[i].old.hasOwnProperty("class")) {
-                                    attrContentObjProp = cog.props[i].old["class"];
-                                    for (iii = 0; iii < attrContentObjProp.length; iii++) {
-                                        if (attrContentObjProp[iii] != null) {
-                                            cog.props[i].node.classList.remove(attrContentObjProp[iii]);
-                                        }
-                                    }
-                                }
-                                attrContentObjProp = attrContentObj["class"];
-                                for (iii = 0; iii < attrContentObjProp.length; iii++) {
-                                    if (attrContentObjProp[iii] != null) {
-                                        cog.props[i].node.classList.add(attrContentObjProp[iii]);
-                                    }
-                                }
-                            }
-                            if (attrContentObj.hasOwnProperty("context")) {
-                                attrContentObjProp = attrContentObj["context"];
-                                for (iii = 0; iii < Object.keys(attrContentObjProp).length; iii++) {
-                                    if (attrContentObjProp[Object.keys(attrContentObjProp)[iii]] != cog.props[i].node[Object.keys(attrContentObjProp)[iii]]) {
-                                        cog.props[i].node[Object.keys(attrContentObjProp)[iii]] = attrContentObjProp[Object.keys(attrContentObjProp)[iii]];
-                                    }
-                                }
-                            }
-                        } else {
-                            if (cog.props[i].old.hasOwnProperty("style")) {
-                                attrContentObjProp = cog.props[i].old["style"];
-                                for (iii = 0; iii < Object.keys(attrContentObjProp).length; iii++) {
-                                    cog.props[i].node.style[Object.keys(attrContentObjProp)[iii]] = "";
-                                }
-                            }
-                            if (cog.props[i].old.hasOwnProperty("class")) {
-                                attrContentObjProp = cog.props[i].old["class"];
-                                for (iii = 0; iii < attrContentObjProp.length; iii++) {
-                                    if (attrContentObjProp[iii] != null) {
-                                        cog.props[i].node.classList.remove(attrContentObjProp[iii]);
-                                    }
-                                }
-                            }
-                            if (cog.props[i].old.hasOwnProperty("context")) {
-                                attrContentObjProp = cog.props[i].old["context"];
-                                for (iii = 0; iii < Object.keys(attrContentObjProp).length; iii++) {
-                                    cog.props[i].node[Object.keys(attrContentObjProp)[iii]] = "";
-                                }
-                            }
-                        }
-                        cog.props[i].old = attrContentObj;
-                    } else if (cog.props[i].type == "if") {
-                        attrContentObj = cog.props[i].content.innerHTML;
-                        if (cog.if(attrContentObj)) {
-                            cog.props[i].node.style.display = "";
-                        } else {
-                            cog.props[i].node.style.display = "none";
-                        }
-                    }
-                }
             }
         }
     }
