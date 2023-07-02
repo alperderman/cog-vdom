@@ -136,6 +136,7 @@ cog.bind = function (dom, arg) {
             tempNode.parentNode.replaceChild(tempRender, tempNode);
         }
     }
+    cog.renderRepeats(dom);
     dommap = cog.createDOMMap(dom);
     cog.iterate(dommap, {
         obj: function (obj) {
@@ -348,7 +349,6 @@ cog.bind = function (dom, arg) {
             }
         }
     });
-    cog.renderRepeats(dom);
     if (typeof arg.callback === 'function') {
         arg.callback();
     }
@@ -360,6 +360,12 @@ cog.renderRepeats = function (dom, boundArr) {
     while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
         repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(",");
         repeatAttrToken = cog.normalizeKeys(repeatAttr[1].trim());
+        repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
+        repeatAttrAlias = repeatAttr[2].trim();
+        repeatAttrTemp = repeatAttr[0].trim();
+        if (!cog.templates.hasOwnProperty(repeatAttrTemp)) {
+            cog.template({ id: repeatAttrTemp, elem: repeatNode });
+        }
         repeatNode.setAttribute(cog.label.await, "");
         checkRepeat = false;
         if (boundArr.length == 0) {
@@ -372,15 +378,12 @@ cog.renderRepeats = function (dom, boundArr) {
                 }
             }
         }
+        if (typeof repeatAttrTokenArr === "undefined") {
+            checkRepeat = false;
+        }
         if (checkRepeat) {
-            repeatAttrAlias = repeatAttr[2].trim();
-            repeatAttrTemp = repeatAttr[0].trim();
-            if (!cog.templates.hasOwnProperty(repeatAttrTemp)) {
-                cog.template({ id: repeatAttrTemp, elem: repeatNode });
-            }
             repeatNode.innerHTML = "";
             if (!cog.repeats.hasOwnProperty(repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias)) {
-                repeatAttrTokenArr = cog.getRecursiveValue({ str: repeatAttrToken });
                 repeatAttrTokenArrKeys = Object.keys(repeatAttrTokenArr);
                 for (i = 0; i < repeatAttrTokenArrKeys.length; i++) {
                     repeatTemp = cog.template({ id: repeatAttrTemp, data: repeatAttrToken + "." + repeatAttrTokenArrKeys[i] + "," + repeatAttrAlias, fragment: true, global: false });
@@ -612,7 +615,7 @@ cog.eventHandler = function (event, elem) {
     if (typeof elem.getAttribute !== 'function') { return; }
     var elemAllEvents = cog.getElementAllEvents(elem), prevent = false, checkIf, i, ii, objKeys, e;
     if (elemAllEvents.length > 0) {
-        for (i = 0;i< elemAllEvents.length;i++) {
+        for (i = 0; i < elemAllEvents.length; i++) {
             obj = elemAllEvents[i];
             checkIf = true;
             if (obj.hasOwnProperty("if")) {
@@ -634,7 +637,7 @@ cog.eventHandler = function (event, elem) {
                     }
                 } else {
                     objKeys = Object.keys(obj);
-                    for (ii = 0;ii < objKeys.length;ii++) {
+                    for (ii = 0; ii < objKeys.length; ii++) {
                         e = objKeys[ii];
                         if (e == event.type && e != "if") {
                             cog.get(obj[e])(event);
@@ -832,7 +835,7 @@ cog.iterate = function (obj, arg) {
             arg.obj(currentObj);
         }
         currentObjKeys = Object.keys(currentObj)
-        for (i = 0;i < currentObjKeys.length;i++) {
+        for (i = 0; i < currentObjKeys.length; i++) {
             key = currentObjKeys[i];
             if (typeof arg.item === "function") {
                 arg.item(key, currentObj[key]);
