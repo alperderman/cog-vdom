@@ -15,7 +15,7 @@
     <table>
         <tbody cog-repeat="table,products,i">
             <tr>
-                <td cog-prop="style:{color:'{{colors}}'}, if:'\'{{i.title}}\' == \'women\\\'s shoes\''">{{i.title}} {{colors}}</td>
+                <td cog-prop="style:{color:'{{colors}}'}, if:'\'{{i.title}}\' == \'women\\\'s shoes\''">{{i._index}} {{i.title}} {{colors}} </td>
                 <td>{{i.description}}</td>
                 <td>{{i.price}} $</td>
                 <td>{{i.rating}}</td>
@@ -23,7 +23,20 @@
             </tr>
         </tbody>
     </table>
-    
+    <hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr>
+    <table>
+        <tbody cog-repeat="table,products,i">
+            <tr>
+                <td cog-prop="style:{color:'{{colors}}'}, if:'\'{{i.title}}\' == \'women\\\'s shoes\''">{{i._index}} {{i.title}} {{colors}} </td>
+                <td>{{i.description}}</td>
+                <td>{{i.price}} $</td>
+                <td>{{i.rating}}</td>
+                <td>{{i.category}}</td>
+            </tr>
+        </tbody>
+    </table>
+
+
     <button cog-event="click:'add'">PUSH</button>
     <script src="dist/cog.js"></script>
     <script>
