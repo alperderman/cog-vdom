@@ -322,7 +322,7 @@ cog.bindAlias = function (dom, arg) {
     return dom;
 };
 cog.bind = function (dom, arg) {
-    var i, ii, renderRepeats, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    var i, ii, dommap, renderRepeats, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.alias == null) { arg.alias = {}; }
@@ -618,6 +618,8 @@ cog.renderRepeats = function (dom, arg) {
                     arg.index[repeatAttrToken + "." + repeatAttrTokenArrKeys[i] + "." + cog.keyword.index] = i;
                     repeatTemp = cog.bind(cog.bindAlias(cog.template({ id: repeatAttrTemp }), { alias: arg.alias, index: arg.index }), { alias: arg.alias, global: false, index: arg.index });
                     repeatNode.appendChild(cog.elemFragment(repeatTemp));
+                    delete arg.alias[repeatAttrAlias];
+                    delete arg.index[repeatAttrToken + "." + repeatAttrTokenArrKeys[i] + "." + cog.keyword.index];
                 }
                 cog.repeats[repeatAttrTemp + "," + repeatAttrToken + "," + repeatAttrAlias] = repeatNode;
             } else {
