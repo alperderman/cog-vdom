@@ -145,18 +145,16 @@ cog.bindAlias = function (dom, arg) {
                             token = tokens[ii];
                             tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length - cog.token.close.length));
                             tokenArr = tokenPure.split(".");
-                            if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                                if (arg.alias.hasOwnProperty(tokenArr[0])) {
-                                    tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
-                                }
-                                if (arg.index.hasOwnProperty(tokenPure)) {
-                                    tokenContent = arg.index[tokenPure];
-                                } else {
-                                    tokenContent = cog.getRecursiveValue({ str: tokenPure });
-                                }
-                                if (typeof tokenContent !== "undefined") {
-                                    tokenContents[tokenPure] = tokenContent;
-                                }
+                            if (arg.alias.hasOwnProperty(tokenArr[0])) {
+                                tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
+                            }
+                            if (arg.index.hasOwnProperty(tokenPure)) {
+                                tokenContent = arg.index[tokenPure];
+                            } else {
+                                tokenContent = cog.getRecursiveValue({ str: tokenPure });
+                            }
+                            if (typeof tokenContent !== "undefined") {
+                                tokenContents[tokenPure] = tokenContent;
                             }
                         }
                         nodeRegexMatches = [];
@@ -167,12 +165,7 @@ cog.bindAlias = function (dom, arg) {
                                 nodeRegexString = nodeRegexString + nodeRegexMatch[1];
                             }
                             tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
-                            if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
-                                tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
-                                nodeRegexMatches.push(tokenEscaped);
-                            } else {
-                                nodeRegexMatches.push(nodeRegexMatch[2]);
-                            }
+                            nodeRegexMatches.push(nodeRegexMatch[2]);
                             nodeRegexString = nodeRegexString + nodeRegexMatch[2];
                         }
                         nodeRegexString = attrVal.replace(nodeRegexString, "");
@@ -262,16 +255,14 @@ cog.bindAlias = function (dom, arg) {
                         token = tokens[i];
                         tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length - cog.token.close.length));
                         tokenArr = tokenPure.split(".");
-                        if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                            if (arg.alias.hasOwnProperty(tokenArr[0])) {
-                                tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
-                                tokenContent = cog.token.open + tokenPure + cog.token.close;
-                            } else {
-                                tokenContent = undefined;
-                            }
-                            if (typeof tokenContent !== "undefined") {
-                                tokenContents[tokenPure] = tokenContent;
-                            }
+                        if (arg.alias.hasOwnProperty(tokenArr[0])) {
+                            tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
+                            tokenContent = cog.token.open + tokenPure + cog.token.close;
+                        } else {
+                            tokenContent = undefined;
+                        }
+                        if (typeof tokenContent !== "undefined") {
+                            tokenContents[tokenPure] = tokenContent;
                         }
                     }
                     nodeRegexMatches = [];
@@ -282,12 +273,7 @@ cog.bindAlias = function (dom, arg) {
                             nodeRegexString = nodeRegexString + nodeRegexMatch[1];
                         }
                         tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
-                        if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
-                            tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
-                            nodeRegexMatches.push(tokenEscaped);
-                        } else {
-                            nodeRegexMatches.push(nodeRegexMatch[2]);
-                        }
+                        nodeRegexMatches.push(nodeRegexMatch[2]);
                         nodeRegexString = nodeRegexString + nodeRegexMatch[2];
                     }
                     nodeRegexString = obj.content.replace(nodeRegexString, "");
@@ -371,20 +357,18 @@ cog.bind = function (dom, arg) {
                             token = tokens[ii];
                             tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length - cog.token.close.length));
                             tokenArr = tokenPure.split(".");
-                            if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                                if (arg.alias.hasOwnProperty(tokenArr[0])) {
-                                    tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
-                                }
-                                if (arg.index.hasOwnProperty(tokenPure)) {
-                                    tokenContent = arg.index[tokenPure];
-                                } else {
-                                    tokenContent = cog.getRecursiveValue({ str: tokenPure });
-                                }
-                                if (typeof tokenContent !== "undefined") {
-                                    tokenContents[tokenPure] = tokenContent;
-                                    if (!cog.nodes.hasOwnProperty(tokenPure) && arg.global) {
-                                        cog.nodes[tokenPure] = [];
-                                    }
+                            if (arg.alias.hasOwnProperty(tokenArr[0])) {
+                                tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
+                            }
+                            if (arg.index.hasOwnProperty(tokenPure)) {
+                                tokenContent = arg.index[tokenPure];
+                            } else {
+                                tokenContent = cog.getRecursiveValue({ str: tokenPure });
+                            }
+                            if (typeof tokenContent !== "undefined") {
+                                tokenContents[tokenPure] = tokenContent;
+                                if (!cog.nodes.hasOwnProperty(tokenPure) && arg.global) {
+                                    cog.nodes[tokenPure] = [];
                                 }
                             }
                         }
@@ -396,12 +380,7 @@ cog.bind = function (dom, arg) {
                                 nodeRegexString = nodeRegexString + nodeRegexMatch[1];
                             }
                             tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
-                            if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
-                                tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
-                                nodeRegexMatches.push(tokenEscaped);
-                            } else {
-                                nodeRegexMatches.push(nodeRegexMatch[2]);
-                            }
+                            nodeRegexMatches.push(nodeRegexMatch[2]);
                             nodeRegexString = nodeRegexString + nodeRegexMatch[2];
                         }
                         nodeRegexString = attrVal.replace(nodeRegexString, "");
@@ -505,20 +484,18 @@ cog.bind = function (dom, arg) {
                         token = tokens[i];
                         tokenPure = cog.normalizeKeys(token.substring(cog.token.open.length, token.length - cog.token.close.length));
                         tokenArr = tokenPure.split(".");
-                        if (tokenPure.substring(0, cog.token.escape.length) != cog.token.escape) {
-                            if (arg.alias.hasOwnProperty(tokenArr[0])) {
-                                tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
-                            }
-                            if (arg.index.hasOwnProperty(tokenPure)) {
-                                tokenContent = arg.index[tokenPure];
-                            } else {
-                                tokenContent = cog.getRecursiveValue({ str: tokenPure });
-                            }
-                            if (typeof tokenContent !== "undefined") {
-                                tokenContents[tokenPure] = tokenContent;
-                                if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement(tokenContent) && arg.global) {
-                                    cog.nodes[tokenPure] = [];
-                                }
+                        if (arg.alias.hasOwnProperty(tokenArr[0])) {
+                            tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
+                        }
+                        if (arg.index.hasOwnProperty(tokenPure)) {
+                            tokenContent = arg.index[tokenPure];
+                        } else {
+                            tokenContent = cog.getRecursiveValue({ str: tokenPure });
+                        }
+                        if (typeof tokenContent !== "undefined") {
+                            tokenContents[tokenPure] = tokenContent;
+                            if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement(tokenContent) && arg.global) {
+                                cog.nodes[tokenPure] = [];
                             }
                         }
                     }
@@ -530,12 +507,7 @@ cog.bind = function (dom, arg) {
                             nodeRegexString = nodeRegexString + nodeRegexMatch[1];
                         }
                         tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
-                        if (tokenPure.substring(0, cog.token.escape.length) == cog.token.escape) {
-                            tokenEscaped = nodeRegexMatch[2].substring(0, cog.token.open.length) + nodeRegexMatch[2].substring(cog.token.open.length + cog.token.escape.length, nodeRegexMatch[2].length);
-                            nodeRegexMatches.push(tokenEscaped);
-                        } else {
-                            nodeRegexMatches.push(nodeRegexMatch[2]);
-                        }
+                        nodeRegexMatches.push(nodeRegexMatch[2]);
                         nodeRegexString = nodeRegexString + nodeRegexMatch[2];
                     }
                     nodeRegexString = obj.content.replace(nodeRegexString, "");
@@ -1111,6 +1083,9 @@ cog.getRecursiveValue = function (arg) {
     if (arg.ref == null) { arg.ref = true; }
     if (arg.exec == null) { arg.exec = true; }
     var refData = arg.root, result, i, key;
+    if (typeof arg.str === 'string' && arg.str.substring(0, cog.token.escape.length) == cog.token.escape) {
+        return cog.token.open + arg.str.substring(cog.token.escape.length, arg.str.length) + cog.token.close;
+    }
     if (typeof arg.str === 'string') {
         strSplit = cog.normalizeKeys(arg.str).split(".");
     } else {
