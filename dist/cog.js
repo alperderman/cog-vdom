@@ -18,6 +18,7 @@ cog.label = {
     source: "cog-src",
     temp: "cog-temp",
     repeat: "cog-repeat",
+    once: "cog-once",
     if: "cog-if",
     live: "cog-live",
     event: "cog-event",
@@ -591,7 +592,12 @@ cog.renderRepeats = function (dom, arg) {
         if (!cog.templates.hasOwnProperty(repeatAttrTemp)) {
             cog.template({ id: repeatAttrTemp, elem: repeatNode });
         }
-        repeatNode.setAttribute(cog.label.await, "");
+        if (repeatNode.hasAttribute(cog.label.once)) {
+            repeatNode.removeAttribute(cog.label.repeat);
+            repeatNode.removeAttribute(cog.label.once);
+        } else {
+            repeatNode.setAttribute(cog.label.await, "");
+        }
         checkRepeat = false;
         if (arg.boundArr.length == 0) {
             checkRepeat = true;
