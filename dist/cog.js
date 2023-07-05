@@ -10,6 +10,7 @@ cog.templates = {};
 cog.bound = [];
 cog.encapVar = null;
 cog.cache = true;
+cog.isRendered = false;
 cog.label = {
     head: "head",
     escape: "#",
@@ -70,6 +71,7 @@ cog.render = function (layoutSrc) {
                 } else {
                     cog.bind();
                 }
+                cog.isRendered = true;
                 setTimeout(function () {
                     document.dispatchEvent(new CustomEvent(cog.event.afterRender));
                 }, 0);
@@ -116,6 +118,7 @@ cog.render = function (layoutSrc) {
         if (window.location.hash.slice(1) && document.getElementById(window.location.hash.slice(1))) {
             document.getElementById(window.location.hash.slice(1)).scrollIntoView();
         }
+        cog.isRendered = true;
         setTimeout(function () {
             document.dispatchEvent(new CustomEvent(cog.event.afterRender));
         }, 0);
@@ -211,7 +214,7 @@ cog.bindAlias = function (dom, arg) {
                                     }
                                 }
                                 if (attrContentObj.hasOwnProperty("class")) {
-                                    if (!Array.isArray(attrContentObj["class"])) {
+                                    if (typeof attrContentObj["class"] === "string") {
                                         attrContentObjProp = attrContentObj["class"].trim().split(" ");
                                     } else {
                                         attrContentObjProp = attrContentObj["class"];
@@ -431,7 +434,7 @@ cog.bind = function (dom, arg) {
                                     }
                                 }
                                 if (attrContentObj.hasOwnProperty("class")) {
-                                    if (!Array.isArray(attrContentObj["class"])) {
+                                    if (typeof attrContentObj["class"] === "string") {
                                         attrContentObjProp = attrContentObj["class"].trim().split(" ");
                                     } else {
                                         attrContentObjProp = attrContentObj["class"];
@@ -604,6 +607,7 @@ cog.renderRepeats = function (dom, arg) {
     }
 };
 cog.rebind = function (key, boundArr) {
+    if (!cog.isRendered) { return; }
     var token = cog.normalizeKeys(key), i, nodesKeys, tempNode;
     if (boundArr == null) { boundArr = []; }
     while (tempNode = document.querySelector("[" + cog.label.repeat + "][" + cog.label.await + "]")) {
@@ -678,6 +682,9 @@ cog.renderProps = function (boundArr) {
                     if (attrContentObj.hasOwnProperty("class")) {
                         if (cog.props[i].old.hasOwnProperty("class")) {
                             attrContentObjProp = cog.props[i].old["class"];
+                            if (typeof attrContentObjProp === "string") {
+                                attrContentObjProp = attrContentObjProp.trim().split(" ");
+                            }
                             for (ii = 0; ii < attrContentObjProp.length; ii++) {
                                 if (attrContentObjProp[ii] != null) {
                                     cog.props[i].node.classList.remove(attrContentObjProp[ii]);
@@ -685,6 +692,9 @@ cog.renderProps = function (boundArr) {
                             }
                         }
                         attrContentObjProp = attrContentObj["class"];
+                        if (typeof attrContentObjProp === "string") {
+                            attrContentObjProp = attrContentObjProp.trim().split(" ");
+                        }
                         for (ii = 0; ii < attrContentObjProp.length; ii++) {
                             if (attrContentObjProp[ii] != null) {
                                 cog.props[i].node.classList.add(attrContentObjProp[ii]);
@@ -837,12 +847,7 @@ cog.eventHandler = function (event, elem) {
                     for (ii = 0; ii < objKeys.length; ii++) {
                         e = objKeys[ii];
                         if (e == event.type && e != "if") {
-                            execute = cog.get(obj[e]);
-                            if (typeof execute === "function") {
-                                execute(event);
-                            } else {
-                                cog.eval(obj[e]);
-                            }
+                            cog.eval(obj[e]);
                         }
                     }
                 }
@@ -1286,7 +1291,7 @@ cog.loadContents = function (callback) {
         }
     } else {
         if (typeof callback === 'function') {
-            if (!document.querySelector("[" + cog.label.await + "]")) {
+            if (!document.querySelector("[" + cog.label.source + "][" + cog.label.await + "]")) {
                 callback();
             } else {
                 setTimeout(function () {

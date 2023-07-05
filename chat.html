@@ -15,7 +15,7 @@
         </p>
     </div>
     <input cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input'" type="text">
-    <button cog-event="click:'addChat'">Send</button>
+    <button cog-event="click:'addChat()'">Send</button>
     <script src="dist/cog.js"></script>
     <script>
         cog.data.chat = [
@@ -33,7 +33,7 @@
             { "user": "Jane", "text": "don't blame yourself, some things are just meant to happen" }
         ];
         cog.data.input = "";
-        cog.data.addChat = function () {
+        addChat = function () {
             if (cog.get("input") != "") {
                 cog.alter("chat", function(arr){
                     arr.push({text:cog.get("input"), user:"alper"});

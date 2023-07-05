@@ -37,13 +37,13 @@
     </table>
 
 
-    <button cog-event="click:'add'">PUSH</button>
+    <button cog-event="click:'addToProducts()'">PUSH</button>
     <script src="dist/cog.js"></script>
     <script>
         cog.data.colors = "#4f8";
         cog.data.name = "TESTING OUT NOWWWWWWW!!!!!!!! WOOOHOOOO";
         cog.bound.push(["colors", "products"]);
-        cog.data.add = function() {
+        addToProducts = function() {
             cog.alter("products", function(obj){
                 obj.unshift({
                 "title": "WOOWOWOWPHONE 10213",
