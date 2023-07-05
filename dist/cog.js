@@ -792,10 +792,10 @@ cog.collectGarbage = function () {
 cog.getElementAllEvents = function (elem) {
     var elemLives = [], elemEvents = [];
     if (elem.getAttribute(cog.label.live) != null) {
-        elemLives = (cog.strToObj(elem.getAttribute(cog.label.live), "array"));
+        elemLives = (cog.strToObj(elem.getAttribute(cog.label.live), true));
     }
     if (elem.getAttribute(cog.label.event) != null) {
-        elemEvents = (cog.strToObj(elem.getAttribute(cog.label.event), "array"));
+        elemEvents = (cog.strToObj(elem.getAttribute(cog.label.event), true));
     }
     return elemLives.concat(elemEvents);
 };
@@ -805,7 +805,7 @@ cog.eventListener = function (event) {
 cog.eventHandler = function (event, elem) {
     if (!elem) { elem = event.target; }
     if (typeof elem.getAttribute !== 'function') { return; }
-    var elemAllEvents = cog.getElementAllEvents(elem), prevent = false, checkIf, i, ii, objKeys, e;
+    var elemAllEvents = cog.getElementAllEvents(elem), prevent = false, execute, checkIf, i, ii, objKeys, e;
     if (elemAllEvents.length > 0) {
         for (i = 0; i < elemAllEvents.length; i++) {
             obj = elemAllEvents[i];
@@ -825,14 +825,24 @@ cog.eventHandler = function (event, elem) {
                         obj.data = "value";
                     }
                     if (obj.event == event.type) {
-                        cog.set(obj.live, elem[obj.data]);
+                        if (typeof elem[obj.data] !== "undefined") {
+                            obj.data = elem[obj.data];
+                        } else {
+                            obj.data = cog.eval(obj.data);
+                        }
+                        cog.set(obj.live, obj.data);
                     }
                 } else {
                     objKeys = Object.keys(obj);
                     for (ii = 0; ii < objKeys.length; ii++) {
                         e = objKeys[ii];
                         if (e == event.type && e != "if") {
-                            cog.get(obj[e])(event);
+                            execute = cog.get(obj[e]);
+                            if (typeof execute === "function") {
+                                execute(event);
+                            } else {
+                                cog.eval(obj[e]);
+                            }
                         }
                     }
                 }
@@ -882,13 +892,14 @@ cog.template = function (arg) {
     }
     return template;
 };
-cog.strToObj = function (json, type) {
+cog.strToObj = function (json, isArray) {
     if (typeof json === "object") { return json; }
+    if (isArray == null) { isArray = false; }
     fixedJSON = json.trim();
     if (fixedJSON.indexOf("{") !== 0) {
         fixedJSON = "{" + fixedJSON + "}";
     }
-    if (type == "array") {
+    if (isArray) {
         fixedJSON = "[" + fixedJSON + "]";
     }
     var fixedJSON = fixedJSON
