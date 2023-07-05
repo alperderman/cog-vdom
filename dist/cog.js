@@ -720,6 +720,9 @@ cog.renderProps = function (boundArr) {
                     }
                     if (cog.props[i].old.hasOwnProperty("class")) {
                         attrContentObjProp = cog.props[i].old["class"];
+                        if (typeof attrContentObjProp === "string") {
+                            attrContentObjProp = attrContentObjProp.trim().split(" ");
+                        }
                         for (ii = 0; ii < attrContentObjProp.length; ii++) {
                             if (attrContentObjProp[ii] != null) {
                                 cog.props[i].node.classList.remove(attrContentObjProp[ii]);
