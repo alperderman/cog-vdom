@@ -234,6 +234,15 @@ cog.bindAlias = function (dom, arg) {
                                         }
                                     }
                                 }
+                                if (attrContentObj.hasOwnProperty("attr")) {
+                                    attrContentObjProp = attrContentObj["attr"];
+                                    if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
+                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                                            obj.node.setAttribute(attrContentObjPropKeys[ii], attrContentObjProp[attrContentObjPropKeys[ii]]);
+                                        }
+                                    }
+                                }
                             }
                             obj.node.removeAttribute(attrKey);
                         } else if (attrKey == cog.label.if) {
@@ -451,6 +460,15 @@ cog.bind = function (dom, arg) {
                                         attrContentObjPropKeys = Object.keys(attrContentObjProp);
                                         for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
                                             obj.node[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
+                                        }
+                                    }
+                                }
+                                if (attrContentObj.hasOwnProperty("attr")) {
+                                    attrContentObjProp = attrContentObj["attr"];
+                                    if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
+                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                                            obj.node.setAttribute(attrContentObjPropKeys[ii], attrContentObjProp[attrContentObjPropKeys[ii]]);
                                         }
                                     }
                                 }
@@ -710,6 +728,15 @@ cog.renderProps = function (boundArr) {
                             }
                         }
                     }
+                    if (attrContentObj.hasOwnProperty("attr")) {
+                        attrContentObjProp = attrContentObj["attr"];
+                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                            if (attrContentObjProp[attrContentObjPropKeys[ii]] != cog.props[i].node.getAttribute(attrContentObjPropKeys[ii])) {
+                                cog.props[i].node.setAttribute(attrContentObjPropKeys[ii], attrContentObjProp[attrContentObjPropKeys[ii]]);
+                            }
+                        }
+                    }
                 } else {
                     if (cog.props[i].old.hasOwnProperty("style")) {
                         attrContentObjProp = cog.props[i].old["style"];
@@ -734,6 +761,13 @@ cog.renderProps = function (boundArr) {
                         attrContentObjPropKeys = Object.keys(attrContentObjProp);
                         for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
                             cog.props[i].node[attrContentObjPropKeys[ii]] = "";
+                        }
+                    }
+                    if (cog.props[i].old.hasOwnProperty("attr")) {
+                        attrContentObjProp = cog.props[i].old["attr"];
+                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
+                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
+                            cog.props[i].node.removeAttribute(attrContentObjPropKeys[ii]);
                         }
                     }
                 }

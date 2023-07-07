@@ -20,7 +20,7 @@
         <h1 class="title" cog-prop="style:{color:'{{color}}',backgroundColor:'{{bg}}'}, if:'{{colorIf}}'">Hello, {{#world}} <span style="font-size: 0.7rem;">&lt;- (this is a comment token)</span>  {{name}}!</h1>
 
         <p id="subtitle" cog-event="mouseover:'eFunc()'" data-attribute="be friendly">
-            <strong cog-if="{{bool}}" cog-prop="class:'{{greet}}'" cog-prop2="style:{backgroundColor:'{{bg}}'}">How are you {{world}} today?</strong>
+            <strong cog-if="{{bool}}" cog-prop="class:'{{greet}}'" cog-prop2="style:{backgroundColor:'{{bg}}'}, attr:{'data-nice':'{{world}}'}, if:'{{bool}}'">How are you {{world}} today?</strong>
         </p>
         <div cog-temp="card,temp,pep">
 
@@ -62,7 +62,7 @@
         cog.data.input = "test";
         cog.data.colorIf = false;
         cog.data.greetName = function () {return cog.get("greet")+" "+cog.get("name")};
-        cog.bound.push(["greetName", "greet", "name"]);
+        cog.bound.push(["greetName", "greet", "name", "world"]);
         cog.data.names = ["alex", "john", "brock"];
         cog.data.color="red";
         cog.data.bg="yellow";
