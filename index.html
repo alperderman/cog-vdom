@@ -17,7 +17,7 @@
         <div cog-set="temp:card">
             <h3 #style="color:{{pep.color}};">{{pep.name}}</h3>
         </div>
-        <h1 class="title" cog-prop="style:{color:'{{color}}',backgroundColor:'{{bg}}'}, if:'{{colorIf}}'">Hello, {{#world}} <span style="font-size: 0.7rem;">&lt;- (this is a comment token)</span>  {{name}}!</h1>
+        <h1 class="title" id="helloworld" cog-prop="style:{color:'{{color}}',backgroundColor:'{{bg}}'}, if:'{{colorIf}}'">Hello, {{#world}} <span style="font-size: 0.7rem;">&lt;- (this is a comment token)</span>  {{name}}!</h1>
 
         <p id="subtitle" cog-event="mouseover:'eFunc()'" data-attribute="be friendly">
             <strong cog-if="{{bool}}" cog-prop="class:'{{greet}}'" cog-prop2="style:{backgroundColor:'{{bg}}'}, attr:{'data-nice':'{{world}}'}, if:'{{bool}}'">How are you {{world}} today?</strong>

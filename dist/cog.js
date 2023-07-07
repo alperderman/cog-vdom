@@ -515,7 +515,7 @@ cog.bind = function (dom, arg) {
                         }
                         if (typeof tokenContent !== "undefined") {
                             tokenContents[tokenPure] = tokenContent;
-                            if (!cog.nodes.hasOwnProperty(tokenPure) && !cog.isElement(tokenContent) && arg.global) {
+                            if (!cog.nodes.hasOwnProperty(tokenPure) && arg.global) {
                                 cog.nodes[tokenPure] = [];
                             }
                         }
@@ -552,7 +552,12 @@ cog.bind = function (dom, arg) {
                                 }
                             } else {
                                 cloneNode = cog.bind(tokenContents[tokenPure].cloneNode(true));
-                                newNode.appendChild(cloneNode);
+                                if (arg.global) {
+                                    newNodeLength = cog.nodes[tokenPure].push(cloneNode);
+                                    newNode.appendChild(cog.nodes[tokenPure][newNodeLength - 1]);
+                                } else {
+                                    newNode.appendChild(cloneNode);
+                                }
                             }
                         } else {
                             newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
@@ -784,13 +789,18 @@ cog.renderProps = function (boundArr) {
     }
 };
 cog.renderNodes = function (key) {
-    var token = cog.normalizeKeys(key), i, newNode, content = cog.getRecursiveValue({ str: token });
+    var token = cog.normalizeKeys(key), i, newNode, content, cloneNode;
     if (cog.nodes.hasOwnProperty(token)) {
+        content = cog.getRecursiveValue({ str: token });
         for (i = 0; i < cog.nodes[token].length; i++) {
-            if (cog.nodes[token][i].textContent != content) {
+            if (!cog.isElement(content) && cog.nodes[token][i].textContent != content) {
                 newNode = document.createTextNode(content);
                 cog.nodes[token][i].parentNode.replaceChild(newNode, cog.nodes[token][i]);
                 cog.nodes[token][i] = newNode;
+            } else if (cog.isElement(content)) {
+                cloneNode = cog.bind(content.cloneNode(true));
+                cog.nodes[token][i].parentNode.replaceChild(cloneNode, cog.nodes[token][i]);
+                cog.nodes[token][i] = cloneNode;
             }
         }
     }
@@ -910,6 +920,7 @@ cog.template = function (arg) {
     var template, createEl, data;
     if (arg.id == null) { return; }
     if (arg.fragment == null) { arg.fragment = false; }
+    if (arg.bind == null) { arg.bind = false; }
     if (cog.templates[arg.id] == null && arg.elem != null) {
         if (typeof arg.elem === 'string') {
             createEl = document.createElement("div");
@@ -928,6 +939,8 @@ cog.template = function (arg) {
         data = {};
         data[arg.alias] = arg.token;
         cog.bind(template, { alias: data, global: arg.global, index: arg.index });
+    } else if (arg.bind && template != null) {
+        cog.bind(template);
     }
     if (arg.fragment) {
         template = cog.elemFragment(template);
