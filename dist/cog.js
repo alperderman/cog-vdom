@@ -1015,11 +1015,12 @@ cog.set = function (key, set, arg) {
 };
 cog.setElems = function (callback) {
     cog.loadContents(function () {
-        var setElem, setAttr, setType, setKey, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
+        var setElem, setAttr, setAttrSplit, setType, setKey, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
         while (setElem = document.querySelector("[" + cog.label.set + "]")) {
             setAttr = setElem.getAttribute(cog.label.set);
-            setType = cog.parseSet(setAttr)[0];
-            setKey = cog.parseSet(setAttr)[1].trim();
+            setAttrSplit = setAttr.split(":");
+            setType = setAttrSplit[0].trim();
+            setKey = setAttrSplit[1].trim();
             if (setType == "json") {
                 propData = cog.isJSON(setElem.innerText);
                 if (propData) {
@@ -1242,9 +1243,6 @@ cog.checkKeys = function (key1, key2) {
         }
     }
     return result;
-};
-cog.parseSet = function (str) {
-    return str.split(":");
 };
 cog.elemFragment = function (elem) {
     var fragment = document.createDocumentFragment();
