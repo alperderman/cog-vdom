@@ -67,7 +67,7 @@
         cog.data.color="red";
         cog.data.bg="yellow";
         cog.data.temp = {name:"Alex", color:"#9f4"};
-        cog.data.elem = document.getElementById("subtitle");
+        cog.data.elem = cog.elemFragment(document.getElementById("subtitle").cloneNode(true));
         var testTemp = cog.template({id:"card", token:"temp", alias:"pep"});
         //document.body.appendChild(testTemp);
         //console.log(document.body.contains(testTemp));
