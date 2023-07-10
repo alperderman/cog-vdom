@@ -27,6 +27,7 @@
         </div>
         <input id="input" cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input', if:'{{bool}}'">
         <p>{{input}}</p>
+        <p cog-if='typeof {{name._exec}} === "string"'>{{#name}} is string</p>
         <ul cog-repeat="names,names,tname">
             <li>{{tname}}</li>
         </ul>

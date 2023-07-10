@@ -37,6 +37,7 @@ cog.keyword = {
     count: "_count",
     token: "_token",
     index: "_index",
+    execute: "_exec",
     prevent: "_prevent"
 };
 cog.token = {
@@ -186,7 +187,7 @@ cog.bindAlias = function (dom, arg) {
                                 tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
                             }
                             if (tokenContents.hasOwnProperty(tokenPure)) {
-                                if (typeof tokenContents[tokenPure] === "string") {
+                                if (typeof tokenContents[tokenPure] === "string" && attrKey != cog.label.if) {
                                     tokenContentEscaped = cog.replaceAll(cog.replaceAll(tokenContents[tokenPure], '"', "\\" + "\\" + '\\"'), "'", "\\" + "\\" + "\\'");
                                 } else {
                                     tokenContentEscaped = tokenContents[tokenPure];
@@ -415,7 +416,7 @@ cog.bind = function (dom, arg) {
                                 tokenPure = arg.alias[tokenArr[0]] + tokenPure.substring(tokenArr[0].length, tokenPure.length);
                             }
                             if (tokenContents.hasOwnProperty(tokenPure)) {
-                                if (typeof tokenContents[tokenPure] === "string") {
+                                if (typeof tokenContents[tokenPure] === "string" && attrKey != cog.label.if) {
                                     tokenContentEscaped = cog.replaceAll(cog.replaceAll(tokenContents[tokenPure], '"', "\\" + "\\" + '\\"'), "'", "\\" + "\\" + "\\'");
                                 } else {
                                     tokenContentEscaped = tokenContents[tokenPure];
@@ -1156,7 +1157,7 @@ cog.getRecursiveValue = function (arg) {
     if (arg.root == null) { arg.root = cog.data; }
     if (arg.ref == null) { arg.ref = true; }
     if (arg.exec == null) { arg.exec = true; }
-    var refData = arg.root, result, i, key;
+    var refData = arg.root, result, i, key, strSplit;
     if (typeof arg.str === 'string' && arg.str.substring(0, cog.token.escape.length) == cog.token.escape) {
         return cog.token.open + arg.str.substring(cog.token.escape.length, arg.str.length) + cog.token.close;
     }
@@ -1186,6 +1187,9 @@ cog.getRecursiveValue = function (arg) {
             } else if (key == cog.keyword.token) {
                 strSplit.splice(i, 1);
                 result = cog.normalizeKeys(strSplit);
+            } else if (key == cog.keyword.execute) {
+                strSplit.splice(i, 1);
+                result = "cog.get('" + cog.normalizeKeys(strSplit) + "')";
             } else if (key == cog.keyword.count) {
                 if (typeof refData === 'object' && !Array.isArray(refData)) {
                     result = Object.keys(refData).length;
