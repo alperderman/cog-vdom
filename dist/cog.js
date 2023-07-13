@@ -127,7 +127,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bindAlias = function (dom, arg) {
-    var i, ii, dommap, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    var i, ii, dommap, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.alias == null) { arg.alias = {}; }
@@ -322,7 +322,7 @@ cog.bindAlias = function (dom, arg) {
     return dom;
 };
 cog.bind = function (dom, arg) {
-    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, tokenEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
+    var i, ii, dommap, tempRender, tempNode, tempId, tempAttr, tempToken, tempAlias, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode, newNodeLength;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.alias == null) { arg.alias = {}; }
@@ -330,7 +330,7 @@ cog.bind = function (dom, arg) {
     if (arg.global == null) { arg.global = true; }
     while (tempNode = dom.querySelector("[" + cog.label.temp + "]")) {
         tempAttr = tempNode.getAttribute(cog.label.temp).split(",");
-        tempId = cog.normalizeKeys(tempAttr[0].trim());
+        tempId = tempAttr[0].trim();
         if (tempAttr.length == 3) {
             tempToken = cog.normalizeKeys(tempAttr[1].trim());
             tempAlias = cog.normalizeKeys(tempAttr[2].trim());
@@ -343,19 +343,6 @@ cog.bind = function (dom, arg) {
             tempRender = cog.template({ id: tempId, token: tempToken, alias: tempAlias, bind: true, fragment: true });
             tempNode.parentNode.replaceChild(tempRender, tempNode);
         }
-    }
-    while (tempNode = dom.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
-        tempAttr = tempNode.getAttribute(cog.label.repeat).split(",");
-        tempId = cog.normalizeKeys(tempAttr[0].trim());
-        tempToken = cog.normalizeKeys(tempAttr[1].trim());
-        tempAlias = cog.normalizeKeys(tempAttr[2].trim());
-        tempNode.setAttribute(cog.label.await, "");
-        if (!cog.templates.hasOwnProperty(tempId)) {
-            cog.template({ id: tempId, elem: tempNode });
-        }
-    }
-    while (tempNode = dom.querySelector("[" + cog.label.repeat + "][" + cog.label.await + "]")) {
-        tempNode.removeAttribute(cog.label.await);
     }
     cog.renderRepeats(dom, { alias: arg.alias, index: arg.index });
     dommap = cog.createDOMMap(dom);
@@ -1036,7 +1023,7 @@ cog.set = function (key, set, arg) {
 };
 cog.setElems = function (callback) {
     cog.loadContents(function () {
-        var setElem, setAttr, setAttrSplit, setType, setKey, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head;
+        var setElem, setAttr, setAttrSplit, setType, setKey, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head, tempNode, tempAttr, tempId;
         while (setElem = document.querySelector("[" + cog.label.set + "]")) {
             setAttr = setElem.getAttribute(cog.label.set);
             setAttrSplit = setAttr.split(":");
@@ -1062,6 +1049,17 @@ cog.setElems = function (callback) {
                 cog.template({ id: setKey, elem: setElem });
             }
             setElem.parentNode.removeChild(setElem);
+        }
+        while (tempNode = document.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
+            tempAttr = tempNode.getAttribute(cog.label.repeat).split(",");
+            tempId = tempAttr[0].trim();
+            tempNode.setAttribute(cog.label.await, "");
+            if (!cog.templates.hasOwnProperty(tempId)) {
+                cog.template({ id: tempId, elem: tempNode });
+            }
+        }
+        while (tempNode = document.querySelector("[" + cog.label.repeat + "][" + cog.label.await + "]")) {
+            tempNode.removeAttribute(cog.label.await);
         }
         for (i = 0; i < links.length; i++) {
             link = links[i];
