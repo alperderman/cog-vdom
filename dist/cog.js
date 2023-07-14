@@ -1155,7 +1155,7 @@ cog.getRecursiveValue = function (arg) {
     if (arg.root == null) { arg.root = cog.data; }
     if (arg.ref == null) { arg.ref = true; }
     if (arg.exec == null) { arg.exec = true; }
-    var refData = arg.root, result, i, key, strSplit;
+    var refData = arg.root, refDataArg, result, i, key, keyIndex, strSplit;
     if (typeof arg.str === 'string' && arg.str.substring(0, cog.token.escape.length) == cog.token.escape) {
         return cog.token.open + arg.str.substring(cog.token.escape.length, arg.str.length) + cog.token.close;
     }
@@ -1167,9 +1167,10 @@ cog.getRecursiveValue = function (arg) {
     for (i = 0; i < strSplit.length; i++) {
         key = strSplit[i];
         if ((typeof refData === 'object' || typeof refData === 'string') && refData[key] != null && i != strSplit.length - 1 && i != arg.index) {
-            refData = refData[key];
+            refDataArg = refData;
+            refData = refDataArg[key];
             if (typeof refData === 'function') {
-                refData = refData();
+                refData = refData({ keys: strSplit, parent: refDataArg });
             }
         } else {
             if (key == cog.keyword.parent) {
@@ -1182,6 +1183,18 @@ cog.getRecursiveValue = function (arg) {
                 result = refData;
             } else if (key == cog.keyword.key) {
                 result = strSplit[i - 1];
+            } else if (key == cog.keyword.index) {
+                keyIndex = strSplit[i - 1];
+                strSplit.splice(i, 1);
+                strSplit.splice(i - 1, 1);
+                i = i - 2;
+                arg.index = i;
+                arg.str = strSplit;
+                refData = cog.getRecursiveValue(arg);
+                result = Object.keys(refData).indexOf(keyIndex);
+                if (result == -1) {
+                    result = undefined;
+                }
             } else if (key == cog.keyword.token) {
                 strSplit.splice(i, 1);
                 result = cog.normalizeKeys(strSplit);
@@ -1205,7 +1218,7 @@ cog.getRecursiveValue = function (arg) {
         }
     }
     if (typeof result === 'function' && arg.exec) {
-        result = result();
+        result = result({ keys: strSplit, parent: refData });
     }
     if (typeof result === 'object' && !arg.ref) {
         result = JSON.parse(JSON.stringify(result));
