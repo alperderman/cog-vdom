@@ -127,7 +127,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bindAlias = function (dom, arg) {
-    var i, ii, dommap, attrKey, attrVal, attrContent, attrTokens, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode;
+    var i, ii, dommap, attrKey, attrVal, attrContent, attrTokens, cloneNode, tokens, token, tokenPure, tokenArr, tokenContent, tokenContents, tokenContentEscaped, i, nodeRegexMatches, nodeRegexString, nodeRegexMatch, newNode;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.alias == null) { arg.alias = {}; }
@@ -140,7 +140,7 @@ cog.bindAlias = function (dom, arg) {
                     attrKey = obj.attrs[i].attr;
                     attrVal = obj.attrs[i].value;
                     tokens = cog.removeDuplicatesFromArray(attrVal.match(cog.regex.token));
-                    if (tokens.length > 0 || (attrKey.indexOf(cog.label.prop) === 0 || attrKey == cog.label.if)) {
+                    if (tokens.length > 0 && attrKey == cog.label.repeat) {
                         if (attrKey.substring(0, cog.label.escape.length) == cog.label.escape) {
                             obj.node.removeAttribute(attrKey);
                             attrKey = attrKey.substring(cog.label.escape.length, attrKey.length);
@@ -199,65 +199,7 @@ cog.bindAlias = function (dom, arg) {
                             }
                         }
                         attrContent.appendChild(newNode);
-                        if (attrKey.indexOf(cog.label.prop) === 0) {
-                            attrContentObj = cog.strToObj(attrContent.innerHTML);
-                            attrContentObjIf = true;
-                            if (attrContentObj.hasOwnProperty("if")) {
-                                attrContentObjIf = cog.if(attrContentObj.if);
-                            }
-                            if (attrContentObjIf) {
-                                if (attrContentObj.hasOwnProperty("style")) {
-                                    attrContentObjProp = attrContentObj["style"];
-                                    if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
-                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
-                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
-                                            obj.node.style[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
-                                        }
-                                    }
-                                }
-                                if (attrContentObj.hasOwnProperty("class")) {
-                                    if (typeof attrContentObj["class"] === "string") {
-                                        attrContentObjProp = attrContentObj["class"].trim().split(" ");
-                                    } else {
-                                        attrContentObjProp = attrContentObj["class"];
-                                    }
-                                    for (ii = 0; ii < attrContentObjProp.length; ii++) {
-                                        if (attrContentObjProp[ii] != null) {
-                                            obj.node.classList.add(attrContentObjProp[ii]);
-                                        }
-                                    }
-                                }
-                                if (attrContentObj.hasOwnProperty("context")) {
-                                    attrContentObjProp = attrContentObj["context"];
-                                    if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
-                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
-                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
-                                            obj.node[attrContentObjPropKeys[ii]] = attrContentObjProp[attrContentObjPropKeys[ii]];
-                                        }
-                                    }
-                                }
-                                if (attrContentObj.hasOwnProperty("attr")) {
-                                    attrContentObjProp = attrContentObj["attr"];
-                                    if (typeof attrContentObjProp === "object" && !Array.isArray(attrContentObjProp)) {
-                                        attrContentObjPropKeys = Object.keys(attrContentObjProp);
-                                        for (ii = 0; ii < attrContentObjPropKeys.length; ii++) {
-                                            obj.node.setAttribute(attrContentObjPropKeys[ii], attrContentObjProp[attrContentObjPropKeys[ii]]);
-                                        }
-                                    }
-                                }
-                            }
-                            obj.node.removeAttribute(attrKey);
-                        } else if (attrKey == cog.label.if) {
-                            attrContentObj = attrContent.innerHTML;
-                            if (cog.if(attrContentObj)) {
-                                obj.node.style.display = "";
-                            } else {
-                                obj.node.style.display = "none";
-                            }
-                            obj.node.removeAttribute(attrKey);
-                        } else {
-                            obj.node.setAttribute(attrKey, attrContent.innerHTML);
-                        }
+                        obj.node.setAttribute(attrKey, attrContent.innerHTML);
                     }
                 }
             }
@@ -674,7 +616,7 @@ cog.isIntersects = function (arr1, arr2) {
         }
     }
     return result;
-}
+};
 cog.renderProps = function (boundArr) {
     var i, ii, attrContentObj, attrContentObjProp, attrContentObjPropKeys, attrContentObjIf;
     for (i = 0; i < cog.props.length; i++) {
