@@ -7,6 +7,7 @@ cog.data = {};
 cog.nodes = {};
 cog.props = [];
 cog.templates = {};
+cog.repeats = {};
 cog.bound = [];
 cog.encapVar = null;
 cog.cache = true;
@@ -32,6 +33,9 @@ cog.event = {
     afterRender: "COGAfterRender"
 };
 cog.keyword = {
+    proxy: "_proxy",
+    target: "_target",
+
     parent: "_parent",
     key: "_key",
     count: "_count",
@@ -40,6 +44,7 @@ cog.keyword = {
     execute: "_exec",
     prevent: "_prevent"
 };
+cog.arrayOperations = ["pop", "push", "reverse", "shift", "sort", "splice", "unshift"];
 cog.token = {
     open: "{{",
     close: "}}",
@@ -49,9 +54,914 @@ cog.regex = {
     head: new RegExp("<head[^>]*>((.|[\\\n\\\r])*)<\\\/head>", "im"),
     body: new RegExp("<body[^>]*>((.|[\\\n\\\r])*)<\\\/body>", "im"),
     normalize: new RegExp("(?:\\\[\\\'|\\\[\\\"|\\\[)(\\\w+)(?:\\\'\\\]|\\\"\\\]|\\\])", "g"),
-    token: new RegExp(cog.token.open + "[\\s\\S]*?" + cog.token.close, "g"),
+    token: new RegExp(cog.token.open + "[\\s\\S]*?" + cog.token.close),
     node: new RegExp("([\\s\\S]*?)(" + cog.token.open + "[\\s\\S]*?" + cog.token.close + ")", "gm")
 };
+
+cog.tasks = [];
+cog.aliasData = {};
+
+cog.render2 = function (layoutSrc) {
+    var layout;
+    step_start();
+    function step_start() {
+        if (typeof layoutSrc === "string") {
+            cog.xhr(layoutSrc, function (xhr) {
+                if (xhr.status == 200) {
+                    layout = xhr.responseText;
+                    step_design();
+                }
+            }, { method: "GET" });
+        } else {
+            cog.setElems2(function () {
+                document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
+                if (cog.isElement(layoutSrc)) {
+                    cog.bind2(layoutSrc);
+                } else {
+                    cog.bind2();
+                }
+
+                setTimeout(function () {
+                    document.dispatchEvent(new CustomEvent(cog.event.afterRender));
+                }, 0);
+            });
+        }
+    }
+    function step_design() {
+        while (document.getElementsByTagName('script').length > 0) {
+            document.getElementsByTagName('script')[0].parentNode.removeChild(document.getElementsByTagName('script')[0]);
+        }
+        if ((/\<\/head\>/).test(layout)) {
+            document.head.innerHTML += layout.match(cog.regex.head)[1];
+        }
+        if ((/\<\/body\>/).test(layout)) {
+            document.documentElement.innerHTML = document.documentElement.innerHTML.replace("<body", "<body" + layout.match("<body" + "(.*)" + ">")[1]);
+            document.body.innerHTML += layout.match(cog.regex.body)[1];
+        }
+        if (!(/\<\/head\>/).test(layout) && !(/\<\/body\>/).test(layout)) {
+            document.body.innerHTML += layout;
+        }
+        setTimeout(function () {
+            cog.setElems2(function () {
+                step_bind();
+            });
+        }, 0);
+    }
+    function step_bind() {
+        document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
+        setTimeout(function () {
+            cog.bind2(document.body, {
+                callback: function () {
+                    step_scripts();
+                }
+            });
+        }, 0);
+    }
+    function step_scripts() {
+        cog.loadScriptsNS(document.querySelectorAll("script"), function () {
+            step_finish();
+        });
+    }
+    function step_finish() {
+        cog.DOMLoad();
+        if (window.location.hash.slice(1) && document.getElementById(window.location.hash.slice(1))) {
+            document.getElementById(window.location.hash.slice(1)).scrollIntoView();
+        }
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent(cog.event.afterRender));
+        }, 0);
+    }
+};
+cog.bind2 = function (dom, arg) {
+    var i, ii, dommap, tokenPure, nodeRegexMatch, nodeRegexMatches, nodeRegexString, newNode, cloneNode, tokenContent, newNodeRef, attrKey, attrVal, attrContent, attrTokens;
+    if (dom == null) { dom = document.body; }
+    if (arg == null) { arg = {}; }
+    //TEMP
+    //REPEAT
+    //TOKENS
+    dommap = cog.createDOMMap(dom);
+    cog.iterate(dommap, {
+        obj: function (obj) {
+            //ATTRS
+            if (obj.hasOwnProperty("attrs")) {
+                for (i = 0; i < obj.attrs.length; i++) {
+                    attrKey = obj.attrs[i].attr;
+                    attrVal = obj.attrs[i].value;
+                    if (cog.regex.token.test(attrVal)) {
+                        if (attrKey.substring(0, cog.label.escape.length) == cog.label.escape) {
+                            obj.node.removeAttribute(attrKey);
+                            attrKey = attrKey.substring(cog.label.escape.length, attrKey.length);
+                        }
+                        nodeRegexMatches = [];
+                        nodeRegexString = "";
+                        while (nodeRegexMatch = cog.regex.node.exec(attrVal)) {
+                            if (nodeRegexMatch[1] != "") {
+                                nodeRegexMatches.push(nodeRegexMatch[1]);
+                                nodeRegexString = nodeRegexString + nodeRegexMatch[1];
+                            }
+                            tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
+                            nodeRegexMatches.push(nodeRegexMatch[2]);
+                            nodeRegexString = nodeRegexString + nodeRegexMatch[2];
+                        }
+                        nodeRegexString = attrVal.replace(nodeRegexString, "");
+                        if (nodeRegexString != "") {
+                            nodeRegexMatches.push(nodeRegexString);
+                        }
+                        attrContent = document.createElement("span");
+                        newNode = document.createDocumentFragment();
+
+                        for (ii = 0; ii < nodeRegexMatches.length; ii++) {
+                            tokenPure = cog.normalizeKeys(nodeRegexMatches[ii].substring(cog.token.open.length, nodeRegexMatches[ii].length - cog.token.close.length));
+                            tokenContent = cog.get2(tokenPure);
+                            if (tokenContent !== undefined) {
+                                newNodeRef = cog.pushNode2(tokenPure, { prop: cog.props.length, node: document.createTextNode(tokenContent) });
+                                newNode.appendChild(newNodeRef.node);
+                            } else {
+                                newNode.appendChild(document.createTextNode(nodeRegexMatches[ii]));
+                            }
+                        }
+                        attrContent.appendChild(newNode);
+
+                        //ADD PROPS HERE
+                        obj.node.setAttribute(attrKey, attrContent.innerHTML);
+                        cog.props.push({ node: obj.node, type: "attr", attr: attrKey, content: attrContent });
+                    }
+                }
+            }
+            //TEXTS
+            if (obj.hasOwnProperty("type") && obj.type == "text" && !obj.isSVG && !obj.isScript) {
+                if (cog.regex.token.test(obj.content)) {
+                    nodeRegexMatches = [];
+                    nodeRegexString = "";
+                    while (nodeRegexMatch = cog.regex.node.exec(obj.content)) {
+                        if (nodeRegexMatch[1] != "") {
+                            nodeRegexMatches.push(nodeRegexMatch[1]);
+                            nodeRegexString = nodeRegexString + nodeRegexMatch[1];
+                        }
+                        tokenPure = nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length);
+                        nodeRegexMatches.push(nodeRegexMatch[2]);
+                        nodeRegexString = nodeRegexString + nodeRegexMatch[2];
+                    }
+                    nodeRegexString = obj.content.replace(nodeRegexString, "");
+                    if (nodeRegexString != "") {
+                        nodeRegexMatches.push(nodeRegexString);
+                    }
+                    newNode = document.createDocumentFragment();
+                    for (i = 0; i < nodeRegexMatches.length; i++) {
+                        tokenPure = nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length - cog.token.close.length);
+                        tokenContent = cog.get2(tokenPure);
+                        if (tokenContent !== undefined) {
+                            if (!cog.isElement(tokenContent) && typeof tokenContent !== 'object') {
+                                newNodeRef = cog.pushNode2(tokenPure, document.createTextNode(tokenContent));
+                                newNode.appendChild(newNodeRef);
+                            } else {
+                                cloneNode = cog.bind2(tokenContent.cloneNode(true));
+                                newNodeRef = cog.pushNode2(tokenPure, cloneNode);
+                                newNode.appendChild(newNodeRef);
+                            }
+                        } else {
+                            newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
+                        }
+                    }
+                    if (obj.node.parentNode) {
+                        obj.node.parentNode.replaceChild(newNode, obj.node);
+                    }
+                }
+            }
+        }
+    });
+    if (typeof arg.callback === 'function') {
+        arg.callback();
+    }
+    return dom;
+};
+cog.template2 = function (arg) {
+    //cog.templates STRUCTURE: {templateName:{alias:[TEXTNODE,TEXTNODE], node:NODE}  }
+    //IMPLEMENT ALIAS INSIDE THE TEMPLATE ITSELF
+    var i, ii, iii, iiii, aliasKeysLength, aliasKeys, aliasKey, aliasKeyArr, aliasKeyArrLength, aliasKeyArrResult, aliasReplace, aliasNode, aliasNodeItem, dommap, alias, node, props, prop, template, createEl, data;
+    var nodeRegexMatches, nodeRegexMatch, nodeRegexString, tokenPure, newNode, newNodeLength, tokenArr, attrContent, attrKey, attrVal;
+    if (arg.id == null) { return; }
+    if (arg.fragment == null) { arg.fragment = false; }
+    if (arg.bind == null) { arg.bind = false; }
+    if (cog.templates[arg.id] == null && arg.node != null && arg.alias != null) {
+        //INIT TEMPLATE
+        cog.templates[arg.id] = { alias: {}, props: [], node: arg.node.cloneNode(true) };
+        aliasKeysLength = arg.alias.length;
+        for (i = 0; i < aliasKeysLength; i++) {
+            cog.templates[arg.id]["alias"][arg.alias[i]] = [];
+        }
+        node = cog.templates[arg.id]["node"];
+        node.removeAttribute(cog.label.repeat);
+        node.removeAttribute(cog.label.temp);
+        alias = cog.templates[arg.id]["alias"];
+        props = cog.templates[arg.id]["props"];
+        aliasKeys = arg.alias;
+        dommap = cog.createDOMMap(node);
+        cog.iterate(dommap, {
+            obj: function (obj) {
+                if (!obj.isRepeat && !obj.isTemplate) {
+                    if (obj.hasOwnProperty("attrs")) {
+                        for (i = 0; i < obj.attrs.length; i++) {
+                            attrKey = obj.attrs[i].attr;
+                            attrVal = obj.attrs[i].value;
+                            if (cog.regex.token.test(attrVal)) {
+                                nodeRegexMatches = [];
+                                nodeRegexString = "";
+                                while (nodeRegexMatch = cog.regex.node.exec(attrVal)) {
+                                    if (nodeRegexMatch[1] != "") {
+                                        nodeRegexMatches.push(nodeRegexMatch[1]);
+                                        nodeRegexString = nodeRegexString + nodeRegexMatch[1];
+                                    }
+                                    tokenPure = cog.normalizeKeys(nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length));
+                                    nodeRegexMatches.push(nodeRegexMatch[2]);
+                                    nodeRegexString = nodeRegexString + nodeRegexMatch[2];
+                                }
+                                nodeRegexString = attrVal.replace(nodeRegexString, "");
+                                if (nodeRegexString != "") {
+                                    nodeRegexMatches.push(nodeRegexString);
+                                }
+                                attrContent = document.createElement("span");
+                                newNode = document.createDocumentFragment();
+                                for (ii = 0; ii < nodeRegexMatches.length; ii++) {
+                                    tokenPure = cog.normalizeKeys(nodeRegexMatches[ii].substring(cog.token.open.length, nodeRegexMatches[ii].length - cog.token.close.length));
+                                    tokenArr = tokenPure.split(".");
+                                    aliasKeyArrResult = false;
+                                    for (iii = 0; iii < aliasKeysLength; iii++) {
+                                        aliasKey = aliasKeys[iii];
+                                        aliasKeyArr = aliasKey.split(".");
+                                        aliasKeyArrLength = aliasKeyArr.length;
+
+                                        for (iiii = 0; iiii < aliasKeyArrLength; iiii++) {
+                                            if (aliasKeyArr[iiii] != tokenArr[iiii]) {
+                                                break;
+                                            }
+                                            if (iiii == aliasKeyArrLength - 1) {
+                                                aliasKeyArrResult = true;
+                                            }
+                                        }
+                                        if (aliasKeyArrResult) {
+                                            break;
+                                        }
+                                    }
+                                    if (aliasKeyArrResult) {
+                                        newNodeLength = alias[aliasKey].push({ prop: props.length, node: document.createTextNode(aliasKey) });
+                                        if (attrKey == cog.label.repeat || attrKey == cog.label.temp) {
+                                            newNode.appendChild(alias[aliasKey][newNodeLength - 1].node);
+                                            newNode.appendChild(document.createTextNode(tokenPure.replace(aliasKey, '')));
+                                        } else {
+                                            newNode.appendChild(document.createTextNode(cog.token.open));
+                                            newNode.appendChild(alias[aliasKey][newNodeLength - 1].node);
+                                            newNode.appendChild(document.createTextNode(tokenPure.replace(aliasKey, '')));
+                                            newNode.appendChild(document.createTextNode(cog.token.close));
+                                        }
+                                    } else {
+                                        newNode.appendChild(document.createTextNode(nodeRegexMatches[ii]));
+                                    }
+                                }
+                                attrContent.appendChild(newNode);
+                                obj.node.setAttribute(attrKey, attrContent.innerHTML);
+                                props.push({ node: obj.node, attr: attrKey, content: attrContent });
+                            }
+                        }
+                    }
+                    //TEXT
+                    if (obj.hasOwnProperty("type") && obj.type == "text" && !obj.isSVG && !obj.isScript) {
+                        if (cog.regex.token.test(obj.content)) {
+                            nodeRegexMatches = [];
+                            nodeRegexString = "";
+                            while (nodeRegexMatch = cog.regex.node.exec(obj.content)) {
+                                if (nodeRegexMatch[1] != "") {
+                                    nodeRegexMatches.push(nodeRegexMatch[1]);
+                                    nodeRegexString = nodeRegexString + nodeRegexMatch[1];
+                                }
+                                tokenPure = nodeRegexMatch[2].substring(cog.token.open.length, nodeRegexMatch[2].length - cog.token.close.length);
+                                nodeRegexMatches.push(nodeRegexMatch[2]);
+                                nodeRegexString = nodeRegexString + nodeRegexMatch[2];
+                            }
+                            nodeRegexString = obj.content.replace(nodeRegexString, "");
+                            if (nodeRegexString != "") {
+                                nodeRegexMatches.push(nodeRegexString);
+                            }
+                            newNode = document.createDocumentFragment();
+                            for (i = 0; i < nodeRegexMatches.length; i++) {
+                                tokenPure = nodeRegexMatches[i].substring(cog.token.open.length, nodeRegexMatches[i].length - cog.token.close.length);
+                                tokenArr = tokenPure.split(".");
+                                aliasKeyArrResult = false;
+                                for (ii = 0; ii < aliasKeysLength; ii++) {
+                                    aliasKey = aliasKeys[ii];
+                                    aliasKeyArr = aliasKey.split(".");
+                                    aliasKeyArrLength = aliasKeyArr.length;
+                                    for (iii = 0; iii < aliasKeyArrLength; iii++) {
+                                        if (aliasKeyArr[iii] != tokenArr[iii]) {
+                                            break;
+                                        }
+                                        if (iii == aliasKeyArrLength - 1) {
+                                            aliasKeyArrResult = true;
+                                        }
+                                    }
+                                    if (aliasKeyArrResult) {
+                                        break;
+                                    }
+                                }
+                                if (aliasKeyArrResult) {
+                                    newNodeLength = alias[aliasKey].push(document.createTextNode(aliasKey));
+                                    newNode.appendChild(document.createTextNode(cog.token.open));
+                                    newNode.appendChild(alias[aliasKey][newNodeLength - 1]);
+                                    newNode.appendChild(document.createTextNode(tokenPure.replace(aliasKey, '')));
+                                    newNode.appendChild(document.createTextNode(cog.token.close));
+                                } else {
+                                    newNode.appendChild(document.createTextNode(nodeRegexMatches[i]));
+                                }
+                            }
+                            if (obj.node.parentNode) {
+                                obj.node.parentNode.replaceChild(newNode, obj.node);
+                            }
+                        }
+                    }
+                }
+
+            }
+        });
+    }
+
+    if (cog.templates[arg.id] != null && arg.data) {
+        //RENDER TEMPLATE
+        node = cog.templates[arg.id]["node"];
+        alias = cog.templates[arg.id]["alias"];
+        aliasKeys = Object.keys(alias);
+        props = cog.templates[arg.id]["props"];
+        aliasKeysLength = aliasKeys.length;
+        for (i = 0; i < aliasKeysLength; i++) {
+            aliasKey = aliasKeys[i];
+            if (arg.data.hasOwnProperty(aliasKey)) {
+                aliasReplace = arg.data[aliasKey];
+                aliasNode = alias[aliasKey];
+                for (ii in aliasNode) {
+                    aliasNodeItem = aliasNode[ii];
+                    if (aliasNodeItem.hasOwnProperty("prop")) {
+                        newNode = document.createTextNode(arg.data[aliasKey]);
+                        aliasNodeItem.node.parentNode.replaceChild(newNode, aliasNodeItem.node);
+                        aliasNode[ii].node = newNode;
+                        prop = props[aliasNodeItem.prop];
+                        prop.node.setAttribute(prop.attr, prop.content.innerHTML);
+                    } else {
+                        newNode = document.createTextNode(arg.data[aliasKey]);
+                        aliasNodeItem.parentNode.replaceChild(newNode, aliasNodeItem);
+                        aliasNode[ii] = newNode;
+                    }
+                }
+            }
+        }
+        if (arg.fragment) {
+            return cog.elemFragment(node.cloneNode(true));
+        } else {
+            return node.cloneNode(true);
+        }
+    }
+
+
+};
+cog.getNode2 = function (keys) {
+    var i, key, keysLength, ref = cog.nodes;
+    if (typeof keys === 'string') {
+        keys = keys.split(".");
+    }
+    keysLength = keys.length;
+    for (i = 0; i < keysLength; i++) {
+        key = keys[i];
+        if (!ref.hasOwnProperty(key)) {
+            return undefined;
+        }
+        ref = ref[key];
+    }
+    return ref;
+};
+cog.pushNode2 = function (keys, node) {
+    var i, key, keysLength, ref = cog.nodes, nodesLength, result;
+    if (typeof keys === 'string') {
+        keys = keys.split(".");
+    }
+    keysLength = keys.length;
+    for (i = 0; i < keysLength; i++) {
+        key = keys[i];
+        if (!ref.hasOwnProperty(key)) {
+            if (i == keysLength - 1) {
+                ref[key] = [];
+            } else {
+                ref[key] = {};
+            }
+        }
+        if (i == keysLength - 1) {
+            nodesLength = ref[key].push(node);
+            result = ref[key][nodesLength - 1];
+        }
+        ref = ref[key];
+    }
+    return result;
+};
+
+cog.bindRepeats2 = function () {
+    //cog.repeats STRUCTURE: {arr: {templapteNameAndAlias:{owner:NDOE, template:templateName, alias:alias, nodes:[ {index:[TEXTNODE,TEXTNODE], nodes:[NODE,NODE,NODE]}, {}, {} ]   } } }
+    //CREATE ONLY ONE TEMPLATE AND REPEAT THE DATA BY REBINDING THE DATA ON THAT SPECIFIC TEMPLATE (REQUIRES MAKING A TEMPORARY SCOPE)
+};
+cog.fixRepeatsIndex2 = function () {
+    //THIS FUNCTION WILL BE USED FOR UPDATING THE INDEX VALUE OF THE BOUND NODES
+};
+cog.rebind2 = function () {
+    var i, ii, task, token, content, item, index;
+    for (i = 0; i < cog.tasks.length; i++) {
+        task = cog.tasks[i];
+        if (task.action == "set") {
+            //REBIND NODES
+            token = task.keys.join(".");
+            cog.rebindNodes2(token, task.value);
+        }
+        if (task.action == "push") {
+            //REBIND NODES
+            token = task.keys.join(".");
+            content = cog.get2(token);
+            if (content !== undefined) {
+                for (ii = 0; ii < task.args.length; ii++) {
+                    item = task.args[ii];
+                    index = (content.length - 1) - (task.args.length) + (ii);
+                    cog.rebindNodes2(token + "." + index, item);
+                }
+            }
+            //REBIND REPEATERS HERE
+        }
+        if (task.action == "unshift") {
+            //REBIND NODES
+            token = task.keys.join(".");
+            cog.rebindNodes2(task.keys, cog.get2(task.keys));
+            //REBIND REPEATERS HERE
+        }
+    }
+    cog.tasks = [];
+};
+cog.rebindNodes2 = function (token, content) {
+    var i, content, newNode, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), contentKeys, contentAlt, nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength;
+    if (typeof nodeTokens === 'object') {
+        if (Array.isArray(nodeTokens)) {
+            nodeTokensLength = nodeTokens.length;
+            for (i = 0; i < nodeTokensLength; i++) {
+                nodeToken = nodeTokens[i];
+                //cog.nodes STRUCTURE: { arr: {0: [TEXTNODE, {prop:0, node:TEXTNODE}, TEXTNODE]} }
+                if (nodeToken.hasOwnProperty("prop")) {
+                    newNode = document.createTextNode(content);
+                    nodeToken.node.parentNode.replaceChild(newNode, nodeToken.node);
+                    nodeTokens[i].node = newNode;
+                    prop = cog.props[nodeToken.prop];
+                    //ADD PROPS HERE
+                    if (prop.type == "attr") {
+                        prop.node.setAttribute(prop.attr, prop.content.innerHTML);
+                    }
+                } else {
+                    if (!cog.isElement(content) && typeof content !== 'object' && nodeToken.textContent != content) {
+                        newNode = document.createTextNode(content);
+                        nodeToken.parentNode.replaceChild(newNode, nodeToken);
+                        nodeTokens[i] = newNode;
+                    } else if (cog.isElement(content)) {
+                        cloneNode = cog.bind2(content.cloneNode(true));
+                        nodeToken.parentNode.replaceChild(cloneNode, nodeToken);
+                        nodeTokens[i] = cloneNode;
+                    }
+                }
+            }
+        } else {
+            nodeTokenKeys = Object.keys(nodeTokens);
+            contentKeys = Object.keys(content);
+            nodeTokenKeysLength = nodeTokenKeys.length;
+            for (i = 0; i < nodeTokenKeysLength; i++) {
+                nodeTokenKey = nodeTokenKeys[i];
+                contentAlt = content[contentKeys[i]];
+                cog.rebindNodes2(token + "." + nodeTokenKey, contentAlt);
+            }
+        }
+    }
+};
+cog.get2 = function (keys) {
+    var i, key, keysLength, ref = cog.data;
+    if (typeof keys === 'string') {
+        keys = keys.split(".");
+    }
+    keysLength = keys.length;
+    for (i = 0; i < keysLength; i++) {
+        key = keys[i];
+        if (!ref.hasOwnProperty(key)) {
+            return undefined;
+        }
+        ref = ref[key];
+    }
+    return ref;
+};
+cog.set2 = function (keys, val) {
+    var i, key, keysLength, ref = cog.data, copy, diff;
+    if (typeof keys === 'string') {
+        keys = keys.split(".");
+    }
+    keysLength = keys.length;
+    for (i = 0; i < keysLength; i++) {
+        key = keys[i];
+        if (!ref.hasOwnProperty(key)) {
+            if (i == keysLength - 1) {
+                ref[key] = undefined;
+            } else {
+                ref[key] = {};
+            }
+        }
+        if (i == keysLength - 1) {
+            if (typeof ref[key] === 'object') {
+                //IF ARRAY
+                if (Array.isArray(ref[key]) || ref[key] instanceof cog.observableArray) {
+                    if (!(ref[key] instanceof cog.observableArray)) {
+                        ref[key] = new cog.observableArray(ref[key], function (args) {
+                            if (args.action == "set") {
+                                var keysCopy = JSON.parse(JSON.stringify(keys));
+                                keysCopy.push(args.index);
+                                cog.tasks.push({ action: args.action, value: args.value, keys: keysCopy });
+                            }
+                            if (args.action == "push") {
+                                cog.tasks.push({ action: args.action, args: args.args, keys: keys });
+                            }
+                            if (args.action == "pop") {
+                                cog.tasks.push({ action: args.action, keys: keys });
+                            }
+                            if (args.action == "unshift") {
+                                cog.tasks.push({ action: args.action, args: args.args, keys: keys });
+                            }
+                            if (args.action == "shift") {
+                                cog.tasks.push({ action: args.action, keys: keys });
+                            }
+                            if (args.action == "splice") {
+                                cog.tasks.push({ action: args.action, args: args.args, keys: keys });
+                            }
+
+                        });
+                    }
+                    copy = ref[key];
+                    if (typeof val === 'function') {
+                        ref[key] = val(ref[key]);
+                    } else {
+                        ref[key] = val;
+                    }
+                    if (copy !== ref[key]) {
+                        cog.tasks.push({ action: "set", value: ref[key], keys: keys });
+                    }
+                } else {
+                    //IF OBJECT
+                    copy = JSON.parse(JSON.stringify(ref[key]));
+                    if (typeof val === 'function') {
+                        ref[key] = val(ref[key]);
+                    } else {
+                        ref[key] = val;
+                    }
+                    if (typeof ref[key] === 'object' && !Array.isArray(ref[key])) {
+                        diff = cog.deepDiffMapper.map(copy, ref[key]);
+                        cog.tasks.push({ action: "diff", diff: diff, keys: keys });
+                    } else {
+                        cog.tasks.push({ action: "set", value: ref[key], keys: keys });
+                    }
+                }
+            } else {
+                //IF PRIMATIVE
+                if (typeof val === 'function') {
+                    ref[key] = val(ref[key]);
+                } else {
+                    ref[key] = val;
+                }
+                cog.tasks.push({ action: "set", value: ref[key], keys: keys });
+            }
+        } else {
+            ref = ref[key];
+        }
+    }
+
+};
+cog.setElems2 = function (callback) {
+    cog.loadContents(function () {
+        var setElem, setAttr, setAttrSplit, setType, setKey, setKeys, setTemp, setTempId, setTempAlias, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head, tempNode, tempAttr, tempId, tempAlias;
+        while (setElem = document.querySelector("[" + cog.label.set + "]")) {
+            setAttr = setElem.getAttribute(cog.label.set);
+            setAttrSplit = setAttr.split(":");
+            setType = setAttrSplit[0].trim();
+            setKey = setAttrSplit[1].trim();
+            setKeys = setKey.split(".");
+            if (setType == "json") {
+                propData = cog.isJSON(setElem.innerText);
+                if (propData) {
+                    cog.set2(setKeys, propData);
+                }
+            }
+            if (setType == "raw") {
+                propData = cog.eval("(" + setElem.innerText + ")");
+                cog.set2(setKeys, function () { return propData; });
+            }
+            if (setType == "text") {
+                cog.set2(setKeys, setElem.innerText);
+            }
+            if (setType == "html") {
+                cog.set2(setKeys, cog.elemFragment(setElem));
+            }
+            if (setType == "temp") {
+                setTemp = setKey.split(";");
+                setTempId = setTemp[0].trim();
+                setTempAlias = setTemp[1].split(",");
+                for (i in setTempAlias) {
+                    setTempAlias[i] = setTempAlias[i].trim();
+                }
+                cog.template2({ id: setTempId, node: setElem, alias: setTempAlias });
+            }
+            setElem.parentNode.removeChild(setElem);
+        }
+        while (tempNode = document.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
+            tempAttr = tempNode.getAttribute(cog.label.repeat).split(";");
+            tempId = tempAttr[0].trim();
+            tempAlias = tempAttr[1].split(",");
+            for (i in tempAlias) {
+                tempAlias[i] = tempAlias[i].trim();
+            }
+            tempNode.setAttribute(cog.label.await, "");
+            if (!cog.templates.hasOwnProperty(tempId)) {
+                cog.template2({ id: tempId, node: tempNode, alias: tempAlias });
+            }
+        }
+        while (tempNode = document.querySelector("[" + cog.label.repeat + "][" + cog.label.await + "]")) {
+            tempNode.removeAttribute(cog.label.await);
+        }
+        for (i = 0; i < links.length; i++) {
+            link = links[i];
+            document.head.appendChild(link);
+            link.href = link.href;
+        }
+        for (i = 0; i < heads.length; i++) {
+            head = heads[i];
+            head.removeAttribute("head");
+            document.head.appendChild(head);
+        }
+        cog.tasks = [];
+        if (typeof callback === 'function') {
+            callback();
+        }
+    });
+};
+cog.deepDiffMapper = function () {
+    return {
+        VALUE_CREATED: 'created',
+        VALUE_UPDATED: 'updated',
+        VALUE_DELETED: 'deleted',
+        VALUE_UNCHANGED: 'unchanged',
+        map: function (obj1, obj2, keys, allKeys) {
+            if (keys == null) { keys = [] }
+            if (allKeys == null) { allKeys = [] }
+            if (this.isValue(obj1) || this.isValue(obj2)) {
+                if (this.compareValues(obj1, obj2) != this.VALUE_UNCHANGED) {
+                    allKeys.push({
+                        type: this.compareValues(obj1, obj2),
+                        data: obj2,
+                        keys: JSON.parse(JSON.stringify(keys))
+                    });
+                }
+                return {
+                    type: this.compareValues(obj1, obj2),
+                    data: obj1 === undefined ? obj2 : obj1,
+                    keys: JSON.parse(JSON.stringify(keys))
+                };
+            }
+
+            var diff = {};
+
+            for (var key in obj1) {
+                var value2 = undefined;
+                if (obj2[key] !== undefined) {
+                    value2 = obj2[key];
+                }
+                keys.push(key);
+                diff[key] = this.map(obj1[key], value2, keys, allKeys);
+                keys.pop();
+            }
+            for (var key in obj2) {
+                if (diff[key] !== undefined) {
+                    continue;
+                }
+                keys.push(key);
+                diff[key] = this.map(undefined, obj2[key], keys, allKeys);
+                keys.pop();
+            }
+
+            return allKeys;
+        },
+        compareValues: function (value1, value2) {
+            if (value1 === value2) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (this.isFunction(value1) && this.isFunction(value2) && value1.toString() === value2.toString()) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (value1 === undefined) {
+                return this.VALUE_CREATED;
+            }
+            if (value2 === undefined) {
+                return this.VALUE_DELETED;
+            }
+            return this.VALUE_UPDATED;
+        },
+        isFunction: function (x) {
+            return Object.prototype.toString.call(x) === '[object Function]';
+        },
+        isArray: function (x) {
+            return Object.prototype.toString.call(x) === '[object Array]';
+        },
+        isDate: function (x) {
+            return Object.prototype.toString.call(x) === '[object Date]';
+        },
+        isObject: function (x) {
+            return Object.prototype.toString.call(x) === '[object Object]';
+        },
+        isValue: function (x) {
+            return !this.isObject(x) && !this.isArray(x);
+        }
+    }
+}();
+//OBSERVABLE 
+cog.observableArray = function (items, callback) {
+    var _self = this, _array = [], _init = false;
+
+    function defineIndexProperty(index) {
+        if (!(index in _self)) {
+            Object.defineProperty(_self, index, {
+                configurable: true,
+                enumerable: true,
+                get: function () {
+                    return _array[index];
+                },
+                set: function (v) {
+                    _array[index] = v;
+                    callback({
+                        action: "set",
+                        value: v,
+                        index: index
+                    });
+                }
+            });
+        }
+    }
+
+    Object.defineProperty(_self, "push", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function () {
+            var index;
+            for (var i = 0, ln = arguments.length; i < ln; i++) {
+                index = _array.length;
+                _array.push(arguments[i]);
+                defineIndexProperty(index);
+            }
+            if (_init) {
+                callback({
+                    action: "push",
+                    args: arguments
+                });
+            } else {
+                _init = true;
+            }
+            return _array.length;
+        }
+    });
+
+    Object.defineProperty(_self, "pop", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function () {
+            if (_array.length > -1) {
+                var index = _array.length - 1,
+                    item = _array.pop();
+                delete _self[index];
+                callback({
+                    action: "pop"
+                });
+                return item;
+            }
+        }
+    });
+
+    Object.defineProperty(_self, "unshift", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function () {
+            for (var i = 0, ln = arguments.length; i < ln; i++) {
+                _array.splice(i, 0, arguments[i]);
+                defineIndexProperty(_array.length - 1);
+            }
+            callback({
+                action: "unshift",
+                args: arguments
+            });
+            return _array.length;
+        }
+    });
+
+    Object.defineProperty(_self, "shift", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function () {
+            if (_array.length > -1) {
+                var item = _array.shift();
+                delete _self[_array.length];
+                callback({
+                    action: "shift"
+                });
+                return item;
+            }
+        }
+    });
+
+    Object.defineProperty(_self, "splice", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function (index, howMany) {
+            var removed = [],
+                item,
+                pos;
+
+            index = index == null ? 0 : index < 0 ? _array.length + index : index;
+
+            howMany = howMany == null ? _array.length - index : howMany > 0 ? howMany : 0;
+
+            while (howMany--) {
+                item = _array.splice(index, 1)[0];
+                removed.push(item);
+                delete _self[_array.length];
+            }
+
+            for (var i = 2, ln = arguments.length; i < ln; i++) {
+                _array.splice(index, 0, arguments[i]);
+                defineIndexProperty(_array.length - 1);
+                index++;
+            }
+
+            callback({
+                action: "splice",
+                args: arguments
+            });
+
+            return removed;
+        }
+    });
+
+    Object.defineProperty(_self, "length", {
+        configurable: false,
+        enumerable: false,
+        get: function () {
+            return _array.length;
+        },
+        set: function (value) {
+            var n = Number(value);
+            var length = _array.length;
+            if (n % 1 === 0 && n >= 0) {
+                if (n < length) {
+                    _self.splice(n);
+                } else if (n > length) {
+                    _self.push.apply(_self, new Array(n - length));
+                }
+            } else {
+                throw new RangeError("Invalid array length");
+            }
+            _array.length = n;
+            return value;
+        }
+    });
+
+    Object.getOwnPropertyNames(Array.prototype).forEach(function (name) {
+        if (!(name in _self)) {
+            Object.defineProperty(_self, name, {
+                configurable: false,
+                enumerable: false,
+                writable: false,
+                value: Array.prototype[name]
+            });
+        }
+    });
+
+    if (items instanceof Array) {
+        _self.push.apply(_self, items);
+    }
+};
+
+
+
+
+
+
+
+
 
 cog.render = function (layoutSrc) {
     var layout;
@@ -1072,7 +1982,7 @@ cog.getAttributes = function (attributes) {
         };
     });
 };
-cog.createDOMMap = function (element, isSVG) {
+cog.createDOMMap = function (element, isSVG, isScript, isRepeat, isTemplate) {
     return Array.prototype.map.call(element.childNodes, (function (node) {
         var details = {
             content: node.childNodes && node.childNodes.length > 0 ? null : node.textContent,
@@ -1080,8 +1990,24 @@ cog.createDOMMap = function (element, isSVG) {
             type: node.nodeType === 3 ? 'text' : (node.nodeType === 8 ? 'comment' : node.tagName.toLowerCase()),
             node: node
         };
+        var dasRepeat, dasTemplate;
         details.isSVG = isSVG || details.type === 'svg';
-        details.children = cog.createDOMMap(node, details.isSVG);
+        details.isScript = isScript || details.type === 'script';
+        if (isRepeat) {
+            details.isRepeat = true;
+            dasRepeat = true;
+        } else {
+            details.isRepeat = false;
+            dasRepeat = (node.hasAttribute && node.hasAttribute(cog.label.repeat));
+        }
+        if (isTemplate) {
+            details.isTemplate = true;
+            dasTemplate = true;
+        } else {
+            details.isTemplate = false;
+            dasTemplate = (node.hasAttribute && node.hasAttribute(cog.label.repeat));
+        }
+        details.children = cog.createDOMMap(node, details.isSVG, details.isScript, dasRepeat, dasTemplate);
         return details;
     }));
 };
