@@ -19,16 +19,22 @@
         <h3>{{item.job}}</h3>
     </div>
 
+    <div cog-temp="nameTemp;item;person"></div>
+
     <br><br><br>
     <h2>REPEATS</h2>
     <hr>
-    <div cog-repeat="test;alias" id="template">
-        {{alias.name}}
-        <div cog-repeat="test2;alias,ii;{{alias.test}}">
-            {{alias}} - {{ii}}
+    <div cog-repeat="people;item;people">
+        <p>{{item.id1}}</p>
+        <p>{{item.name}}</p>
+        <p>{{item.job}}</p>
+        <div cog-repeat="tags;item, pep;{{item.tags}}, {{item}}">
+            <span>{{pep.id}}</span>
+            <span>{{item}}</span>
         </div>
-        <h1 data="color:{{alias.color}};">HEEY</h1>
+        <hr>
     </div>
+    
 
 
     <script src="dist/cog.js"></script>
@@ -38,9 +44,14 @@
         cog.data.color = "red";
 
         cog.data.person = {name:"Alex", job:"bestONE!"};
+        cog.data.people = [
+            {id:"1",name:"Alex", job:"CEO", id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["wow", "such", "nicesity"]},
+            {id:"2",name:"Aaron", job:"CFO",id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["hah", "ok"]},
+            {id:"3",name:"Adam", job:"CCO", id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["that", "this", "there"]}
+        ];
 
         cog.data.arr = [1, 2, 3, 4];
-        cog.data.obj = { name: "alex" };
+        cog.data.obj = { name: "alex", func:function(v){return v.join(".")} };
         cog.data.prim = "nice JOB!";
         cog.set2("arr", function(val){
             val.push(5);return val;
