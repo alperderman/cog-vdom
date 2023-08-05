@@ -74,7 +74,11 @@ cog.render2 = function (layoutSrc) {
             }, { method: "GET" });
         } else {
             cog.setElems2(function () {
+                cog.data = new cog.observable(cog.data, function(a){
+                    cog.tasks.push(a);
+                });
                 document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
+
                 if (cog.isElement(layoutSrc)) {
                     cog.bind2(layoutSrc);
                 } else {
@@ -103,6 +107,9 @@ cog.render2 = function (layoutSrc) {
         }
         setTimeout(function () {
             cog.setElems2(function () {
+                cog.data = new cog.observable(cog.data, function(a){
+                    cog.tasks.push(a);
+                });
                 step_bind();
             });
         }, 0);
@@ -538,7 +545,7 @@ cog.bindRepeats2 = function (dom, repeat) {
             repeatTokenObj[repeatAlias[i]] = repeatToken[i];
         }
         repeatNode.removeAttribute(cog.label.repeat);
-
+        
 
 
         repeatDataToken = repeatToken[0];
@@ -758,7 +765,7 @@ cog.get2 = function (keys) {
     return ref;
 };
 cog.set2 = function (keys, val) {
-    var i, key, keysLength, ref = cog.data, copy, diff;
+    var i, key, keysLength, ref = cog.data;
     if (typeof keys === 'string') {
         keys = keys.split(".");
     }
@@ -766,79 +773,259 @@ cog.set2 = function (keys, val) {
     for (i = 0; i < keysLength; i++) {
         key = keys[i];
         if (!ref.hasOwnProperty(key)) {
-            if (i == keysLength - 1) {
-                ref[key] = undefined;
-            } else {
+            if (i != keysLength - 1) {
                 ref[key] = {};
             }
         }
         if (i == keysLength - 1) {
-            if (typeof ref[key] === 'object') {
-                //IF ARRAY
-                if (Array.isArray(ref[key]) || ref[key] instanceof cog.observableArray) {
-                    if (!(ref[key] instanceof cog.observableArray)) {
-                        ref[key] = new cog.observableArray(ref[key], function (args) {
-                            if (args.action == "set") {
-                                var keysCopy = JSON.parse(JSON.stringify(keys));
-                                keysCopy.push(args.index);
-                                cog.tasks.push({ action: args.action, value: args.value, keys: keysCopy });
-                            }
-                            if (args.action == "push") {
-                                cog.tasks.push({ action: args.action, args: args.args, keys: keys });
-                            }
-                            if (args.action == "pop") {
-                                cog.tasks.push({ action: args.action, keys: keys });
-                            }
-                            if (args.action == "unshift") {
-                                cog.tasks.push({ action: args.action, args: args.args, keys: keys });
-                            }
-                            if (args.action == "shift") {
-                                cog.tasks.push({ action: args.action, keys: keys });
-                            }
-                            if (args.action == "splice") {
-                                cog.tasks.push({ action: args.action, args: args.args, keys: keys });
-                            }
-                        });
-                    }
-                    copy = ref[key];
-                    if (typeof val === 'function') {
-                        ref[key] = val(ref[key]);
-                    } else {
-                        ref[key] = val;
-                    }
-                    if (copy !== ref[key]) {
-                        cog.tasks.push({ action: "set", value: ref[key], keys: keys });
-                    }
-                } else {
-                    //IF OBJECT
-                    copy = JSON.parse(JSON.stringify(ref[key]));
-                    if (typeof val === 'function') {
-                        ref[key] = val(ref[key]);
-                    } else {
-                        ref[key] = val;
-                    }
-                    if (typeof ref[key] === 'object' && !Array.isArray(ref[key])) {
-                        diff = cog.deepDiffMapper.map(copy, ref[key]);
-                        cog.tasks.push({ action: "diff", diff: diff, keys: keys });
-                    } else {
-                        cog.tasks.push({ action: "set", value: ref[key], keys: keys });
-                    }
-                }
-            } else {
-                //IF PRIMATIVE
-                if (typeof val === 'function') {
-                    ref[key] = val(ref[key]);
-                } else {
-                    ref[key] = val;
-                }
-                cog.tasks.push({ action: "set", value: ref[key], keys: keys });
-            }
+            ref[key] = val;
         } else {
             ref = ref[key];
         }
     }
-
 };
+
+cog.checkType = function (input) {
+    var typeString = Object.prototype.toString.call(input);
+    return typeString.slice(8, typeString.length - 1).toLowerCase();
+};
+cog.observable = function (items, callback, keys) {
+    var _type = cog.checkType(items);
+    if ((_type !== 'object' && _type !== 'array') || items instanceof cog.observable) {return items;}
+    //if (_type !== 'object' && _type !== 'array') {return items;}
+    
+    var _self = this, _object, _init = false, _keys;
+    if (keys == null) {
+        _keys = [];
+    } else {
+        _keys = JSON.parse(JSON.stringify(keys));
+    }
+
+    function defineKeyProperty(key) {
+        if (!(key in _self)) {
+            Object.defineProperty(_self, key, {
+                configurable: true,
+                enumerable: true,
+                get: function () {
+                    return _object[key];
+                },
+                set: function (v) {
+                    _object[key] = v;
+                    var valueKeys = JSON.parse(JSON.stringify(_keys));
+                    valueKeys.push(key);
+                    if (typeof v === 'object') {
+                        v = new cog.observable(v, callback, valueKeys);
+                    }
+                    if (_init) {
+                        callback({
+                            action: "set",
+                            value: v,
+                            keys: valueKeys
+                        });
+                    }
+                }
+            });
+        }
+    }
+
+    function defineNewObservable(obj, key) {
+        if (typeof obj === 'object') {
+            var valueKeys = JSON.parse(JSON.stringify(_keys));
+            valueKeys.push(key);
+            return new cog.observable(obj, callback, valueKeys);
+        } else {
+            return obj;
+        }
+    }
+    
+    if (_type === 'array') {
+        
+        _object = [];
+        Object.defineProperty(_self, "push", {
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: function () {
+                var index, args = [];
+                for (var i = 0, ln = arguments.length; i < ln; i++) {
+                    index = _object.length;
+                    args.push(defineNewObservable(arguments[i], index));
+                    _object.push(args[args.length-1]);
+                    defineKeyProperty(index);
+                }
+                if (_init) {
+                    callback({
+                        action: "push",
+                        args: args,
+                        keys: JSON.parse(JSON.stringify(_keys))
+                    });
+                }
+                return _object.length;
+            }
+        });
+
+        Object.defineProperty(_self, "pop", {
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: function () {
+                if (_object.length > -1) {
+                    var index = _object.length - 1,
+                        item = _object.pop();
+                    delete _self[index];
+                    callback({
+                        action: "pop",
+                        keys: JSON.parse(JSON.stringify(_keys))
+                    });
+                    return item;
+                }
+            }
+        });
+
+        Object.defineProperty(_self, "unshift", {
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: function () {
+                var args = [];
+                for (var i = 0, ln = arguments.length; i < ln; i++) {
+                    args.push(defineNewObservable(arguments[i], i));
+                    _object.splice(i, 0, args[args.length-1]);
+                    defineKeyProperty(_object.length - 1);
+                }
+                callback({
+                    action: "unshift",
+                    args: args,
+                    keys: JSON.parse(JSON.stringify(_keys))
+                });
+                return _object.length;
+            }
+        });
+
+        Object.defineProperty(_self, "shift", {
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: function () {
+                if (_object.length > -1) {
+                    var item = _object.shift();
+                    delete _self[_object.length];
+                    callback({
+                        action: "shift",
+                        keys: JSON.parse(JSON.stringify(_keys))
+                    });
+                    return item;
+                }
+            }
+        });
+
+        Object.defineProperty(_self, "splice", {
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: function (index, howMany) {
+                var removed = [], item, args = [];
+
+                index = index == null ? 0 : index < 0 ? _object.length + index : index;
+
+                howMany = howMany == null ? _object.length - index : howMany > 0 ? howMany : 0;
+
+                while (howMany--) {
+                    item = _object.splice(index, 1)[0];
+                    removed.push(item);
+                    delete _self[_object.length];
+                }
+
+                for (var i = 2, ln = arguments.length; i < ln; i++) {
+                    args.push(defineNewObservable(arguments[i], i));
+                    _object.splice(index, 0, args[args.length-1]);
+                    defineKeyProperty(_object.length - 1);
+                    index++;
+                }
+
+                callback({
+                    action: "splice",
+                    args: args,
+                    keys: JSON.parse(JSON.stringify(_keys))
+                });
+
+                return removed;
+            }
+        });
+
+        Object.defineProperty(_self, "length", {
+            configurable: false,
+            enumerable: false,
+            get: function () {
+                return _object.length;
+            },
+            set: function (value) {
+                var n = Number(value);
+                var length = _object.length;
+                if (n % 1 === 0 && n >= 0) {
+                    if (n < length) {
+                        _self.splice(n);
+                    } else if (n > length) {
+                        _self.push.apply(_self, new Array(n - length));
+                    }
+                } else {
+                    throw new RangeError("Invalid array length");
+                }
+                _object.length = n;
+                return value;
+            }
+        });
+
+        Object.getOwnPropertyNames(Array.prototype).forEach(function (name) {
+            if (!(name in _self)) {
+                Object.defineProperty(_self, name, {
+                    configurable: false,
+                    enumerable: false,
+                    writable: false,
+                    value: Array.prototype[name]
+                });
+            }
+        });/*
+        var valueKeys;
+        for (var i in items) {
+            if (typeof items[i] === 'object') {
+                valueKeys = JSON.parse(JSON.stringify(_keys));
+                valueKeys.push(i);
+                items[i] = new cog.observable(items[i], callback, valueKeys);
+            }
+        }*/
+        _self.push.apply(_self, items);
+    } else {
+        _object = {};
+        Object.getOwnPropertyNames(Object.prototype).forEach(function (name) {
+            if (!(name in _self)) {
+                Object.defineProperty(_self, name, {
+                    configurable: false,
+                    enumerable: false,
+                    writable: false,
+                    value: Object.prototype[name]
+                });
+            }
+        });
+        var valueKeys;
+        for (var i in items) {
+            //FIX THE EXCESSIVE LOOPING BUG 
+            if (typeof items[i] === 'object') {
+                valueKeys = JSON.parse(JSON.stringify(_keys));
+                valueKeys.push(i);
+                items[i] = new cog.observable(items[i], callback, valueKeys);
+            }
+            defineKeyProperty(i);
+            _self[i] = items[i];
+            
+            
+            
+        }
+    }
+    _init = true;
+};
+
+
 cog.setElems2 = function (callback) {
     cog.loadContents(function () {
         var setElem, setAttr, setAttrSplit, setType, setKey, setKeys, setTemp, setTempId, setTempAlias, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head, tempNode, tempAttr, tempId, tempAlias;
@@ -856,7 +1043,7 @@ cog.setElems2 = function (callback) {
             }
             if (setType == "raw") {
                 propData = cog.eval("(" + setElem.innerText + ")");
-                cog.set2(setKeys, function () { return propData; });
+                cog.set2(setKeys, propData);
             }
             if (setType == "text") {
                 cog.set2(setKeys, setElem.innerText);
@@ -900,7 +1087,6 @@ cog.setElems2 = function (callback) {
             head.removeAttribute("head");
             document.head.appendChild(head);
         }
-        cog.tasks = [];
         if (typeof callback === 'function') {
             callback();
         }
@@ -987,175 +1173,7 @@ cog.deepDiffMapper = function () {
         }
     }
 }();
-//OBSERVABLE 
-cog.observableArray = function (items, callback) {
-    var _self = this, _array = [], _init = false;
-
-    function defineIndexProperty(index) {
-        if (!(index in _self)) {
-            Object.defineProperty(_self, index, {
-                configurable: true,
-                enumerable: true,
-                get: function () {
-                    return _array[index];
-                },
-                set: function (v) {
-                    _array[index] = v;
-                    callback({
-                        action: "set",
-                        value: v,
-                        index: index
-                    });
-                }
-            });
-        }
-    }
-
-    Object.defineProperty(_self, "push", {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: function () {
-            var index;
-            for (var i = 0, ln = arguments.length; i < ln; i++) {
-                index = _array.length;
-                _array.push(arguments[i]);
-                defineIndexProperty(index);
-            }
-            if (_init) {
-                callback({
-                    action: "push",
-                    args: arguments
-                });
-            } else {
-                _init = true;
-            }
-            return _array.length;
-        }
-    });
-
-    Object.defineProperty(_self, "pop", {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: function () {
-            if (_array.length > -1) {
-                var index = _array.length - 1,
-                    item = _array.pop();
-                delete _self[index];
-                callback({
-                    action: "pop"
-                });
-                return item;
-            }
-        }
-    });
-
-    Object.defineProperty(_self, "unshift", {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: function () {
-            for (var i = 0, ln = arguments.length; i < ln; i++) {
-                _array.splice(i, 0, arguments[i]);
-                defineIndexProperty(_array.length - 1);
-            }
-            callback({
-                action: "unshift",
-                args: arguments
-            });
-            return _array.length;
-        }
-    });
-
-    Object.defineProperty(_self, "shift", {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: function () {
-            if (_array.length > -1) {
-                var item = _array.shift();
-                delete _self[_array.length];
-                callback({
-                    action: "shift"
-                });
-                return item;
-            }
-        }
-    });
-
-    Object.defineProperty(_self, "splice", {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: function (index, howMany) {
-            var removed = [],
-                item,
-                pos;
-
-            index = index == null ? 0 : index < 0 ? _array.length + index : index;
-
-            howMany = howMany == null ? _array.length - index : howMany > 0 ? howMany : 0;
-
-            while (howMany--) {
-                item = _array.splice(index, 1)[0];
-                removed.push(item);
-                delete _self[_array.length];
-            }
-
-            for (var i = 2, ln = arguments.length; i < ln; i++) {
-                _array.splice(index, 0, arguments[i]);
-                defineIndexProperty(_array.length - 1);
-                index++;
-            }
-
-            callback({
-                action: "splice",
-                args: arguments
-            });
-
-            return removed;
-        }
-    });
-
-    Object.defineProperty(_self, "length", {
-        configurable: false,
-        enumerable: false,
-        get: function () {
-            return _array.length;
-        },
-        set: function (value) {
-            var n = Number(value);
-            var length = _array.length;
-            if (n % 1 === 0 && n >= 0) {
-                if (n < length) {
-                    _self.splice(n);
-                } else if (n > length) {
-                    _self.push.apply(_self, new Array(n - length));
-                }
-            } else {
-                throw new RangeError("Invalid array length");
-            }
-            _array.length = n;
-            return value;
-        }
-    });
-
-    Object.getOwnPropertyNames(Array.prototype).forEach(function (name) {
-        if (!(name in _self)) {
-            Object.defineProperty(_self, name, {
-                configurable: false,
-                enumerable: false,
-                writable: false,
-                value: Array.prototype[name]
-            });
-        }
-    });
-
-    if (items instanceof Array) {
-        _self.push.apply(_self, items);
-    }
-};
+//OBSERVABLE
 
 
 

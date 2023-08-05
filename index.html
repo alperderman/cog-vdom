@@ -29,7 +29,7 @@
         <p>{{item.name}}</p>
         <p>{{item.job}}</p>
         <div cog-repeat="tags;item, pep;{{item.tags}}, {{item}}">
-            <span>{{pep.id}}</span>
+            <span>{{item._index}}</span>
             <span>{{item}}</span>
         </div>
         <hr>
@@ -68,6 +68,7 @@
         cog.data.arr = [1, 2, 3, 4];
         cog.data.obj = { name: "alex", func:function(v){return v.join(".")} };
         cog.data.prim = "nice JOB!";
+        /*
         cog.set2("arr", function(val){
             val.push(5);return val;
         });
@@ -86,7 +87,7 @@
             val.job = "nice one!";
             val.name= "ok then mane!";
             return val;
-        });
+        });*/
         console.log(cog.tasks);
         cog.render2();
     </script>
