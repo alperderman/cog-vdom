@@ -145,6 +145,7 @@ cog.bind2 = function (dom, arg) {
     if (arg == null) { arg = {}; }
     if (arg.global == null) { arg.global = true; }
     if (arg.repeat == null) { arg.repeat = true; }
+    if (arg.parent == null) { arg.parent = false; }
     while (tempNode = dom.querySelector("[" + cog.label.temp + "]")) {
         tempAttr = tempNode.getAttribute(cog.label.temp).split(";");
         tempId = tempAttr[0].trim();
@@ -169,7 +170,7 @@ cog.bind2 = function (dom, arg) {
         }
     }
     //REPEAT
-    cog.bindRepeats2(dom, arg.repeat);
+    cog.bindRepeats2(dom, arg.repeat, arg.parent);
     dommap = cog.createDOMMap(dom);
     cog.iterate(dommap, {
         obj: function (obj) {
@@ -289,6 +290,7 @@ cog.template2 = function (arg) {
     if (arg.bind == null) { arg.bind = false; }
     if (arg.global == null) { arg.global = true; }
     if (arg.repeat == null) { arg.repeat = true; }
+    if (arg.parent == null) { arg.parent = false; }
     if (cog.templates[arg.id] == null && arg.node != null) {
         //INIT TEMPLATE
         cog.templates[arg.id] = { alias: {}, props: [], node: arg.node.cloneNode(true) };
@@ -465,7 +467,7 @@ cog.template2 = function (arg) {
         cloneNode = document.createElement("div");
         cloneNode.innerHTML = node.innerHTML;
         if (arg.bind) {
-            cloneNode = cog.bind2(cloneNode, { global: arg.global, repeat: arg.repeat });
+            cloneNode = cog.bind2(cloneNode, { global: arg.global, repeat: arg.repeat, parent: arg.parent });
         }
         if (arg.fragment) {
             return cog.elemFragment(cloneNode);
@@ -526,7 +528,7 @@ cog.pushNode2 = function (keys, node) {
     }
     return result;
 };
-cog.bindRepeats2 = function (dom, repeat) {
+cog.bindRepeats2 = function (dom, repeat, parent) {
     //cog.repeats STRUCTURE: {arr: {templapteNameAndAlias:{owner:NDOE, template:templateName, alias:alias, nodes:[ {index:[TEXTNODE,TEXTNODE], nodes:[NODE,NODE,NODE]}, {}, {} ]   } } }
     //CREATE ONLY ONE TEMPLATE AND REPEAT THE DATA BY REBINDING THE DATA ON THAT SPECIFIC TEMPLATE (REQUIRES MAKING A TEMPORARY SCOPE)
     var i, ii, repeatNode, repeatAttr, repeatId, repeatToken, repeatTokenObj, repeatAlias, repeatData, repeatDataLength, repeatDataToken, repeatDataKey, repeatTemp, repeatTempChilds;
@@ -563,12 +565,14 @@ cog.bindRepeats2 = function (dom, repeat) {
                 if (!cog.repeats.hasOwnProperty(repeatDataToken)) {
                     cog.repeats[repeatDataToken] = {};
                 }
-                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone: [] };
+                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone: [], inner: [] };
             }
-
+            if (parent) {
+                parent.inner.push([repeatDataToken, repeatDataKey]);
+            }
             for (i = 0; i < repeatDataLength; i++) {
                 repeatTokenObj[repeatAlias[0]] = repeatDataToken + "." + i;
-                repeatTemp = cog.template2({ id: repeatId, data: repeatTokenObj, fragment: true, bind: true, global: true, repeat: true });
+                repeatTemp = cog.template2({ id: repeatId, data: repeatTokenObj, fragment: true, bind: true, global: true, repeat: true, parent: cog.repeats[repeatDataToken][repeatDataKey] });
                 //ADD NODES HERE, ALSO MAY DONT NEED GLOBAL AND REPEAT
                 //repeatTempChilds = repeatTemp.childNodes;
 
@@ -585,7 +589,7 @@ cog.rebindRepeats2 = function (arg) {// MAY DONT NEED THIS
     arg.owner.innerHTML = "";
     for (i = 0; i < repeatDataLength; i++) {
         arg.alias[arg.dataAlias] = arg.data + "." + i;
-        arg.owner.appendChild(cog.template2({ id: arg.template, data: arg.alias, fragment: true, bind: true, global: true, repeat: true }));
+        arg.owner.appendChild(cog.template2({ id: arg.template, data: arg.alias, fragment: true, bind: true, global: true, repeat: true, parent: arg }));
     }
     for (i in arg.clone) {
         arg.clone[i].innerHTML = arg.owner.innerHTML;
@@ -625,7 +629,7 @@ cog.rebind2 = function () {
                     for (iii = 0; iii < task.args.length; iii++) {
                         index = (content.length) - (task.args.length) + (iii);
                         repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
+                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
                     }
                     cog.rebindRepeatClones2(repeat);
                 }
@@ -638,7 +642,7 @@ cog.rebind2 = function () {
                             for (iiii = 0; iiii < task.args.length; iiii++) {
                                 index = (content.length) - (task.args.length) + (iiii);
                                 repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
+                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
                             }
                             cog.rebindRepeatClones2(repeat);
                         }
@@ -651,19 +655,6 @@ cog.rebind2 = function () {
             content = cog.get2(task.keys);
             cog.rebindNodes2(token, content);
             //REBIND REPEATERS HERE
-            /*
-            checkRepeat = false;
-            for (ii in cog.repeats) {
-                if (cog.checkKeys(ii, token)) {
-                    checkRepeat = true;
-                    break;
-                }
-            }
-            if (checkRepeat) {
-                for (ii in cog.repeats[token]) {
-                    cog.rebindRepeats2(cog.repeats[token][ii]);
-                }
-            }*/
 
             if (cog.repeats.hasOwnProperty(token)) {
                 for (ii in cog.repeats[token]) {
@@ -672,7 +663,7 @@ cog.rebind2 = function () {
                     for (iii = 0; iii < task.args.length; iii++) {
                         index = (content.length) - (task.args.length) + (iii);
                         repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
+                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
                     }
                     cog.rebindRepeatClones2(repeat);
                 }
@@ -685,7 +676,7 @@ cog.rebind2 = function () {
                             for (iiii = 0; iiii < task.args.length; iiii++) {
                                 index = (content.length) - (task.args.length) + (iiii);
                                 repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
+                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
                             }
                             cog.rebindRepeatClones2(repeat);
                         }
@@ -696,15 +687,8 @@ cog.rebind2 = function () {
     }
     cog.tasks = [];
 };
-cog.rebindNodes2 = function (token, content) {
-    var i, newNode, cloneNode, nodeToken, nodeTokensLength, prop, contentKeys, contentAlt, nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength;
-    if (typeof token !== "string") {
-        token = token.join(".");
-    }
-    if (content instanceof cog.observable) {
-        content = content._get();
-    }
-    var nodeTokens = cog.getNode2(token);
+cog.rebindNodes2 = function (token) {
+    var i, newNode, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token);
     if (typeof nodeTokens === 'object') {
         if (Array.isArray(nodeTokens)) {
             nodeTokensLength = nodeTokens.length;
@@ -734,13 +718,10 @@ cog.rebindNodes2 = function (token, content) {
             }
         } else {
             nodeTokenKeys = Object.keys(nodeTokens);
-            contentKeys = Object.keys(content);
             nodeTokenKeysLength = nodeTokenKeys.length;
-
             for (i = 0; i < nodeTokenKeysLength; i++) {
                 nodeTokenKey = nodeTokenKeys[i];
-                contentAlt = content[contentKeys[i]];
-                cog.rebindNodes2(token + "." + nodeTokenKey, contentAlt);
+                cog.rebindNodes2(token + "." + nodeTokenKey);
             }
         }
     }
@@ -796,7 +777,7 @@ cog.set2 = function (keys, val) {
 cog.observable = function (value, callback, parent, keys) {
     var _type = checkType(value);
     if (value instanceof cog.observable) { return value; }
-    var _self = this, _object, _init = false, _keys, _parent;
+    var _self = this, _value, _init = false, _keys, _parent;
     if (checkType(callback) !== 'function') {
         callback = function () { };
     }
@@ -822,7 +803,7 @@ cog.observable = function (value, callback, parent, keys) {
                 configurable: true,
                 enumerable: true,
                 get: function () {
-                    return _object[key];
+                    return _value[key];
                 },
                 set: function (val) {
                     _self._set.apply(_self, [val, key]);
@@ -842,11 +823,11 @@ cog.observable = function (value, callback, parent, keys) {
     }
 
     function fixArrayIndex() {
-        var val, i, ln = _object.length;
+        var val, i, ln = _value.length;
         for (i = 0, ln; i < ln; i++) {
-            val = JSON.parse(JSON.stringify(_object[i]._keys));
+            val = JSON.parse(JSON.stringify(_value[i]._keys));
             val[val.length - 1] = i;
-            _object[i]._keys = val;
+            _value[i]._keys = val;
         }
     }
 
@@ -855,7 +836,7 @@ cog.observable = function (value, callback, parent, keys) {
         enumerable: false,
         writable: false,
         value: function () {
-            return _object;
+            return _value;
         }
     });
 
@@ -868,13 +849,13 @@ cog.observable = function (value, callback, parent, keys) {
             if (key != null) {
                 var o = defineNewObservable(val, key, true);
                 val = o.val;
-                _object[key] = val;
+                _value[key] = val;
                 valKeys = o.keys;
                 if (!_self.hasOwnProperty(key)) {
                     defineNewProperty(key);
                 }
             } else {
-                _object = val;
+                _value = val;
                 valKeys = JSON.parse(JSON.stringify(_keys));
             }
             if (_init) {
@@ -930,7 +911,7 @@ cog.observable = function (value, callback, parent, keys) {
 
     if (_type === 'array' || _type === 'object') {
         if (_type === 'array') {
-            _object = [];
+            _value = [];
 
             Object.defineProperty(_self, "push", {
                 configurable: false,
@@ -939,9 +920,9 @@ cog.observable = function (value, callback, parent, keys) {
                 value: function () {
                     var index, args = [];
                     for (var i = 0, ln = arguments.length; i < ln; i++) {
-                        index = _object.length;
+                        index = _value.length;
                         args.push(defineNewObservable(arguments[i], index));
-                        _object.push(args[args.length - 1]);
+                        _value.push(args[args.length - 1]);
                         defineNewProperty(index);
                     }
                     if (_init) {
@@ -951,7 +932,7 @@ cog.observable = function (value, callback, parent, keys) {
                             keys: JSON.parse(JSON.stringify(_keys))
                         });
                     }
-                    return _object.length;
+                    return _value.length;
                 }
             });
 
@@ -960,9 +941,9 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    if (_object.length > -1) {
-                        var index = _object.length - 1,
-                            item = _object.pop();
+                    if (_value.length > -1) {
+                        var index = _value.length - 1,
+                            item = _value.pop();
                         delete _self[index];
                         callback({
                             action: "pop",
@@ -981,8 +962,8 @@ cog.observable = function (value, callback, parent, keys) {
                     var i, ln, args = [];
                     for (i = 0, ln = arguments.length; i < ln; i++) {
                         args.push(defineNewObservable(arguments[i], i));
-                        _object.splice(i, 0, args[args.length - 1]);
-                        defineNewProperty(_object.length - 1);
+                        _value.splice(i, 0, args[args.length - 1]);
+                        defineNewProperty(_value.length - 1);
                     }
                     fixArrayIndex();
                     callback({
@@ -990,7 +971,7 @@ cog.observable = function (value, callback, parent, keys) {
                         args: args,
                         keys: JSON.parse(JSON.stringify(_keys))
                     });
-                    return _object.length;
+                    return _value.length;
                 }
             });
 
@@ -999,9 +980,9 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    if (_object.length > -1) {
-                        var item = _object.shift();
-                        delete _self[_object.length];
+                    if (_value.length > -1) {
+                        var item = _value.shift();
+                        delete _self[_value.length];
                         fixArrayIndex();
                         callback({
                             action: "shift",
@@ -1019,20 +1000,20 @@ cog.observable = function (value, callback, parent, keys) {
                 value: function (index, howMany) {
                     var removed = [], item, args = [];
 
-                    index = index == null ? 0 : index < 0 ? _object.length + index : index;
+                    index = index == null ? 0 : index < 0 ? _value.length + index : index;
 
-                    howMany = howMany == null ? _object.length - index : howMany > 0 ? howMany : 0;
+                    howMany = howMany == null ? _value.length - index : howMany > 0 ? howMany : 0;
 
                     while (howMany--) {
-                        item = _object.splice(index, 1)[0];
+                        item = _value.splice(index, 1)[0];
                         removed.push(item);
-                        delete _self[_object.length];
+                        delete _self[_value.length];
                     }
 
                     for (var i = 2, ln = arguments.length; i < ln; i++) {
                         args.push(defineNewObservable(arguments[i], i));
-                        _object.splice(index, 0, args[args.length - 1]);
-                        defineNewProperty(_object.length - 1);
+                        _value.splice(index, 0, args[args.length - 1]);
+                        defineNewProperty(_value.length - 1);
                         index++;
                     }
                     fixArrayIndex();
@@ -1050,11 +1031,11 @@ cog.observable = function (value, callback, parent, keys) {
                 configurable: false,
                 enumerable: false,
                 get: function () {
-                    return _object.length;
+                    return _value.length;
                 },
                 set: function (val) {
                     var n = Number(val);
-                    var length = _object.length;
+                    var length = _value.length;
                     if (n % 1 === 0 && n >= 0) {
                         if (n < length) {
                             _self.splice(n);
@@ -1064,7 +1045,7 @@ cog.observable = function (value, callback, parent, keys) {
                     } else {
                         throw new RangeError("Invalid array length");
                     }
-                    _object.length = n;
+                    _value.length = n;
                     return val;
                 }
             });
@@ -1081,14 +1062,14 @@ cog.observable = function (value, callback, parent, keys) {
             });
             _self.push.apply(_self, value);
         } else {
-            _object = {};
+            _value = {};
             for (var i in value) {
-                _object[i] = defineNewObservable(value[i], i);
+                _value[i] = defineNewObservable(value[i], i);
                 defineNewProperty(i);
             }
         }
     } else {
-        _object = value;
+        _value = value;
     }
 
     _init = true;
