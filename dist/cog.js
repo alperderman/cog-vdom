@@ -785,24 +785,31 @@ cog.set2 = function (keys, val) {
     }
 };
 
-cog.checkType = function (input) {
-    var typeString = Object.prototype.toString.call(input);
-    return typeString.slice(8, typeString.length - 1).toLowerCase();
-};
-cog.observable = function (items, callback, keys) {
-    var _type = cog.checkType(items);
+cog.observable = function (items, callback, parent, keys) {
+    var _type = checkType(items);
     if ((_type !== 'object' && _type !== 'array') || items instanceof cog.observable) {return items;}
-    //if (_type !== 'object' && _type !== 'array') {return items;}
-    
-    var _self = this, _object, _init = false, _keys;
+    var _self = this, _object, _init = false, _keys, _parent;
+    if (checkType(callback) !== 'function') {
+        callback = function(){};
+    }
     if (keys == null) {
         _keys = [];
     } else {
-        _keys = JSON.parse(JSON.stringify(keys));
+        _keys = keys;
+    }
+    if (parent == null) {
+        _parent = undefined;
+    } else {
+        _parent = parent;
+    }
+
+    function checkType(input) {
+        var typeString = Object.prototype.toString.call(input);
+        return typeString.slice(8, typeString.length - 1).toLowerCase();
     }
 
     function defineKeyProperty(key) {
-        if (!(key in _self)) {
+        if (!_self.hasOwnProperty(key)) {
             Object.defineProperty(_self, key, {
                 configurable: true,
                 enumerable: true,
@@ -810,37 +817,94 @@ cog.observable = function (items, callback, keys) {
                     return _object[key];
                 },
                 set: function (v) {
-                    _object[key] = v;
-                    var valueKeys = JSON.parse(JSON.stringify(_keys));
-                    valueKeys.push(key);
-                    if (typeof v === 'object') {
-                        v = new cog.observable(v, callback, valueKeys);
-                    }
-                    if (_init) {
-                        callback({
-                            action: "set",
-                            value: v,
-                            keys: valueKeys
-                        });
-                    }
+                    _self._set.apply(_self, [key, v]);
                 }
             });
         }
     }
 
-    function defineNewObservable(obj, key) {
-        if (typeof obj === 'object') {
+    function defineNewObservable(obj, key, verbose) {
+        var type = checkType(obj);
+        if (verbose) {
             var valueKeys = JSON.parse(JSON.stringify(_keys));
             valueKeys.push(key);
-            return new cog.observable(obj, callback, valueKeys);
+            if (type === 'object' || type === 'array') {
+                return {val:new cog.observable(obj, callback, _self, valueKeys), keys:valueKeys};
+            } else {
+                return {val:obj, keys:valueKeys};
+            }
         } else {
-            return obj;
+            if (type === 'object' || type === 'array') {
+                var valueKeys = JSON.parse(JSON.stringify(_keys));
+                valueKeys.push(key);
+                return new cog.observable(obj, callback, _self, valueKeys);
+            } else {
+                return obj;
+            }
         }
     }
-    
+
+    Object.defineProperty(_self, "_set", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function (key, v) {
+            var o = defineNewObservable(v, key, true);
+            v = o.val;
+            _object[key] = v;
+            if (!_self.hasOwnProperty(key)) {
+                defineKeyProperty(key);
+            }
+            if (_init) {
+                callback({
+                    action: "set",
+                    value: v,
+                    keys: o.keys
+                });
+            }
+        }
+    });
+
+    Object.defineProperty(_self, "_type", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: _type
+    });
+
+    Object.defineProperty(_self, "_key", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: _keys[_keys.length-1]
+    });
+
+    Object.defineProperty(_self, "_keys", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: JSON.parse(JSON.stringify(_keys))
+    });
+
+    Object.defineProperty(_self, "_parent", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: _parent
+    });
+
+    if (_parent && _parent._type === 'array') {
+        Object.defineProperty(_self, "_index", {
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: _keys[_keys.length-1]
+        });
+    }
+
     if (_type === 'array') {
-        
         _object = [];
+        
         Object.defineProperty(_self, "push", {
             configurable: false,
             enumerable: false,
@@ -985,15 +1049,7 @@ cog.observable = function (items, callback, keys) {
                     value: Array.prototype[name]
                 });
             }
-        });/*
-        var valueKeys;
-        for (var i in items) {
-            if (typeof items[i] === 'object') {
-                valueKeys = JSON.parse(JSON.stringify(_keys));
-                valueKeys.push(i);
-                items[i] = new cog.observable(items[i], callback, valueKeys);
-            }
-        }*/
+        });
         _self.push.apply(_self, items);
     } else {
         _object = {};
@@ -1007,19 +1063,9 @@ cog.observable = function (items, callback, keys) {
                 });
             }
         });
-        var valueKeys;
         for (var i in items) {
-            //FIX THE EXCESSIVE LOOPING BUG 
-            if (typeof items[i] === 'object') {
-                valueKeys = JSON.parse(JSON.stringify(_keys));
-                valueKeys.push(i);
-                items[i] = new cog.observable(items[i], callback, valueKeys);
-            }
+            _object[i] = defineNewObservable(items[i], i);
             defineKeyProperty(i);
-            _self[i] = items[i];
-            
-            
-            
         }
     }
     _init = true;
