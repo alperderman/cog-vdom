@@ -74,7 +74,7 @@ cog.render2 = function (layoutSrc) {
             }, { method: "GET" });
         } else {
             cog.setElems2(function () {
-                cog.data = new cog.observable(cog.data, function(a){
+                cog.data = new cog.observable(cog.data, function (a) {
                     cog.tasks.push(a);
                 });
                 document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
@@ -107,7 +107,7 @@ cog.render2 = function (layoutSrc) {
         }
         setTimeout(function () {
             cog.setElems2(function () {
-                cog.data = new cog.observable(cog.data, function(a){
+                cog.data = new cog.observable(cog.data, function (a) {
                     cog.tasks.push(a);
                 });
                 step_bind();
@@ -545,7 +545,7 @@ cog.bindRepeats2 = function (dom, repeat) {
             repeatTokenObj[repeatAlias[i]] = repeatToken[i];
         }
         repeatNode.removeAttribute(cog.label.repeat);
-        
+
 
 
         repeatDataToken = repeatToken[0];
@@ -563,7 +563,7 @@ cog.bindRepeats2 = function (dom, repeat) {
                 if (!cog.repeats.hasOwnProperty(repeatDataToken)) {
                     cog.repeats[repeatDataToken] = {};
                 }
-                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone:[] };
+                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone: [] };
             }
 
             for (i = 0; i < repeatDataLength; i++) {
@@ -585,7 +585,7 @@ cog.rebindRepeats2 = function (arg) {// MAY DONT NEED THIS
     arg.owner.innerHTML = "";
     for (i = 0; i < repeatDataLength; i++) {
         arg.alias[arg.dataAlias] = arg.data + "." + i;
-        arg.owner.appendChild(cog.template2({ id: arg.template, data: arg.alias, fragment: true, bind: true, global:true, repeat: true }));
+        arg.owner.appendChild(cog.template2({ id: arg.template, data: arg.alias, fragment: true, bind: true, global: true, repeat: true }));
     }
     for (i in arg.clone) {
         arg.clone[i].innerHTML = arg.owner.innerHTML;
@@ -609,6 +609,7 @@ cog.rebind2 = function () {
         if (task.action == "push") {
             //REBIND NODES
             content = cog.get2(task.keys);
+
             if (content !== undefined) {
                 for (ii = 0; ii < task.args.length; ii++) {
                     item = task.args[ii];
@@ -623,8 +624,8 @@ cog.rebind2 = function () {
                     repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
                     for (iii = 0; iii < task.args.length; iii++) {
                         index = (content.length) - (task.args.length) + (iii);
-                        repeatAlias[repeat.dataAlias] = repeat.data +"."+index;
-                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global:true, repeat: false }));
+                        repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
+                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
                     }
                     cog.rebindRepeatClones2(repeat);
                 }
@@ -636,8 +637,8 @@ cog.rebind2 = function () {
                             repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
                             for (iiii = 0; iiii < task.args.length; iiii++) {
                                 index = (content.length) - (task.args.length) + (iiii);
-                                repeatAlias[repeat.dataAlias] = repeat.data +"."+index;
-                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global:true, repeat: false }));
+                                repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
+                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
                             }
                             cog.rebindRepeatClones2(repeat);
                         }
@@ -663,15 +664,15 @@ cog.rebind2 = function () {
                     cog.rebindRepeats2(cog.repeats[token][ii]);
                 }
             }*/
-            
+
             if (cog.repeats.hasOwnProperty(token)) {
                 for (ii in cog.repeats[token]) {
                     repeat = cog.repeats[token][ii];
                     repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
                     for (iii = 0; iii < task.args.length; iii++) {
                         index = (content.length) - (task.args.length) + (iii);
-                        repeatAlias[repeat.dataAlias] = repeat.data +"."+index;
-                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global:true, repeat: false }));
+                        repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
+                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
                     }
                     cog.rebindRepeatClones2(repeat);
                 }
@@ -683,8 +684,8 @@ cog.rebind2 = function () {
                             repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
                             for (iiii = 0; iiii < task.args.length; iiii++) {
                                 index = (content.length) - (task.args.length) + (iiii);
-                                repeatAlias[repeat.dataAlias] = repeat.data +"."+index;
-                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global:true, repeat: false }));
+                                repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
+                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: false }));
                             }
                             cog.rebindRepeatClones2(repeat);
                         }
@@ -696,9 +697,12 @@ cog.rebind2 = function () {
     cog.tasks = [];
 };
 cog.rebindNodes2 = function (token, content) {
-    var i, content, newNode, cloneNode, nodeToken, nodeTokensLength, prop, contentKeys, contentAlt, nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength;
+    var i, newNode, cloneNode, nodeToken, nodeTokensLength, prop, contentKeys, contentAlt, nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength;
     if (typeof token !== "string") {
         token = token.join(".");
+    }
+    if (content instanceof cog.observable) {
+        content = content._get();
     }
     var nodeTokens = cog.getNode2(token);
     if (typeof nodeTokens === 'object') {
@@ -732,7 +736,7 @@ cog.rebindNodes2 = function (token, content) {
             nodeTokenKeys = Object.keys(nodeTokens);
             contentKeys = Object.keys(content);
             nodeTokenKeysLength = nodeTokenKeys.length;
-            
+
             for (i = 0; i < nodeTokenKeysLength; i++) {
                 nodeTokenKey = nodeTokenKeys[i];
                 contentAlt = content[contentKeys[i]];
@@ -747,9 +751,6 @@ cog.get2 = function (keys) {
         keys = keys.split(".");
     }
     keysLength = keys.length;
-    if (keys[keysLength-1] == cog.keyword.index) {
-        return keys[keysLength-2];
-    }
     for (i = 0; i < keysLength; i++) {
         key = keys[i];
         if (!ref.hasOwnProperty(key)) {
@@ -762,7 +763,11 @@ cog.get2 = function (keys) {
         keysCopy.pop();
         ref = ref(keysCopy);
     }
-    return ref;
+    if (ref instanceof cog.observable) {
+        return ref._get();
+    } else {
+        return ref;
+    }
 };
 cog.set2 = function (keys, val) {
     var i, key, keysLength, ref = cog.data;
@@ -778,19 +783,22 @@ cog.set2 = function (keys, val) {
             }
         }
         if (i == keysLength - 1) {
-            ref[key] = val;
+            if (ref instanceof cog.observable) {
+                ref[key]._set(val);
+            } else {
+                ref[key] = val;
+            }
         } else {
             ref = ref[key];
         }
     }
 };
-
-cog.observable = function (items, callback, parent, keys) {
-    var _type = checkType(items);
-    if ((_type !== 'object' && _type !== 'array') || items instanceof cog.observable) {return items;}
+cog.observable = function (value, callback, parent, keys) {
+    var _type = checkType(value);
+    if (value instanceof cog.observable) { return value; }
     var _self = this, _object, _init = false, _keys, _parent;
     if (checkType(callback) !== 'function') {
-        callback = function(){};
+        callback = function () { };
     }
     if (keys == null) {
         _keys = [];
@@ -808,7 +816,7 @@ cog.observable = function (items, callback, parent, keys) {
         return typeString.slice(8, typeString.length - 1).toLowerCase();
     }
 
-    function defineKeyProperty(key) {
+    function defineNewProperty(key) {
         if (!_self.hasOwnProperty(key)) {
             Object.defineProperty(_self, key, {
                 configurable: true,
@@ -816,50 +824,64 @@ cog.observable = function (items, callback, parent, keys) {
                 get: function () {
                     return _object[key];
                 },
-                set: function (v) {
-                    _self._set.apply(_self, [key, v]);
+                set: function (val) {
+                    _self._set.apply(_self, [val, key]);
                 }
             });
         }
     }
 
     function defineNewObservable(obj, key, verbose) {
-        var type = checkType(obj);
+        var valueKeys = JSON.parse(JSON.stringify(_keys));
+        valueKeys.push(key);
         if (verbose) {
-            var valueKeys = JSON.parse(JSON.stringify(_keys));
-            valueKeys.push(key);
-            if (type === 'object' || type === 'array') {
-                return {val:new cog.observable(obj, callback, _self, valueKeys), keys:valueKeys};
-            } else {
-                return {val:obj, keys:valueKeys};
-            }
+            return { val: new cog.observable(obj, callback, _self, valueKeys), keys: valueKeys };
         } else {
-            if (type === 'object' || type === 'array') {
-                var valueKeys = JSON.parse(JSON.stringify(_keys));
-                valueKeys.push(key);
-                return new cog.observable(obj, callback, _self, valueKeys);
-            } else {
-                return obj;
-            }
+            return new cog.observable(obj, callback, _self, valueKeys);
         }
     }
+
+    function fixArrayIndex() {
+        var val, i, ln = _object.length;
+        for (i = 0, ln; i < ln; i++) {
+            val = JSON.parse(JSON.stringify(_object[i]._keys));
+            val[val.length - 1] = i;
+            _object[i]._keys = val;
+        }
+    }
+
+    Object.defineProperty(_self, "_get", {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function () {
+            return _object;
+        }
+    });
 
     Object.defineProperty(_self, "_set", {
         configurable: false,
         enumerable: false,
         writable: false,
-        value: function (key, v) {
-            var o = defineNewObservable(v, key, true);
-            v = o.val;
-            _object[key] = v;
-            if (!_self.hasOwnProperty(key)) {
-                defineKeyProperty(key);
+        value: function (val, key) {
+            var valKeys;
+            if (key != null) {
+                var o = defineNewObservable(val, key, true);
+                val = o.val;
+                _object[key] = val;
+                valKeys = o.keys;
+                if (!_self.hasOwnProperty(key)) {
+                    defineNewProperty(key);
+                }
+            } else {
+                _object = val;
+                valKeys = JSON.parse(JSON.stringify(_keys));
             }
             if (_init) {
                 callback({
                     action: "set",
-                    value: v,
-                    keys: o.keys
+                    value: val,
+                    keys: valKeys
                 });
             }
         }
@@ -876,14 +898,16 @@ cog.observable = function (items, callback, parent, keys) {
         configurable: false,
         enumerable: false,
         writable: false,
-        value: _keys[_keys.length-1]
+        value: function () {
+            return _self._keys[_self._keys.length - 1];
+        }
     });
 
     Object.defineProperty(_self, "_keys", {
         configurable: false,
         enumerable: false,
-        writable: false,
-        value: JSON.parse(JSON.stringify(_keys))
+        writable: true,
+        value: _keys
     });
 
     Object.defineProperty(_self, "_parent", {
@@ -898,176 +922,175 @@ cog.observable = function (items, callback, parent, keys) {
             configurable: false,
             enumerable: false,
             writable: false,
-            value: _keys[_keys.length-1]
+            value: function () {
+                return _self._keys[_self._keys.length - 1];
+            }
         });
     }
 
-    if (_type === 'array') {
-        _object = [];
-        
-        Object.defineProperty(_self, "push", {
-            configurable: false,
-            enumerable: false,
-            writable: false,
-            value: function () {
-                var index, args = [];
-                for (var i = 0, ln = arguments.length; i < ln; i++) {
-                    index = _object.length;
-                    args.push(defineNewObservable(arguments[i], index));
-                    _object.push(args[args.length-1]);
-                    defineKeyProperty(index);
+    if (_type === 'array' || _type === 'object') {
+        if (_type === 'array') {
+            _object = [];
+
+            Object.defineProperty(_self, "push", {
+                configurable: false,
+                enumerable: false,
+                writable: false,
+                value: function () {
+                    var index, args = [];
+                    for (var i = 0, ln = arguments.length; i < ln; i++) {
+                        index = _object.length;
+                        args.push(defineNewObservable(arguments[i], index));
+                        _object.push(args[args.length - 1]);
+                        defineNewProperty(index);
+                    }
+                    if (_init) {
+                        callback({
+                            action: "push",
+                            args: args,
+                            keys: JSON.parse(JSON.stringify(_keys))
+                        });
+                    }
+                    return _object.length;
                 }
-                if (_init) {
+            });
+
+            Object.defineProperty(_self, "pop", {
+                configurable: false,
+                enumerable: false,
+                writable: false,
+                value: function () {
+                    if (_object.length > -1) {
+                        var index = _object.length - 1,
+                            item = _object.pop();
+                        delete _self[index];
+                        callback({
+                            action: "pop",
+                            keys: JSON.parse(JSON.stringify(_keys))
+                        });
+                        return item;
+                    }
+                }
+            });
+
+            Object.defineProperty(_self, "unshift", {
+                configurable: false,
+                enumerable: false,
+                writable: false,
+                value: function () {
+                    var i, ln, args = [];
+                    for (i = 0, ln = arguments.length; i < ln; i++) {
+                        args.push(defineNewObservable(arguments[i], i));
+                        _object.splice(i, 0, args[args.length - 1]);
+                        defineNewProperty(_object.length - 1);
+                    }
+                    fixArrayIndex();
                     callback({
-                        action: "push",
+                        action: "unshift",
                         args: args,
                         keys: JSON.parse(JSON.stringify(_keys))
                     });
+                    return _object.length;
                 }
-                return _object.length;
-            }
-        });
+            });
 
-        Object.defineProperty(_self, "pop", {
-            configurable: false,
-            enumerable: false,
-            writable: false,
-            value: function () {
-                if (_object.length > -1) {
-                    var index = _object.length - 1,
-                        item = _object.pop();
-                    delete _self[index];
-                    callback({
-                        action: "pop",
-                        keys: JSON.parse(JSON.stringify(_keys))
-                    });
-                    return item;
-                }
-            }
-        });
-
-        Object.defineProperty(_self, "unshift", {
-            configurable: false,
-            enumerable: false,
-            writable: false,
-            value: function () {
-                var args = [];
-                for (var i = 0, ln = arguments.length; i < ln; i++) {
-                    args.push(defineNewObservable(arguments[i], i));
-                    _object.splice(i, 0, args[args.length-1]);
-                    defineKeyProperty(_object.length - 1);
-                }
-                callback({
-                    action: "unshift",
-                    args: args,
-                    keys: JSON.parse(JSON.stringify(_keys))
-                });
-                return _object.length;
-            }
-        });
-
-        Object.defineProperty(_self, "shift", {
-            configurable: false,
-            enumerable: false,
-            writable: false,
-            value: function () {
-                if (_object.length > -1) {
-                    var item = _object.shift();
-                    delete _self[_object.length];
-                    callback({
-                        action: "shift",
-                        keys: JSON.parse(JSON.stringify(_keys))
-                    });
-                    return item;
-                }
-            }
-        });
-
-        Object.defineProperty(_self, "splice", {
-            configurable: false,
-            enumerable: false,
-            writable: false,
-            value: function (index, howMany) {
-                var removed = [], item, args = [];
-
-                index = index == null ? 0 : index < 0 ? _object.length + index : index;
-
-                howMany = howMany == null ? _object.length - index : howMany > 0 ? howMany : 0;
-
-                while (howMany--) {
-                    item = _object.splice(index, 1)[0];
-                    removed.push(item);
-                    delete _self[_object.length];
-                }
-
-                for (var i = 2, ln = arguments.length; i < ln; i++) {
-                    args.push(defineNewObservable(arguments[i], i));
-                    _object.splice(index, 0, args[args.length-1]);
-                    defineKeyProperty(_object.length - 1);
-                    index++;
-                }
-
-                callback({
-                    action: "splice",
-                    args: args,
-                    keys: JSON.parse(JSON.stringify(_keys))
-                });
-
-                return removed;
-            }
-        });
-
-        Object.defineProperty(_self, "length", {
-            configurable: false,
-            enumerable: false,
-            get: function () {
-                return _object.length;
-            },
-            set: function (value) {
-                var n = Number(value);
-                var length = _object.length;
-                if (n % 1 === 0 && n >= 0) {
-                    if (n < length) {
-                        _self.splice(n);
-                    } else if (n > length) {
-                        _self.push.apply(_self, new Array(n - length));
+            Object.defineProperty(_self, "shift", {
+                configurable: false,
+                enumerable: false,
+                writable: false,
+                value: function () {
+                    if (_object.length > -1) {
+                        var item = _object.shift();
+                        delete _self[_object.length];
+                        fixArrayIndex();
+                        callback({
+                            action: "shift",
+                            keys: JSON.parse(JSON.stringify(_keys))
+                        });
+                        return item;
                     }
-                } else {
-                    throw new RangeError("Invalid array length");
                 }
-                _object.length = n;
-                return value;
-            }
-        });
+            });
 
-        Object.getOwnPropertyNames(Array.prototype).forEach(function (name) {
-            if (!(name in _self)) {
-                Object.defineProperty(_self, name, {
-                    configurable: false,
-                    enumerable: false,
-                    writable: false,
-                    value: Array.prototype[name]
-                });
+            Object.defineProperty(_self, "splice", {
+                configurable: false,
+                enumerable: false,
+                writable: false,
+                value: function (index, howMany) {
+                    var removed = [], item, args = [];
+
+                    index = index == null ? 0 : index < 0 ? _object.length + index : index;
+
+                    howMany = howMany == null ? _object.length - index : howMany > 0 ? howMany : 0;
+
+                    while (howMany--) {
+                        item = _object.splice(index, 1)[0];
+                        removed.push(item);
+                        delete _self[_object.length];
+                    }
+
+                    for (var i = 2, ln = arguments.length; i < ln; i++) {
+                        args.push(defineNewObservable(arguments[i], i));
+                        _object.splice(index, 0, args[args.length - 1]);
+                        defineNewProperty(_object.length - 1);
+                        index++;
+                    }
+                    fixArrayIndex();
+                    callback({
+                        action: "splice",
+                        args: args,
+                        keys: JSON.parse(JSON.stringify(_keys))
+                    });
+
+                    return removed;
+                }
+            });
+
+            Object.defineProperty(_self, "length", {
+                configurable: false,
+                enumerable: false,
+                get: function () {
+                    return _object.length;
+                },
+                set: function (val) {
+                    var n = Number(val);
+                    var length = _object.length;
+                    if (n % 1 === 0 && n >= 0) {
+                        if (n < length) {
+                            _self.splice(n);
+                        } else if (n > length) {
+                            _self.push.apply(_self, new Array(n - length));
+                        }
+                    } else {
+                        throw new RangeError("Invalid array length");
+                    }
+                    _object.length = n;
+                    return val;
+                }
+            });
+
+            Object.getOwnPropertyNames(Array.prototype).forEach(function (name) {
+                if (!(name in _self)) {
+                    Object.defineProperty(_self, name, {
+                        configurable: false,
+                        enumerable: false,
+                        writable: false,
+                        value: Array.prototype[name]
+                    });
+                }
+            });
+            _self.push.apply(_self, value);
+        } else {
+            _object = {};
+            for (var i in value) {
+                _object[i] = defineNewObservable(value[i], i);
+                defineNewProperty(i);
             }
-        });
-        _self.push.apply(_self, items);
-    } else {
-        _object = {};
-        Object.getOwnPropertyNames(Object.prototype).forEach(function (name) {
-            if (!(name in _self)) {
-                Object.defineProperty(_self, name, {
-                    configurable: false,
-                    enumerable: false,
-                    writable: false,
-                    value: Object.prototype[name]
-                });
-            }
-        });
-        for (var i in items) {
-            _object[i] = defineNewObservable(items[i], i);
-            defineKeyProperty(i);
         }
+    } else {
+        _object = value;
     }
+
     _init = true;
 };
 
