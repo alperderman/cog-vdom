@@ -531,7 +531,7 @@ cog.pushNode2 = function (keys, node) {
 cog.bindRepeats2 = function (dom, repeat, parent) {
     //cog.repeats STRUCTURE: {arr: {templapteNameAndAlias:{owner:NDOE, template:templateName, alias:alias, nodes:[ {index:[TEXTNODE,TEXTNODE], nodes:[NODE,NODE,NODE]}, {}, {} ]   } } }
     //CREATE ONLY ONE TEMPLATE AND REPEAT THE DATA BY REBINDING THE DATA ON THAT SPECIFIC TEMPLATE (REQUIRES MAKING A TEMPORARY SCOPE)
-    var i, ii, repeatNode, repeatAttr, repeatId, repeatToken, repeatTokenObj, repeatAlias, repeatData, repeatDataLength, repeatDataToken, repeatDataKey, repeatTemp, repeatTempChilds;
+    var i, repeatNode, repeatAttr, repeatId, repeatToken, repeatTokenObj, repeatAlias, repeatData, repeatDataLength, repeatDataToken, repeatDataKey, repeatTemp;
     if (repeat == null) { repeat = true; }
     while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]")) {
         repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(";");
@@ -565,50 +565,86 @@ cog.bindRepeats2 = function (dom, repeat, parent) {
                 if (!cog.repeats.hasOwnProperty(repeatDataToken)) {
                     cog.repeats[repeatDataToken] = {};
                 }
-                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone: [], inner: [] };
+                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone: [], childs: [], inner: [] };
             }
             if (parent) {
-                parent.inner.push([repeatDataToken, repeatDataKey]);
+                parent.inner.push(repeatDataToken);
             }
+            cog.repeats[repeatDataToken][repeatDataKey]["childs"] = [];
             for (i = 0; i < repeatDataLength; i++) {
+
                 repeatTokenObj[repeatAlias[0]] = repeatDataToken + "." + i;
-                repeatTemp = cog.template2({ id: repeatId, data: repeatTokenObj, fragment: true, bind: true, global: true, repeat: true, parent: cog.repeats[repeatDataToken][repeatDataKey] });
+                repeatTemp = cog.template2({ id: repeatId, data: repeatTokenObj, fragment: false, bind: true, global: true, repeat: true, parent: cog.repeats[repeatDataToken][repeatDataKey] });
                 //ADD NODES HERE, ALSO MAY DONT NEED GLOBAL AND REPEAT
-                //repeatTempChilds = repeatTemp.childNodes;
 
+                cog.repeats[repeatDataToken][repeatDataKey]["childs"][i] = [];
+                while (repeatTemp.firstChild) {
+                    cog.repeats[repeatDataToken][repeatDataKey]["childs"][i].push(repeatTemp.firstChild);
+                    repeatNode.appendChild(repeatTemp.firstChild);
+                }
 
-                repeatNode.appendChild(repeatTemp);
             }
         }
 
     }
 };
-cog.rebindRepeats2 = function (arg) {// MAY DONT NEED THIS
-    var i, repeatData = cog.get2(arg.data), repeatDataLength = repeatData.length;
-    arg.alias = JSON.parse(JSON.stringify(arg.alias));
-    arg.owner.innerHTML = "";
-    for (i = 0; i < repeatDataLength; i++) {
-        arg.alias[arg.dataAlias] = arg.data + "." + i;
-        arg.owner.appendChild(cog.template2({ id: arg.template, data: arg.alias, fragment: true, bind: true, global: true, repeat: true, parent: arg }));
-    }
-    for (i in arg.clone) {
-        arg.clone[i].innerHTML = arg.owner.innerHTML;
-    }
-};
-cog.rebindRepeatClones2 = function (arg) {
-    var i;
-    for (i in arg.clone) {
-        arg.clone[i].innerHTML = arg.owner.innerHTML;
+cog.rebindRepeats2 = function (token) {
+    var i, ii, iii, repeat, content, contentLength, repeatChilds, repeatChild, repeatChildsLength, repeatAlias, repeatTemp;
+    if (cog.repeats.hasOwnProperty(token)) {
+        content = cog.get2(token);
+        contentLength = content.length;
+        for (i in cog.repeats[token]) {
+            repeat = cog.repeats[token][i];
+            repeatChilds = repeat["childs"];
+            repeatChildsLength = repeatChilds.length;
+            //REMOVE
+            if (repeatChildsLength > contentLength) {
+                for (ii = repeatChildsLength - 1; ii >= contentLength; ii--) {
+                    repeatChild = repeatChilds[ii];
+                    for (iii in repeatChild) {
+                        repeatChild[iii].parentNode.removeChild(repeatChild[iii]);
+                    }
+                    repeatChilds.pop();
+                }
+            }
+            //ADD
+            if (repeatChildsLength < contentLength) {
+
+                for (ii = repeatChildsLength; ii < contentLength; ii++) {
+
+                    repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
+                    repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
+                    repeatTemp = cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat });
+
+
+                    repeat["childs"][ii] = [];
+                    while (repeatTemp.firstChild) {
+                        repeat["childs"][ii].push(repeatTemp.firstChild);
+                        repeat.owner.appendChild(repeatTemp.firstChild);
+                    }
+
+                }
+
+            }
+            //INNER
+            for (ii in repeat["inner"]) {
+                cog.rebindRepeats2(repeat["inner"][ii]);
+            }
+            //CLONES
+            for (ii in repeat["clone"]) {
+                repeat["clone"][ii].innerHTML = repeat.owner.innerHTML;
+            }
+        }
     }
 };
 cog.rebind2 = function () {
-    var i, ii, iii, iiii, task, token, content, item, index, repeat, repeatAlias;
+    var i, ii, task, token, content, item, index;
     for (i = 0; i < cog.tasks.length; i++) {
         task = cog.tasks[i];
         token = task.keys.join(".");
         if (task.action == "set") {
             //REBIND NODES
-            cog.rebindNodes2(token, task.value);
+            cog.rebindNodes2(token);
         }
         if (task.action == "push") {
             //REBIND NODES
@@ -618,103 +654,71 @@ cog.rebind2 = function () {
                 for (ii = 0; ii < task.args.length; ii++) {
                     item = task.args[ii];
                     index = (content.length) - (task.args.length) + (ii);
-                    cog.rebindNodes2(token + "." + index, item);
+                    cog.rebindNodes2(token + "." + index);
                 }
             }
             //REBIND REPEATERS HERE
-            if (cog.repeats.hasOwnProperty(token)) {
-                for (ii in cog.repeats[token]) {
-                    repeat = cog.repeats[token][ii];
-                    repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
-                    for (iii = 0; iii < task.args.length; iii++) {
-                        index = (content.length) - (task.args.length) + (iii);
-                        repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
-                    }
-                    cog.rebindRepeatClones2(repeat);
-                }
-            } else {
-                for (ii in cog.repeats) {
-                    if (cog.checkKeys(ii, token)) {
-                        for (iii in cog.repeats[ii]) {
-                            repeat = cog.repeats[ii][iii];
-                            repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
-                            for (iiii = 0; iiii < task.args.length; iiii++) {
-                                index = (content.length) - (task.args.length) + (iiii);
-                                repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
-                            }
-                            cog.rebindRepeatClones2(repeat);
-                        }
-                    }
-                }
-            }
+            cog.rebindRepeats2(token);
         }
         if (task.action == "unshift") {
             //REBIND NODES
             content = cog.get2(task.keys);
-            cog.rebindNodes2(token, content);
+            cog.rebindNodes2(token);
             //REBIND REPEATERS HERE
 
-            if (cog.repeats.hasOwnProperty(token)) {
-                for (ii in cog.repeats[token]) {
-                    repeat = cog.repeats[token][ii];
-                    repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
-                    for (iii = 0; iii < task.args.length; iii++) {
-                        index = (content.length) - (task.args.length) + (iii);
-                        repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                        repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
-                    }
-                    cog.rebindRepeatClones2(repeat);
-                }
-            } else {
-                for (ii in cog.repeats) {
-                    if (cog.checkKeys(ii, token)) {
-                        for (iii in cog.repeats[ii]) {
-                            repeat = cog.repeats[ii][iii];
-                            repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
-                            for (iiii = 0; iiii < task.args.length; iiii++) {
-                                index = (content.length) - (task.args.length) + (iiii);
-                                repeatAlias[repeat.dataAlias] = repeat.data + "." + index;
-                                repeat.owner.appendChild(cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat }));
-                            }
-                            cog.rebindRepeatClones2(repeat);
-                        }
-                    }
-                }
-            }
+            cog.rebindRepeats2(token);
         }
     }
     cog.tasks = [];
+};
+cog.isInDocument = function (el) {
+    var html = document.body.parentNode;
+    while (el) {
+        if (el === html) {
+            return true;
+        }
+        el = el.parentNode;
+    }
+    return false;
 };
 cog.rebindNodes2 = function (token) {
     var i, newNode, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token);
     if (typeof nodeTokens === 'object') {
         if (Array.isArray(nodeTokens)) {
             nodeTokensLength = nodeTokens.length;
-            for (i = 0; i < nodeTokensLength; i++) {
+            for (i = nodeTokensLength - 1; i >= 0; i--) {
                 nodeToken = nodeTokens[i];
                 //cog.nodes STRUCTURE: { arr: {0: [TEXTNODE, {prop:0, node:TEXTNODE}, TEXTNODE]} }
                 if (nodeToken.hasOwnProperty("prop")) {
-                    newNode = document.createTextNode(content);
-                    nodeToken.node.parentNode.replaceChild(newNode, nodeToken.node);
-                    nodeTokens[i].node = newNode;
                     prop = cog.props[nodeToken.prop];
-                    //ADD PROPS HERE
-                    if (prop.type == "attr") {
-                        prop.node.setAttribute(prop.attr, prop.content.innerHTML);
+                    if (cog.isInDocument(prop.node)) {
+                        newNode = document.createTextNode(content);
+                        nodeToken.node.parentNode.replaceChild(newNode, nodeToken.node);
+                        nodeTokens[i].node = newNode;
+                        //ADD PROPS HERE
+                        if (prop.type == "attr") {
+                            prop.node.setAttribute(prop.attr, prop.content.innerHTML);
+                        }
+                    } else {
+                        nodeTokens.splice(i, 1);
+                        cog.props.splice(nodeToken.prop, 1);
                     }
                 } else {
-                    if (!cog.isElement(content) && typeof content !== 'object' && nodeToken.textContent != content) {
-                        newNode = document.createTextNode(content);
-                        nodeToken.parentNode.replaceChild(newNode, nodeToken);
-                        nodeTokens[i] = newNode;
-                    } else if (cog.isElement(content)) {
-                        cloneNode = cog.bind2(content.cloneNode(true));
-                        nodeToken.parentNode.replaceChild(cloneNode, nodeToken);
-                        nodeTokens[i] = cloneNode;
+                    if (cog.isInDocument(nodeToken)) {
+                        if (!cog.isElement(content) && typeof content !== 'object' && nodeToken.textContent != content) {
+                            newNode = document.createTextNode(content);
+                            nodeToken.parentNode.replaceChild(newNode, nodeToken);
+                            nodeTokens[i] = newNode;
+                        } else if (cog.isElement(content)) {
+                            cloneNode = cog.bind2(content.cloneNode(true));
+                            nodeToken.parentNode.replaceChild(cloneNode, nodeToken);
+                            nodeTokens[i] = cloneNode;
+                        }
+                    } else {
+                        nodeTokens.splice(i, 1);
                     }
                 }
+
             }
         } else {
             nodeTokenKeys = Object.keys(nodeTokens);
