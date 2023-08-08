@@ -1,96 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROXY</title>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOMMAP</title>
+<style>
+    .hello {
+        color: #9f2;
+    }
+</style>
 </head>
-
 <body>
 
-    <h1 #style="{{style}}:{{color}};">{{greet}}</h1>
-    <h1>{{arr.0}}</h1>
-
-    <div cog-set="temp:nameTemp;item">
-        <h3>{{item.name}}</h3>
-        <hr>
-        <h3>{{item.job}}</h3>
-    </div>
-
-    <div cog-temp="nameTemp;item;person"></div>
-
-    <br><br><br>
-    <h2>REPEATS</h2>
-    <hr>
-    <div cog-repeat="people;item;people">
-        <p>{{item._index}}</p>
-        <p>{{item.name}}</p>
-        <p>{{item.job}}</p>
-        <div cog-repeat="tags;item, pep;{{item.tags}}, {{item}}">
-            <span>{{item._index}}</span>
-            <span>{{item}}</span>
+    <div id="app">
+        <div cog-set="temp:card">
+            <h3 #style="color:{{pep.color}};">{{pep.name}}</h3>
         </div>
-        <hr>
-    </div>
-    <br><br><br>
-    <h2>FRUITS</h2>
-    <hr>
-    <div cog-repeat="fruits;item;fruits">
-        <p>{{item._index}}</p>
-        <p>{{item}}</p>
-        <hr>
-    </div>
-    <hr><hr><hr><hr>
-    <div cog-repeat="fruits;item;fruits">
-        <p>{{item._index}}</p>
-        <p>{{item}}</p>
-        <hr>
-    </div>
-    
+        <h1 class="title" id="helloworld" cog-prop="style:{color:'{{color}}',backgroundColor:'{{bg}}'}, if:'{{colorIf}}'">Hello, {{#world}} <span style="font-size: 0.7rem;">&lt;- (this is a comment token)</span>  {{name}}!</h1>
 
+        <p id="subtitle" cog-event="mouseover:'eFunc()'" data-attribute="be friendly">
+            <strong cog-if="{{bool}}" cog-prop="class:'{{greet}}'" cog-prop2="style:{backgroundColor:'{{bg}}'}, attr:{'data-nice':'{{world}}'}, if:'{{bool}}'">How are you {{world}} today?</strong>
+        </p>
+        <div cog-temp="card,temp,pep">
 
+        </div>
+        <input id="input" cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input', if:'{{bool}}'">
+        <p>{{input}}</p>
+        <p cog-if='typeof {{name._exec}} === "string"'>{{#name}} is string</p>
+        <ul cog-repeat="names,names,tname">
+            <li>{{tname}}</li>
+        </ul>
+        {{elem}}
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewbox="0 0 800 800" aria-described="title-thumbsup">
+            <title id="title-thumbsup">Thumbs Up!</title>
+            <path d="M725 450c57.031 0 25 150-25 150 25 0 0 125-50 125 0 50-50 75-100 75-211.212 0-136.925-52.852-350-75V325C388.22 268.541 575 127.012 575 0c41.406 0 150 50 0 300h150c75 0 50 150 0 150zM150 325v400h50v25H100c-27.5 0-50-33.75-50-75V375c0-41.25 22.5-75 50-75h100v25h-50z"/>
+        </svg>
+        
+        I'm doing pretty good, thanks {{greetName}} !
+        <div>
+            <button onclick='cog.alter("names", function(val){val.unshift("josh");return val;})'>CHANGE</button>
+        </div>
+    </div>
     <script src="dist/cog.js"></script>
     <script>
-        cog.data.greet = "HELLO WORLD!";
-        cog.data.style = "color";
-        cog.data.color = "red";
 
-        cog.data.person = {name:"Alex", job:"bestONE!"};
-        cog.data.people = [
-            {id:"1",name:"Alex", job:"CEO", id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["wow", "such", "nicesity"]},
-            {id:"2",name:"Aaron", job:"CFO",id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["hah", "ok"]},
-            {id:"3",name:"Adam", job:"CCO", id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["that", "this", "there"]}
-        ];
+        var app = document.querySelector('#app');
 
-        cog.data.fruits = ["apple", "pear", "banana"];
-        cog.data.arr = [1, 2, 3, 4];
-        cog.data.obj = { name: "alex", func:function(v){return v.join(".")} };
-        cog.data.prim = "nice JOB!";
-        /*
-        cog.set2("arr", function(val){
-            val.push(5);return val;
-        });
-        cog.set2("nicee", function(val){
-            return "helloo";
-        });
-        cog.set2("arr", function(val){
-            val.unshift("ADD THIS MF!");
-            return val;
-        });
-        cog.set2("arr", function(val){
-            val[1] = "SET IT MANE!";
-            return val;
-        });
-        cog.set2("obj", function(val){
-            val.job = "nice one!";
-            val.name= "ok then mane!";
-            return val;
-        });*/
-        console.log(cog.tasks);
-        cog.render2();
+        var map = cog.createDOMMap(app);
+
+        var map2 = cog.createDOMMap(app);
+
+        cog.data.world=function(){
+            return cog.get("greet")+" "+cog.get("name");
+        };
+        eFunc = function (){
+            console.log("etst");
+        };
+        cog.data.bool = true;
+        cog.data.greet = "hello";
+        cog.data.name="Jack";
+        cog.data.input = "test";
+        cog.data.colorIf = false;
+        cog.data.greetName = function () {return cog.get("greet")+" "+cog.get("name")};
+        cog.bound.push(["greetName", "greet", "name", "world"]);
+        cog.data.names = ["alex", "john", "brock"];
+        cog.data.color="red";
+        cog.data.bg="yellow";
+        cog.data.temp = {name:"Alex", color:"#9f4"};
+        cog.data.elem = cog.elemFragment(document.getElementById("subtitle").cloneNode(true));
+        var testTemp = cog.template({id:"card", token:"temp", alias:"pep"});
+        //document.body.appendChild(testTemp);
+        //console.log(document.body.contains(testTemp));
+        cog.render();
     </script>
 </body>
-
 </html>
