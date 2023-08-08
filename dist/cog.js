@@ -614,7 +614,7 @@ cog.rebindRepeats2 = function (token) {
 
                     repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
                     repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
-                    repeatTemp = cog.template2({ id: repeat.template, data: repeatAlias, fragment: true, bind: true, global: true, repeat: true, parent: repeat });
+                    repeatTemp = cog.template2({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, global: true, repeat: true, parent: repeat });
 
 
                     repeat["childs"][ii] = [];
