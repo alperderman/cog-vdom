@@ -60,11 +60,21 @@ cog.regex = {
 
 cog.tasks = [];
 cog.aliasData = {};
+cog.isRebind = false;
 
 cog.render2 = function (layoutSrc) {
     var layout;
     step_start();
     function step_start() {
+        cog.tasks = new cog.observable(cog.tasks, function (a) {
+            if (!cog.isRebind) {
+                cog.isRebind = true;
+                setTimeout(function () {
+                    cog.rebind2();
+                    cog.isRebind = false;
+                }, 0);
+            }
+        });
         if (typeof layoutSrc === "string") {
             cog.xhr(layoutSrc, function (xhr) {
                 if (xhr.status == 200) {
@@ -77,6 +87,7 @@ cog.render2 = function (layoutSrc) {
                 cog.data = new cog.observable(cog.data, function (a) {
                     cog.tasks.push(a);
                 });
+                
                 document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
 
                 if (cog.isElement(layoutSrc)) {
@@ -464,7 +475,7 @@ cog.template2 = function (arg) {
                 }
             }
         }
-        cloneNode = document.createElement("div");
+        cloneNode = document.createElement(node.tagName);
         cloneNode.innerHTML = node.innerHTML;
         if (arg.bind) {
             cloneNode = cog.bind2(cloneNode, { global: arg.global, repeat: arg.repeat, parent: arg.parent });
@@ -579,6 +590,7 @@ cog.bindRepeats2 = function (dom, repeat, parent) {
 
                 cog.repeats[repeatDataToken][repeatDataKey]["childs"][i] = [];
                 while (repeatTemp.firstChild) {
+                    
                     cog.repeats[repeatDataToken][repeatDataKey]["childs"][i].push(repeatTemp.firstChild);
                     repeatNode.appendChild(repeatTemp.firstChild);
                 }
@@ -592,68 +604,73 @@ cog.rebindRepeats2 = function (token) {
     var i, ii, iii, repeat, content, contentLength, repeatChilds, repeatChild, repeatChildsLength, repeatAlias, repeatTemp;
     if (cog.repeats.hasOwnProperty(token)) {
         content = cog.get2(token);
-        contentLength = content.length;
-        for (i in cog.repeats[token]) {
-            repeat = cog.repeats[token][i];
-            repeatChilds = repeat["childs"];
-            repeatChildsLength = repeatChilds.length;
-            //REMOVE
-            if (repeatChildsLength > contentLength) {
-                for (ii = repeatChildsLength - 1; ii >= contentLength; ii--) {
-                    repeatChild = repeatChilds[ii];
-                    for (iii in repeatChild) {
-                        repeatChild[iii].parentNode.removeChild(repeatChild[iii]);
+        if (typeof content !== 'undefined') {
+            contentLength = content.length;
+            for (i in cog.repeats[token]) {
+                repeat = cog.repeats[token][i];
+                repeatChilds = repeat["childs"];
+                repeatChildsLength = repeatChilds.length;
+                //REMOVE
+                if (repeatChildsLength > contentLength) {
+                    for (ii = repeatChildsLength - 1; ii >= contentLength; ii--) {
+                        repeatChild = repeatChilds[ii];
+                        for (iii in repeatChild) {
+                            repeatChild[iii].parentNode.removeChild(repeatChild[iii]);
+                        }
+                        repeatChilds.pop();
                     }
-                    repeatChilds.pop();
                 }
-            }
-            //ADD
-            if (repeatChildsLength < contentLength) {
+                //ADD
+                if (repeatChildsLength < contentLength) {
 
-                for (ii = repeatChildsLength; ii < contentLength; ii++) {
+                    for (ii = repeatChildsLength; ii < contentLength; ii++) {
 
-                    repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
-                    repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
-                    repeatTemp = cog.template2({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, global: true, repeat: true, parent: repeat });
+                        repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
+                        repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
+                        repeatTemp = cog.template2({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, global: true, repeat: true, parent: repeat });
 
 
-                    repeat["childs"][ii] = [];
-                    while (repeatTemp.firstChild) {
-                        repeat["childs"][ii].push(repeatTemp.firstChild);
-                        repeat.owner.appendChild(repeatTemp.firstChild);
+                        repeat["childs"][ii] = [];
+                        while (repeatTemp.firstChild) {
+                            repeat["childs"][ii].push(repeatTemp.firstChild);
+                            repeat.owner.appendChild(repeatTemp.firstChild);
+                        }
+
                     }
 
                 }
-
-            }
-            //INNER
-            for (ii in repeat["inner"]) {
-                cog.rebindRepeats2(repeat["inner"][ii]);
-            }
-            //CLONES
-            for (ii in repeat["clone"]) {
-                repeat["clone"][ii].innerHTML = repeat.owner.innerHTML;
+                //INNER
+                for (ii in repeat["inner"]) {
+                    cog.rebindRepeats2(repeat["inner"][ii]);
+                }
+                //CLONES
+                for (ii in repeat["clone"]) {
+                    repeat["clone"][ii].innerHTML = repeat.owner.innerHTML;
+                }
             }
         }
     }
 };
 cog.rebind2 = function () {
-    var i, ii, task, token, content, item, index;
-    for (i = 0; i < cog.tasks.length; i++) {
-        task = cog.tasks[i];
+    var i, task, token, content, item, index;
+    while (task = cog.tasks[0]) {
+        task = task._get();
+
         token = task.keys.join(".");
         if (task.action == "set") {
             //REBIND NODES
             cog.rebindNodes2(token);
+
+            cog.rebindRepeats2(token);
         }
         if (task.action == "push") {
             //REBIND NODES
             content = cog.get2(task.keys);
 
             if (content !== undefined) {
-                for (ii = 0; ii < task.args.length; ii++) {
-                    item = task.args[ii];
-                    index = (content.length) - (task.args.length) + (ii);
+                for (i = 0; i < task.args.length; i++) {
+                    item = task.args[i];
+                    index = (content.length) - (task.args.length) + (i);
                     cog.rebindNodes2(token + "." + index);
                 }
             }
@@ -668,8 +685,10 @@ cog.rebind2 = function () {
 
             cog.rebindRepeats2(token);
         }
+
+
+        cog.tasks.splice(0, 1);
     }
-    cog.tasks = [];
 };
 cog.isInDocument = function (el) {
     var html = document.body.parentNode;
@@ -764,12 +783,16 @@ cog.set2 = function (keys, val) {
         key = keys[i];
         if (!ref.hasOwnProperty(key)) {
             if (i != keysLength - 1) {
-                ref[key] = {};
+                if (ref instanceof cog.observable) {
+                    ref._set({}, key);
+                } else {
+                    ref[key] = {};
+                }
             }
         }
         if (i == keysLength - 1) {
-            if (ref instanceof cog.observable) {
-                ref[key]._set(val);
+            if (!ref.hasOwnProperty(key) && ref instanceof cog.observable) {
+                ref._set(val, key);
             } else {
                 ref[key] = val;
             }
@@ -779,7 +802,6 @@ cog.set2 = function (keys, val) {
     }
 };
 cog.observable = function (value, callback, parent, keys) {
-    var _type = checkType(value);
     if (value instanceof cog.observable) { return value; }
     var _self = this, _value, _init = false, _keys, _parent;
     if (checkType(callback) !== 'function') {
@@ -840,7 +862,20 @@ cog.observable = function (value, callback, parent, keys) {
         enumerable: false,
         writable: false,
         value: function () {
-            return _value;
+            if (_self._type === 'array' || _self._type === 'object') {
+                var data, i;
+                if (_self._type === 'array') {
+                    data = [];
+                } else {
+                    data = {};
+                }
+                for (i in _self) {
+                    data[i] = _self[i]._get();
+                }
+                return data;
+            } else {
+                return _value;
+            }
         }
     });
 
@@ -849,24 +884,16 @@ cog.observable = function (value, callback, parent, keys) {
         enumerable: false,
         writable: false,
         value: function (val, key) {
-            var valKeys;
-            if (key != null) {
-                var o = defineNewObservable(val, key, true);
-                val = o.val;
-                _value[key] = val;
-                valKeys = o.keys;
-                if (!_self.hasOwnProperty(key)) {
-                    defineNewProperty(key);
-                }
-            } else {
-                _value = val;
-                valKeys = JSON.parse(JSON.stringify(_keys));
+            var o = defineNewObservable(val, key, true);
+            _value[key] = o.val;
+            if (!_self.hasOwnProperty(key)) {
+                defineNewProperty(key);
             }
             if (_init) {
                 callback({
                     action: "set",
-                    value: val,
-                    keys: valKeys
+                    value: o.val,
+                    keys: o.keys
                 });
             }
         }
@@ -876,7 +903,7 @@ cog.observable = function (value, callback, parent, keys) {
         configurable: false,
         enumerable: false,
         writable: false,
-        value: _type
+        value: checkType(value)
     });
 
     Object.defineProperty(_self, "_key", {
@@ -913,8 +940,8 @@ cog.observable = function (value, callback, parent, keys) {
         });
     }
 
-    if (_type === 'array' || _type === 'object') {
-        if (_type === 'array') {
+    if (_self._type === 'array' || _self._type === 'object') {
+        if (_self._type === 'array') {
             _value = [];
 
             Object.defineProperty(_self, "push", {
