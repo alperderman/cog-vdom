@@ -44,7 +44,6 @@ cog.keyword = {
     execute: "_exec",
     prevent: "_prevent"
 };
-cog.arrayOperations = ["pop", "push", "reverse", "shift", "sort", "splice", "unshift"];
 cog.token = {
     open: "{{",
     close: "}}",
@@ -563,7 +562,11 @@ cog.bindRepeats2 = function (dom, repeat, parent) {
 
         repeatDataToken = repeatToken[0];
         repeatData = cog.get2(repeatDataToken);
-        repeatDataLength = repeatData.length;
+        if (typeof repeatData !== 'undefined') {
+            repeatDataLength = repeatData.length;
+        } else {
+            repeatDataLength = 0;
+        }
         repeatDataKey = repeatId + ":" + repeatToken.join(",");
 
         repeatNode.innerHTML = "";
@@ -576,7 +579,7 @@ cog.bindRepeats2 = function (dom, repeat, parent) {
                 if (!cog.repeats.hasOwnProperty(repeatDataToken)) {
                     cog.repeats[repeatDataToken] = {};
                 }
-                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: JSON.parse(JSON.stringify(repeatTokenObj)), clone: [], childs: [], inner: [] };
+                cog.repeats[repeatDataToken][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], data: repeatDataToken, alias: cog.shallowClone(repeatTokenObj), clone: [], childs: [], inner: [] };
             }
             if (parent) {
                 parent.inner.push(repeatDataToken);
@@ -600,14 +603,36 @@ cog.bindRepeats2 = function (dom, repeat, parent) {
 
     }
 };
+cog.shallowClone = function (obj) {
+    if (typeof obj === 'object') {
+        if (Array.isArray(obj)) {
+            return obj.slice();
+        } else {
+            var clone = {};
+            for (var key in obj) {
+                clone[key] = obj[key];
+            }
+            return clone;
+        }
+    } else {
+        return obj;
+    }
+};
 cog.rebindRepeats2 = function (token) {
     var i, ii, iii, repeat, content, contentLength, repeatChilds, repeatChild, repeatChildsLength, repeatAlias, repeatTemp;
+    if (typeof token !== 'string') {
+        token = token.join(".");
+    }
     if (cog.repeats.hasOwnProperty(token)) {
         content = cog.get2(token);
         if (typeof content !== 'undefined') {
             contentLength = content.length;
-            for (i in cog.repeats[token]) {
-                repeat = cog.repeats[token][i];
+        } else {
+            contentLength = 0;
+        }
+        for (i in cog.repeats[token]) {
+            repeat = cog.repeats[token][i];
+            if (cog.isInDocument(repeat.owner)) {
                 repeatChilds = repeat["childs"];
                 repeatChildsLength = repeatChilds.length;
                 //REMOVE
@@ -625,7 +650,7 @@ cog.rebindRepeats2 = function (token) {
 
                     for (ii = repeatChildsLength; ii < contentLength; ii++) {
 
-                        repeatAlias = JSON.parse(JSON.stringify(repeat.alias));
+                        repeatAlias = cog.shallowClone(repeat.alias);
                         repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
                         repeatTemp = cog.template2({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, global: true, repeat: true, parent: repeat });
 
@@ -647,45 +672,61 @@ cog.rebindRepeats2 = function (token) {
                 for (ii in repeat["clone"]) {
                     repeat["clone"][ii].innerHTML = repeat.owner.innerHTML;
                 }
+            } else {
+                delete cog.repeats[token][i];
             }
         }
+        
     }
 };
 cog.rebind2 = function () {
-    var i, task, token, content, item, index;
+    var i, task, token;
     while (task = cog.tasks[0]) {
         task = task._get();
 
         token = task.keys.join(".");
+
+        cog.rebindRepeats2(token);
+
         if (task.action == "set") {
             //REBIND NODES
             cog.rebindNodes2(token);
-
-            cog.rebindRepeats2(token);
         }
         if (task.action == "push") {
             //REBIND NODES
-            content = cog.get2(task.keys);
 
-            if (content !== undefined) {
-                for (i = 0; i < task.args.length; i++) {
-                    item = task.args[i];
-                    index = (content.length) - (task.args.length) + (i);
-                    cog.rebindNodes2(token + "." + index);
-                }
+            for (i = 0; i < task.index.length; i++) {
+                cog.rebindNodes2(token + "." + task.index[i]);
             }
-            //REBIND REPEATERS HERE
-            cog.rebindRepeats2(token);
+
+
         }
         if (task.action == "unshift") {
             //REBIND NODES
-            content = cog.get2(task.keys);
             cog.rebindNodes2(token);
-            //REBIND REPEATERS HERE
 
-            cog.rebindRepeats2(token);
         }
 
+        if (task.action == "pop") {
+            //REBIND NODES
+
+            cog.rebindNodes2(token + "." + task.index);
+
+            
+        }
+        if (task.action == "shift") {
+            //REBIND NODES
+            cog.rebindNodes2(token);
+            
+        }
+        if (task.action == "splice") {
+            //REBIND NODES
+            for (i = task.index; i < task.amount; i++) {
+                cog.rebindNodes2(token + "." + i);
+            }
+        }
+
+        
 
         cog.tasks.splice(0, 1);
     }
@@ -701,6 +742,9 @@ cog.isInDocument = function (el) {
     return false;
 };
 cog.rebindNodes2 = function (token) {
+    if (typeof token !== 'string') {
+        token = token.join(".");
+    }
     var i, newNode, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token);
     if (typeof nodeTokens === 'object') {
         if (Array.isArray(nodeTokens)) {
@@ -763,7 +807,7 @@ cog.get2 = function (keys) {
         ref = ref[key];
     }
     if (typeof ref === 'function') {
-        keysCopy = JSON.parse(JSON.stringify(keys));
+        keysCopy = cog.shallowClone(keys);
         keysCopy.pop();
         ref = ref(keysCopy);
     }
@@ -781,15 +825,6 @@ cog.set2 = function (keys, val) {
     keysLength = keys.length;
     for (i = 0; i < keysLength; i++) {
         key = keys[i];
-        if (!ref.hasOwnProperty(key)) {
-            if (i != keysLength - 1) {
-                if (ref instanceof cog.observable) {
-                    ref._set({}, key);
-                } else {
-                    ref[key] = {};
-                }
-            }
-        }
         if (i == keysLength - 1) {
             if (!ref.hasOwnProperty(key) && ref instanceof cog.observable) {
                 ref._set(val, key);
@@ -797,6 +832,13 @@ cog.set2 = function (keys, val) {
                 ref[key] = val;
             }
         } else {
+            if (!ref.hasOwnProperty(key)) {
+                if (ref instanceof cog.observable) {
+                    ref._set({}, key);
+                } else {
+                    ref[key] = {};
+                }
+            }
             ref = ref[key];
         }
     }
@@ -839,7 +881,7 @@ cog.observable = function (value, callback, parent, keys) {
     }
 
     function defineNewObservable(obj, key, verbose) {
-        var valueKeys = JSON.parse(JSON.stringify(_keys));
+        var valueKeys = cog.shallowClone(_keys);
         valueKeys.push(key);
         if (verbose) {
             return { val: new cog.observable(obj, callback, _self, valueKeys), keys: valueKeys };
@@ -851,7 +893,7 @@ cog.observable = function (value, callback, parent, keys) {
     function fixArrayIndex() {
         var val, i, ln = _value.length;
         for (i = 0, ln; i < ln; i++) {
-            val = JSON.parse(JSON.stringify(_value[i]._keys));
+            val = cog.shallowClone(_value[i]._keys);
             val[val.length - 1] = i;
             _value[i]._keys = val;
         }
@@ -949,9 +991,10 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var index, args = [];
-                    for (var i = 0, ln = arguments.length; i < ln; i++) {
+                    var index, args = [], indexes = [], argumentsLength = arguments.length;
+                    for (var i = 0, ln = argumentsLength; i < ln; i++) {
                         index = _value.length;
+                        indexes.push(index);
                         args.push(defineNewObservable(arguments[i], index));
                         _value.push(args[args.length - 1]);
                         defineNewProperty(index);
@@ -960,7 +1003,8 @@ cog.observable = function (value, callback, parent, keys) {
                         callback({
                             action: "push",
                             args: args,
-                            keys: JSON.parse(JSON.stringify(_keys))
+                            index: indexes,
+                            keys: cog.shallowClone(_keys)
                         });
                     }
                     return _value.length;
@@ -972,13 +1016,15 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    if (_value.length > -1) {
-                        var index = _value.length - 1,
+                    var valueLength = _value.length;
+                    if (valueLength > -1) {
+                        var index = valueLength - 1,
                             item = _value.pop();
                         delete _self[index];
                         callback({
                             action: "pop",
-                            keys: JSON.parse(JSON.stringify(_keys))
+                            index: valueLength,
+                            keys: cog.shallowClone(_keys)
                         });
                         return item;
                     }
@@ -1000,7 +1046,7 @@ cog.observable = function (value, callback, parent, keys) {
                     callback({
                         action: "unshift",
                         args: args,
-                        keys: JSON.parse(JSON.stringify(_keys))
+                        keys: cog.shallowClone(_keys)
                     });
                     return _value.length;
                 }
@@ -1017,7 +1063,7 @@ cog.observable = function (value, callback, parent, keys) {
                         fixArrayIndex();
                         callback({
                             action: "shift",
-                            keys: JSON.parse(JSON.stringify(_keys))
+                            keys: cog.shallowClone(_keys)
                         });
                         return item;
                     }
@@ -1029,11 +1075,11 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function (index, howMany) {
-                    var removed = [], item, args = [];
+                    var removed = [], item, args = [index, howMany], valueLength = _value.length;
 
-                    index = index == null ? 0 : index < 0 ? _value.length + index : index;
+                    index = index == null ? 0 : index < 0 ? valueLength + index : index;
 
-                    howMany = howMany == null ? _value.length - index : howMany > 0 ? howMany : 0;
+                    howMany = howMany == null ? valueLength - index : howMany > 0 ? howMany : 0;
 
                     while (howMany--) {
                         item = _value.splice(index, 1)[0];
@@ -1051,7 +1097,9 @@ cog.observable = function (value, callback, parent, keys) {
                     callback({
                         action: "splice",
                         args: args,
-                        keys: JSON.parse(JSON.stringify(_keys))
+                        index: index,
+                        amount: valueLength,
+                        keys: cog.shallowClone(_keys)
                     });
 
                     return removed;

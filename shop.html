@@ -10,9 +10,11 @@
 
 <body>
 
-    <h2>REPEATS</h2>
+    <h2>SHOP</h2>
     <hr>
     <button onclick='cog.data.products.unshift({title:"IPhone120 X LARGE DOUBLE", description:"YOUR MOTHER HAD A BETTER PHONE", price:1400000, rating:6, category:"phones"});'>UNSHIFT</button>
+    <button onclick="cog.data.products.splice(5,4)">SPLICE</button>
+    <button onclick="cog.data.products.shift()">SHIFT</button>
     <table>
         <tbody cog-repeat="products;i;products">
             <tr>
@@ -25,7 +27,7 @@
         </tbody>
     </table>
     <button onclick='cog.data.products.push({title:"IPhone120 X LARGE DOUBLE", description:"YOUR MOTHER HAD A BETTER PHONE", price:1400000, rating:6, category:"phones"});'>PUSH</button>
-
+    <button onclick="cog.data.products.pop()">POP</button>
 
 
 
