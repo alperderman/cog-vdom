@@ -688,45 +688,35 @@ cog.rebind2 = function () {
 
         cog.rebindRepeats2(token);
 
+        //FULL REBIND
         if (task.action == "set") {
-            //REBIND NODES
             cog.rebindNodes2(token);
-        }
-        if (task.action == "push") {
-            //REBIND NODES
-
-            for (i = 0; i < task.index.length; i++) {
-                cog.rebindNodes2(token + "." + task.index[i]);
-            }
-
-
         }
         if (task.action == "unshift") {
-            //REBIND NODES
             cog.rebindNodes2(token);
 
-        }
-
-        if (task.action == "pop") {
-            //REBIND NODES
-
-            cog.rebindNodes2(token + "." + task.index);
-
-            
         }
         if (task.action == "shift") {
-            //REBIND NODES
             cog.rebindNodes2(token);
             
         }
+
+        //PARTIAL REBIND
+        if (task.action == "push") {
+            for (i = task.index; i < task.amount; i++) {
+                cog.rebindNodes2(token + "." + i);
+            }
+        }
+        if (task.action == "pop") {
+            cog.rebindNodes2(token + "." + task.index);
+        }
         if (task.action == "splice") {
-            //REBIND NODES
             for (i = task.index; i < task.amount; i++) {
                 cog.rebindNodes2(token + "." + i);
             }
         }
 
-        
+        cog.rebindBound2(token);
 
         cog.tasks.splice(0, 1);
     }
@@ -793,8 +783,55 @@ cog.rebindNodes2 = function (token) {
         }
     }
 };
+cog.rebindBound2 = function (token) {
+    var i, bounds, bound;
+    if (typeof token !== 'string') {
+        token = token.join(".");
+    }
+    if (cog.bound.hasOwnProperty(token)) {
+        bounds = cog.bound[token];
+        for (i in bounds) {
+            bound = bounds[i];
+            cog.rebindRepeats2(bound);
+            cog.rebindNodes2(bound);
+        }
+    }
+};
+cog.addBound = function(dataKeys, targetKeys) {
+    var bound;
+    if (typeof dataKeys !== 'string') {
+        dataKeys = dataKeys.join(".");
+    }
+    if (typeof targetKeys !== 'string') {
+        targetKeys = targetKeys.join(".");
+    }
+    if (cog.bound.hasOwnProperty(dataKeys)) {
+        bound = cog.bound[dataKeys];
+        if (bound.indexOf(targetKeys) === -1) {
+            bound.push(targetKeys);
+        }
+    } else {
+        cog.bound[dataKeys] = [targetKeys];
+    }
+};
+cog.removeBound = function(dataKeys, targetKeys) {
+    var bound, index;
+    if (typeof dataKeys !== 'string') {
+        dataKeys = dataKeys.join(".");
+    }
+    if (typeof targetKeys !== 'string') {
+        targetKeys = targetKeys.join(".");
+    }
+    if (cog.bound.hasOwnProperty(dataKeys)) {
+        bound = cog.bound[dataKeys];
+        index = bound.indexOf(targetKeys);
+        if (index !== -1) {
+            bound.splice(index, 1);
+        }
+    }
+};
 cog.get2 = function (keys) {
-    var i, key, keysLength, ref = cog.data, keysCopy;
+    var i, key, keysLength, ref = cog.data;
     if (typeof keys === 'string') {
         keys = keys.split(".");
     }
@@ -806,26 +843,27 @@ cog.get2 = function (keys) {
         }
         ref = ref[key];
     }
+    if (ref instanceof cog.observable && ref._type !== 'object' && ref._type !== 'array') {
+        ref = ref._get();
+    }
     if (typeof ref === 'function') {
-        keysCopy = cog.shallowClone(keys);
-        keysCopy.pop();
-        ref = ref(keysCopy);
+        ref = ref(cog.shallowClone(keys));
     }
-    if (ref instanceof cog.observable) {
-        return ref._get();
-    } else {
-        return ref;
-    }
+    return ref;
 };
-cog.set2 = function (keys, val) {
-    var i, key, keysLength, ref = cog.data;
+cog.set2 = function (keys, val, func) {
+    var i, key, keysLength, ref = cog.data, content = cog.get2(keys);
+    if (func == null) {func = false;}
     if (typeof keys === 'string') {
         keys = keys.split(".");
     }
     keysLength = keys.length;
+    if (func && typeof val === 'function') {
+        val = val(content);
+    }
     for (i = 0; i < keysLength; i++) {
         key = keys[i];
-        if (i == keysLength - 1) {
+        if (i == keysLength - 1 && content !== val) {
             if (!ref.hasOwnProperty(key) && ref instanceof cog.observable) {
                 ref._set(val, key);
             } else {
@@ -842,6 +880,9 @@ cog.set2 = function (keys, val) {
             ref = ref[key];
         }
     }
+};
+cog.alter2 = function (keys, val) {
+    cog.set2(keys, val, true);
 };
 cog.observable = function (value, callback, parent, keys) {
     if (value instanceof cog.observable) { return value; }
@@ -991,10 +1032,9 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var index, args = [], indexes = [], argumentsLength = arguments.length;
+                    var index, args = [], valueLength = _value.length, argumentsLength = arguments.length;
                     for (var i = 0, ln = argumentsLength; i < ln; i++) {
                         index = _value.length;
-                        indexes.push(index);
                         args.push(defineNewObservable(arguments[i], index));
                         _value.push(args[args.length - 1]);
                         defineNewProperty(index);
@@ -1003,7 +1043,8 @@ cog.observable = function (value, callback, parent, keys) {
                         callback({
                             action: "push",
                             args: args,
-                            index: indexes,
+                            index: valueLength,
+                            amount: argumentsLength,
                             keys: cog.shallowClone(_keys)
                         });
                     }
@@ -1221,88 +1262,6 @@ cog.setElems2 = function (callback) {
         }
     });
 };
-cog.deepDiffMapper = function () {
-    return {
-        VALUE_CREATED: 'created',
-        VALUE_UPDATED: 'updated',
-        VALUE_DELETED: 'deleted',
-        VALUE_UNCHANGED: 'unchanged',
-        map: function (obj1, obj2, keys, allKeys) {
-            if (keys == null) { keys = [] }
-            if (allKeys == null) { allKeys = [] }
-            if (this.isValue(obj1) || this.isValue(obj2)) {
-                if (this.compareValues(obj1, obj2) != this.VALUE_UNCHANGED) {
-                    allKeys.push({
-                        type: this.compareValues(obj1, obj2),
-                        data: obj2,
-                        keys: JSON.parse(JSON.stringify(keys))
-                    });
-                }
-                return {
-                    type: this.compareValues(obj1, obj2),
-                    data: obj1 === undefined ? obj2 : obj1,
-                    keys: JSON.parse(JSON.stringify(keys))
-                };
-            }
-
-            var diff = {};
-
-            for (var key in obj1) {
-                var value2 = undefined;
-                if (obj2[key] !== undefined) {
-                    value2 = obj2[key];
-                }
-                keys.push(key);
-                diff[key] = this.map(obj1[key], value2, keys, allKeys);
-                keys.pop();
-            }
-            for (var key in obj2) {
-                if (diff[key] !== undefined) {
-                    continue;
-                }
-                keys.push(key);
-                diff[key] = this.map(undefined, obj2[key], keys, allKeys);
-                keys.pop();
-            }
-
-            return allKeys;
-        },
-        compareValues: function (value1, value2) {
-            if (value1 === value2) {
-                return this.VALUE_UNCHANGED;
-            }
-            if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
-                return this.VALUE_UNCHANGED;
-            }
-            if (this.isFunction(value1) && this.isFunction(value2) && value1.toString() === value2.toString()) {
-                return this.VALUE_UNCHANGED;
-            }
-            if (value1 === undefined) {
-                return this.VALUE_CREATED;
-            }
-            if (value2 === undefined) {
-                return this.VALUE_DELETED;
-            }
-            return this.VALUE_UPDATED;
-        },
-        isFunction: function (x) {
-            return Object.prototype.toString.call(x) === '[object Function]';
-        },
-        isArray: function (x) {
-            return Object.prototype.toString.call(x) === '[object Array]';
-        },
-        isDate: function (x) {
-            return Object.prototype.toString.call(x) === '[object Date]';
-        },
-        isObject: function (x) {
-            return Object.prototype.toString.call(x) === '[object Object]';
-        },
-        isValue: function (x) {
-            return !this.isObject(x) && !this.isArray(x);
-        }
-    }
-}();
-//OBSERVABLE
 
 
 

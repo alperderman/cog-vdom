@@ -12,6 +12,7 @@
 
     <h1 #style="{{style}}:{{color}};">{{greet}}</h1>
     <h1>{{arr.0}}</h1>
+    <h3>{{greetColor}}</h3>
 
     <div cog-set="temp:nameTemp;item">
         <h3>{{item.name}}</h3>
@@ -57,11 +58,17 @@
         cog.data.style = "color";
         cog.data.color = "red";
 
+        cog.data.greetColor = function() {
+            return cog.get2("greet") + " &&& "+ cog.get2("color");
+        }
+        cog.addBound("greet", "greetColor");
+        cog.addBound("color", "greetColor");
+
         cog.data.person = {name:"Alex", job:"bestONE!"};
         cog.data.people = [
-            {id:"1",name:"Alex", job:"CEO", id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["wow", "such", "nicesity"]},
-            {id:"2",name:"Aaron", job:"CFO",id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["hah", "ok"]},
-            {id:"3",name:"Adam", job:"CCO", id1:function(v){v.push("id");return Number(cog.get2(v))+5;}, tags:["that", "this", "there"]}
+            {id:"1",name:"Alex", job:"CEO", tags:["wow", "such", "nicesity"]},
+            {id:"2",name:"Aaron", job:"CFO", tags:["hah", "ok"]},
+            {id:"3",name:"Adam", job:"CCO", tags:["that", "this", "there"]}
         ];
 
         cog.data.fruits = ["apple", "pear", "banana"];
