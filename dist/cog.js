@@ -292,8 +292,6 @@ cog.bind2 = function (dom, arg) {
     return dom;
 };
 cog.template2 = function (arg) {
-    //cog.templates STRUCTURE: {templateName:{alias:[TEXTNODE,TEXTNODE], node:NODE}  }
-    //IMPLEMENT ALIAS INSIDE THE TEMPLATE ITSELF
     var i, ii, iii, iiii, aliasKeysLength, aliasKeys, aliasKey, aliasKeyArr, aliasKeyArrLength, aliasKeyArrResult, aliasReplace, aliasNode, aliasNodeItem, dommap, alias, node, props, prop, cloneNode, nodeRegexMatches, nodeRegexMatch, nodeRegexString, tokenPure, newNode, newNodeLength, tokenArr, attrContent, attrKey, attrVal;
     if (arg.id == null) { return; }
     if (arg.fragment == null) { arg.fragment = false; }
@@ -539,8 +537,6 @@ cog.pushNode2 = function (keys, node) {
     return result;
 };
 cog.bindRepeats2 = function (dom, repeat, parent) {
-    //cog.repeats STRUCTURE: {arr: {templapteNameAndAlias:{owner:NDOE, template:templateName, alias:alias, nodes:[ {index:[TEXTNODE,TEXTNODE], nodes:[NODE,NODE,NODE]}, {}, {} ]   } } }
-    //CREATE ONLY ONE TEMPLATE AND REPEAT THE DATA BY REBINDING THE DATA ON THAT SPECIFIC TEMPLATE (REQUIRES MAKING A TEMPORARY SCOPE)
     var i, repeatNode, repeatAttr, repeatId, repeatToken, repeatTokenObj, repeatAlias, repeatData, repeatDataLength, repeatDataToken, repeatDataKey, repeatTemp;
     if (repeat == null) { repeat = true; }
     while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]")) {
@@ -589,7 +585,6 @@ cog.bindRepeats2 = function (dom, repeat, parent) {
 
                 repeatTokenObj[repeatAlias[0]] = repeatDataToken + "." + i;
                 repeatTemp = cog.template2({ id: repeatId, data: repeatTokenObj, fragment: false, bind: true, global: true, repeat: true, parent: cog.repeats[repeatDataToken][repeatDataKey] });
-                //ADD NODES HERE, ALSO MAY DONT NEED GLOBAL AND REPEAT
 
                 cog.repeats[repeatDataToken][repeatDataKey]["childs"][i] = [];
                 while (repeatTemp.firstChild) {
@@ -735,22 +730,23 @@ cog.rebindNodes2 = function (token) {
     if (typeof token !== 'string') {
         token = token.join(".");
     }
-    var i, newNode, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token);
+    var i, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token);
     if (typeof nodeTokens === 'object') {
         if (Array.isArray(nodeTokens)) {
             nodeTokensLength = nodeTokens.length;
             for (i = nodeTokensLength - 1; i >= 0; i--) {
                 nodeToken = nodeTokens[i];
-                //cog.nodes STRUCTURE: { arr: {0: [TEXTNODE, {prop:0, node:TEXTNODE}, TEXTNODE]} }
+                
                 if (nodeToken.hasOwnProperty("prop")) {
                     prop = cog.props[nodeToken.prop];
                     if (cog.isInDocument(prop.node)) {
-                        newNode = document.createTextNode(content);
-                        nodeToken.node.parentNode.replaceChild(newNode, nodeToken.node);
-                        nodeTokens[i].node = newNode;
-                        //ADD PROPS HERE
-                        if (prop.type == "attr") {
-                            prop.node.setAttribute(prop.attr, prop.content.innerHTML);
+                        if (nodeToken.node.nodeValue != content) {
+                            nodeToken.node.nodeValue = content;
+
+                            //ADD PROPS HERE
+                            if (prop.type == "attr") {
+                                prop.node.setAttribute(prop.attr, prop.content.innerHTML);
+                            }
                         }
                     } else {
                         nodeTokens.splice(i, 1);
@@ -758,10 +754,8 @@ cog.rebindNodes2 = function (token) {
                     }
                 } else {
                     if (cog.isInDocument(nodeToken)) {
-                        if (!cog.isElement(content) && typeof content !== 'object' && nodeToken.textContent != content) {
-                            newNode = document.createTextNode(content);
-                            nodeToken.parentNode.replaceChild(newNode, nodeToken);
-                            nodeTokens[i] = newNode;
+                        if (!cog.isElement(content) && nodeToken.nodeValue != content) {
+                            nodeToken.nodeValue = content;
                         } else if (cog.isElement(content)) {
                             cloneNode = cog.bind2(content.cloneNode(true));
                             nodeToken.parentNode.replaceChild(cloneNode, nodeToken);
