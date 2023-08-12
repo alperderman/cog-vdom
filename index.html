@@ -20,6 +20,8 @@
         <h3>{{item.job}}</h3>
     </div>
 
+    <div cog-if="{{bool}}">BOOL is: {{bool}}</div>
+
     <div cog-temp="nameTemp;item;person"></div>
 
     <br><br><br>
@@ -57,6 +59,8 @@
         cog.data.greet = "HELLO WORLD!";
         cog.data.style = "color";
         cog.data.color = "red";
+
+        cog.data.bool = true;
 
         cog.data.greetColor = function() {
             return cog.get2("greet") + " &&& "+ cog.get2("color");
