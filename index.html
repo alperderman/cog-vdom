@@ -11,6 +11,7 @@
 <body>
 
     <h1 #style="{{style}}:{{color}};">{{greet}}</h1>
+    <h1 cog-event="click:toggleBool" cog-prop1="if:[{{bool}}, {style:{color:'red'}}, {if:[{{bool2}}, {style:{color:'blue'}}, {style:{color:'green'}}]}]">{{greet}} PROP</h1>
     <h1>{{arr.0}}</h1>
     <p>{{#greet}} &lt;- this is an escaped token</p>
     <h3>{{greetColor}}</h3>
@@ -61,7 +62,12 @@
         cog.data.style = "color";
         cog.data.color = "red";
 
+        function toggleBool() {
+            cog.set2("bool", !cog.get2("bool"));
+        }
+
         cog.data.bool = true;
+        cog.data.bool2 = false;
 
         cog.data.greetColor = function() {
             return cog.get2("greet") + " &&& "+ cog.get2("color");

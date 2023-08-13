@@ -17,7 +17,7 @@
     <button onclick="cog.data.products.shift()">SHIFT</button>
     <table>
         <tbody cog-repeat="products;i;products">
-            <tr>
+            <tr cog-prop="if:[{{i.title}} == 'Huawei P30', {style:{color:{{color}}}}]">
                 <td>{{i._index}} {{i.title}}</td>
                 <td>{{i.description}}</td>
                 <td>{{i.price}} $</td>
@@ -34,6 +34,7 @@
 
     <script src="dist/cog.js"></script>
     <script>
+        cog.data.color = "#f83";
         cog.xhr("products.json", function(xhr) {
             cog.data.products = JSON.parse(xhr.responseText).products;
             cog.data.products = cog.data.products.concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products);

@@ -150,7 +150,7 @@ cog.render2 = function (layoutSrc) {
     }
 };
 cog.bind2 = function (dom, arg) {
-    var i, ii, dommap, tokenPure, newNode, cloneNode, tokenContent, newNodeRef, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, attrContentParse, attrContentObj;
+    var i, ii, dommap, tokenPure, newNode, cloneNode, tokenContent, newNodeRef, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, attrContentParse, attrContentObj, attrContentObjProp;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.global == null) { arg.global = true; }
@@ -235,7 +235,43 @@ cog.bind2 = function (dom, arg) {
                                 }
                             } else {
                                 attrContentObj = cog.eval("({" + attrContentParse + "})");
+                                attrContentObj = cog.propCondition(attrContentObj);
                                 //ADD PROPS HERE
+                                if (attrContentObj) {
+                                    if (attrContentObj.hasOwnProperty("style")) {
+                                        attrContentObjProp = attrContentObj["style"];
+                                        for (ii in attrContentObjProp) {
+                                            obj.node.style[ii] = attrContentObjProp[ii];
+                                        }
+                                    }
+                                    if (attrContentObj.hasOwnProperty("class")) {
+                                        if (typeof attrContentObj["class"] === "string") {
+                                            attrContentObjProp = attrContentObj["class"].trim().split(" ");
+                                        } else {
+                                            attrContentObjProp = attrContentObj["class"];
+                                        }
+                                        for (ii in attrContentObjProp) {
+                                            obj.node.classList.add(attrContentObjProp[ii]);
+                                        }
+                                    }
+                                    if (attrContentObj.hasOwnProperty("context")) {
+                                        attrContentObjProp = attrContentObj["context"];
+                                        for (ii in attrContentObjProp) {
+                                            obj.node[ii] = attrContentObjProp[ii];
+                                        }
+                                    }
+                                    if (attrContentObj.hasOwnProperty("attr")) {
+                                        attrContentObjProp = attrContentObj["attr"];
+                                        for (ii in attrContentObjProp) {
+                                            obj.node.setAttribute(ii, attrContentObjProp[ii]);
+                                        }
+                                    }
+                                }
+                                if (arg.global) {
+                                    prop.type = "prop";
+                                    prop.content = attrContentParse;
+                                    prop.old = attrContentObj;
+                                }
                             }
 
                             obj.node.removeAttribute(attrKey);
@@ -321,6 +357,21 @@ cog.bind2 = function (dom, arg) {
         arg.callback();
     }
     return dom;
+};
+cog.propCondition = function (obj) {
+    if (obj.hasOwnProperty("if")) {
+        if (cog.if(obj.if[0])) {
+            return cog.propCondition(obj.if[1]);
+        } else {
+            if (typeof obj.if[2] !== 'undefined') {
+                return cog.propCondition(obj.if[2]);
+            } else {
+                return false;
+            }
+        }
+    } else {
+        return obj;
+    }
 };
 cog.splitTokens = function (str) {
     var m, result = [];
@@ -757,7 +808,7 @@ cog.rebindNodes2 = function (token) {
     if (typeof token !== 'string') {
         token = token.join(".");
     }
-    var i, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token);
+    var i, cloneNode, nodeToken, nodeTokensLength, prop, nodeTokens = cog.getNode2(token), nodeTokenKey, nodeTokenKeys, nodeTokenKeysLength, content = cog.get2(token), attrContentObj, attrContentObjProp;
     if (typeof nodeTokens === 'object') {
         if (Array.isArray(nodeTokens)) {
             nodeTokensLength = nodeTokens.length;
@@ -767,16 +818,79 @@ cog.rebindNodes2 = function (token) {
                 if (nodeToken.hasOwnProperty("prop")) {
                     prop = nodeToken.prop;
                     if (cog.isInDocument(prop.node)) {
-                        //ADD PROPS HERE
-                        if (prop.type == "if") {
+
+                        if (prop.type == "prop") {
+                            attrContentObj = cog.eval("({" + prop.content + "})");
+                            attrContentObj = cog.propCondition(attrContentObj);
+                            //ADD PROPS HERE
+                            if (prop.old) {
+                                if (prop.old.hasOwnProperty("style")) {
+                                    attrContentObjProp = prop.old["style"];
+                                    for (ii in attrContentObjProp) {
+                                        prop.node.style[ii] = "";
+                                    }
+                                }
+                                if (prop.old.hasOwnProperty("class")) {
+                                    if (typeof prop.old["class"] === "string") {
+                                        attrContentObjProp = prop.old["class"].trim().split(" ");
+                                    } else {
+                                        attrContentObjProp = prop.old["class"];
+                                    }
+                                    for (ii in attrContentObjProp) {
+                                        obj.node.classList.remove(attrContentObjProp[ii]);
+                                    }
+                                }
+                                if (prop.old.hasOwnProperty("context")) {
+                                    attrContentObjProp = prop.old["context"];
+                                    for (ii in attrContentObjProp) {
+                                        prop.node[ii] = attrContentObjProp[ii];
+                                    }
+                                }
+                                if (prop.old.hasOwnProperty("attr")) {
+                                    attrContentObjProp = prop.old["attr"];
+                                    for (ii in attrContentObjProp) {
+                                        prop.node.removeAttribute(ii);
+                                    }
+                                }
+                            }
+                            if (attrContentObj) {
+                                if (attrContentObj.hasOwnProperty("style")) {
+                                    attrContentObjProp = attrContentObj["style"];
+                                    for (ii in attrContentObjProp) {
+                                        prop.node.style[ii] = attrContentObjProp[ii];
+                                    }
+                                }
+                                if (attrContentObj.hasOwnProperty("class")) {
+                                    if (typeof attrContentObj["class"] === "string") {
+                                        attrContentObjProp = attrContentObj["class"].trim().split(" ");
+                                    } else {
+                                        attrContentObjProp = attrContentObj["class"];
+                                    }
+                                    for (ii in attrContentObjProp) {
+                                        obj.node.classList.add(attrContentObjProp[ii]);
+                                    }
+                                }
+                                if (attrContentObj.hasOwnProperty("context")) {
+                                    attrContentObjProp = attrContentObj["context"];
+                                    for (ii in attrContentObjProp) {
+                                        prop.node[ii] = attrContentObjProp[ii];
+                                    }
+                                }
+                                if (attrContentObj.hasOwnProperty("attr")) {
+                                    attrContentObjProp = attrContentObj["attr"];
+                                    for (ii in attrContentObjProp) {
+                                        prop.node.setAttribute(ii, attrContentObjProp[ii]);
+                                    }
+                                }
+                            }
+                            prop.old = attrContentObj;
+                        } else if (prop.type == "if") {
                             if (cog.if(prop.content)) {
                                 prop.node.style.display = "";
                             } else {
                                 prop.node.style.display = "none";
                             }
-                        }
-
-                        if (prop.type == "attr") {
+                        } else if (prop.type == "attr") {
                             if (nodeToken.node.nodeValue != content) {
                                 nodeToken.node.nodeValue = content;
                                 prop.node.setAttribute(prop.attr, prop.content.innerHTML);
@@ -2033,61 +2147,51 @@ cog.collectGarbage = function () {
         }
     }
 };
-cog.getElementAllEvents = function (elem) {
-    var elemLives = [], elemEvents = [];
-    if (elem.getAttribute(cog.label.live) != null) {
-        elemLives = (cog.strToObj(elem.getAttribute(cog.label.live), true));
-    }
-    if (elem.getAttribute(cog.label.event) != null) {
-        elemEvents = (cog.strToObj(elem.getAttribute(cog.label.event), true));
-    }
-    return elemLives.concat(elemEvents);
-};
 cog.eventListener = function (event) {
     cog.eventHandler(event);
 };
 cog.eventHandler = function (event, elem) {
     if (!elem) { elem = event.target; }
     if (typeof elem.getAttribute !== 'function') { return; }
-    var elemAllEvents = cog.getElementAllEvents(elem), prevent = false, execute, checkIf, i, ii, objKeys, e;
-    if (elemAllEvents.length > 0) {
-        for (i = 0; i < elemAllEvents.length; i++) {
-            obj = elemAllEvents[i];
-            checkIf = true;
-            if (obj.hasOwnProperty("if")) {
-                checkIf = cog.if(obj["if"]);
+    var events, prevent = false, i;
+    if (elem.getAttribute(cog.label.live) != null) {
+        events = cog.eval("({" + elem.getAttribute(cog.label.live) + "})");
+        events = cog.propCondition(events);
+        if (events) {
+            if (!events.hasOwnProperty("event")) {
+                events.event = "change";
             }
-            if (!checkIf) {
+            if (events.event == event.type) {
+                if (!events.hasOwnProperty("data")) {
+                    events.data = "value";
+                }
+                if (typeof elem[events.data] !== "undefined") {
+                    events.data = elem[events.data];
+                } else {
+                    events.data = cog.eval(events.data);
+                }
+                cog.set2(events.live, events.data);
+            }
+            if (events.hasOwnProperty(cog.keyword.prevent) && cog.if(events[cog.keyword.prevent])) {
                 prevent = true;
             }
-            if (checkIf) {
-                if (obj.hasOwnProperty("live")) {
-                    if (!obj.hasOwnProperty("event")) {
-                        obj.event = "change";
-                    }
-                    if (!obj.hasOwnProperty("data")) {
-                        obj.data = "value";
-                    }
-                    if (obj.event == event.type) {
-                        if (typeof elem[obj.data] !== "undefined") {
-                            obj.data = elem[obj.data];
-                        } else {
-                            obj.data = cog.eval(obj.data);
-                        }
-                        cog.set(obj.live, obj.data);
-                    }
-                } else {
-                    objKeys = Object.keys(obj);
-                    for (ii = 0; ii < objKeys.length; ii++) {
-                        e = objKeys[ii];
-                        if (e == event.type && e != "if") {
-                            cog.eval(obj[e]);
-                        }
+        }
+    }
+    if (elem.getAttribute(cog.label.event) != null) {
+        events = cog.eval("({" + elem.getAttribute(cog.label.event) + "})");
+        events = cog.propCondition(events);
+        if (events) {
+            for (i in events) {
+                if (i == event.type) {
+                    if (typeof events[i] === 'function') {
+                        events[i]();
+                    } else {
+                        cog.eval(events[i]);
                     }
                 }
-                if (obj.hasOwnProperty(cog.keyword.prevent) && cog.if(obj[cog.keyword.prevent])) {
-                    prevent = true;
-                }
+            }
+            if (events.hasOwnProperty(cog.keyword.prevent) && cog.if(events[cog.keyword.prevent])) {
+                prevent = true;
             }
         }
     }
