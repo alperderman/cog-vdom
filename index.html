@@ -26,6 +26,11 @@
 
     <div cog-temp="nameTemp;item;person"></div>
 
+    <input cog-live="live:'input', event:'input'">
+    <p>{{input}}</p>
+
+    <button cog-event="click:'addToNumber()'">ADD</button>
+    <p>{{number}}</p>
     <br><br><br>
     <h2>REPEATS</h2>
     <hr>
@@ -62,15 +67,28 @@
         cog.data.style = "color";
         cog.data.color = "red";
 
+        cog.data.input = "";
+        cog.data.number = 1;
+
+        function addToNumber() {
+            cog.alter("number", function(val){
+                if(val==9){
+                    return 0;
+                }else{
+                    return val+1;
+                }
+            });
+        }
+
         function toggleBool() {
-            cog.set2("bool", !cog.get2("bool"));
+            cog.set("bool", !cog.get("bool"));
         }
 
         cog.data.bool = true;
         cog.data.bool2 = false;
 
         cog.data.greetColor = function() {
-            return cog.get2("greet") + " &&& "+ cog.get2("color");
+            return cog.get("greet") + " &&& "+ cog.get("color");
         }
         cog.addBound("greet", "greetColor");
         cog.addBound("color", "greetColor");
@@ -86,28 +104,7 @@
         cog.data.arr = [1, 2, 3, 4];
         cog.data.obj = { name: "alex", func:function(v){return v.join(".")} };
         cog.data.prim = "nice JOB!";
-        /*
-        cog.set2("arr", function(val){
-            val.push(5);return val;
-        });
-        cog.set2("nicee", function(val){
-            return "helloo";
-        });
-        cog.set2("arr", function(val){
-            val.unshift("ADD THIS MF!");
-            return val;
-        });
-        cog.set2("arr", function(val){
-            val[1] = "SET IT MANE!";
-            return val;
-        });
-        cog.set2("obj", function(val){
-            val.job = "nice one!";
-            val.name= "ok then mane!";
-            return val;
-        });*/
-        console.log(cog.tasks);
-        cog.render2();
+        cog.render();
     </script>
 </body>
 
