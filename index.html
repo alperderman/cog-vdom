@@ -39,6 +39,7 @@
         <p>{{item.name}}</p>
         <p>{{item.job}}</p>
         <div cog-repeat="tags;item, pep;{{item.tags}}, {{item}}">
+            <span>{{pep._index}}</span>
             <span>{{item._index}}</span>
             <span>{{item}}</span>
         </div>

@@ -385,7 +385,6 @@ cog.template = function (arg) {
                                                 aliasKey = aliasKeys[iii];
                                                 aliasKeyArr = aliasKey.split(".");
                                                 aliasKeyArrLength = aliasKeyArr.length;
-
                                                 for (iiii = 0; iiii < aliasKeyArrLength; iiii++) {
                                                     if (aliasKeyArr[iiii] != tokenArr[iiii]) {
                                                         break;
@@ -614,7 +613,6 @@ cog.bindRepeats = function (dom, parent) {
             for (i = 0; i < repeatDataLength; i++) {
                 repeatTokenObj[repeatAlias[0]] = repeatDataToken + "." + i;
                 repeatTemp = cog.template({ id: repeatId, data: repeatTokenObj, fragment: false, bind: true, parent: cog.repeats[repeatDataToken][repeatDataKey] });
-
                 cog.repeats[repeatDataToken][repeatDataKey]["childs"][i] = [];
                 while (repeatTemp.firstChild) {
                     cog.repeats[repeatDataToken][repeatDataKey]["childs"][i].push(repeatTemp.firstChild);
@@ -670,7 +668,6 @@ cog.rebindRepeats = function (token) {
                         repeatAlias = cog.shallowClone(repeat.alias);
                         repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
                         repeatTemp = cog.template({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, parent: repeat });
-
                         repeat["childs"][ii] = [];
                         while (repeatTemp.firstChild) {
                             repeat["childs"][ii].push(repeatTemp.firstChild);
@@ -702,7 +699,6 @@ cog.rebind = function () {
         }
         if (task.action == "unshift") {
             cog.rebindNodes(token);
-
         }
         if (task.action == "shift") {
             cog.rebindNodes(token);
@@ -721,9 +717,7 @@ cog.rebind = function () {
                 cog.rebindNodes(token + "." + i);
             }
         }
-
         cog.rebindBound(token);
-
         cog.tasks.splice(0, 1);
     }
 };
@@ -991,6 +985,15 @@ cog.observable = function (value, callback, parent, keys) {
                     _self[cog.keyword.set].apply(_self, [val, key]);
                 }
             });
+        } else {
+            if (_value[key] instanceof cog.observable) {
+                var valueKeys = cog.shallowClone(_keys);
+                valueKeys.push(key);
+                _value[key][cog.keyword.keys] = valueKeys;
+                _value[key][cog.keyword.parent] = _self;
+            } else {
+                _value[key] = new cog.observable(_value[key]);
+            }
         }
     }
     function defineNewObservable(obj, key, verbose) {
@@ -1038,9 +1041,7 @@ cog.observable = function (value, callback, parent, keys) {
         value: function (val, key) {
             var o = defineNewObservable(val, key, true);
             _value[key] = o.val;
-            if (!_self.hasOwnProperty(key)) {
-                defineNewProperty(key);
-            }
+            defineNewProperty(key);
             if (_init) {
                 callback({
                     action: "set",
