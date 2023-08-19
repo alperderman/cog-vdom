@@ -985,25 +985,22 @@ cog.observable = function (value, callback, parent, keys) {
                     _self[cog.keyword.set].apply(_self, [val, key]);
                 }
             });
-        } else {
-            if (_value[key] instanceof cog.observable) {
-                var valueKeys = cog.shallowClone(_keys);
-                valueKeys.push(key);
-                _value[key][cog.keyword.keys] = valueKeys;
-                _value[key][cog.keyword.parent] = _self;
-            } else {
-                _value[key] = new cog.observable(_value[key]);
-            }
         }
     }
-    function defineNewObservable(obj, key, verbose) {
+    function defineNewObservable(key, val, func) {
         var valueKeys = cog.shallowClone(_keys);
         valueKeys.push(key);
-        if (verbose) {
-            return { val: new cog.observable(obj, callback, _self, valueKeys), keys: valueKeys };
+        if (val instanceof cog.observable) {
+            val = new cog.observable(val._get(), callback, _self, valueKeys);
         } else {
-            return new cog.observable(obj, callback, _self, valueKeys);
+            val = new cog.observable(val, callback, _self, valueKeys);
         }
+        if (typeof func === 'function') {
+            func(val);
+        } else {
+            _value[key] = val;
+        }
+        return { val: val, keys: valueKeys };
     }
     function fixArrayIndex() {
         var val, i, ln = _value.length;
@@ -1039,14 +1036,13 @@ cog.observable = function (value, callback, parent, keys) {
         enumerable: false,
         writable: false,
         value: function (val, key) {
-            var o = defineNewObservable(val, key, true);
-            _value[key] = o.val;
+            var o = defineNewObservable(key, val);
             defineNewProperty(key);
             if (_init) {
                 callback({
                     action: "set",
-                    value: o.val,
-                    keys: o.keys
+                    value: o.val._get(),
+                    keys: cog.shallowClone(o.keys)
                 });
             }
         }
@@ -1095,12 +1091,12 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var index, args = [], valueLength = _value.length, argumentsLength = arguments.length;
+                    var index, args = [], valueLength = _value.length, argumentsLength = arguments.length, o;
                     for (var i = 0, ln = argumentsLength; i < ln; i++) {
                         index = _value.length;
-                        args.push(defineNewObservable(arguments[i], index));
-                        _value.push(args[args.length - 1]);
+                        o = defineNewObservable(index, arguments[i], function (v) { _value.push(v); });
                         defineNewProperty(index);
+                        args.push(o.val._get());
                     }
                     if (_init) {
                         callback({
@@ -1140,9 +1136,9 @@ cog.observable = function (value, callback, parent, keys) {
                 value: function () {
                     var i, ln, args = [];
                     for (i = 0, ln = arguments.length; i < ln; i++) {
-                        args.push(defineNewObservable(arguments[i], i));
-                        _value.splice(i, 0, args[args.length - 1]);
+                        o = defineNewObservable(i, arguments[i], function (v) { _value.splice(i, 0, v); });
                         defineNewProperty(_value.length - 1);
+                        args.push(o.val._get());
                     }
                     fixArrayIndex();
                     callback({
@@ -1176,21 +1172,17 @@ cog.observable = function (value, callback, parent, keys) {
                 writable: false,
                 value: function (index, howMany) {
                     var removed = [], item, args = [index, howMany], valueLength = _value.length;
-
                     index = index == null ? 0 : index < 0 ? valueLength + index : index;
-
                     howMany = howMany == null ? valueLength - index : howMany > 0 ? howMany : 0;
-
                     while (howMany--) {
                         item = _value.splice(index, 1)[0];
                         removed.push(item);
                         delete _self[_value.length];
                     }
-
                     for (var i = 2, ln = arguments.length; i < ln; i++) {
-                        args.push(defineNewObservable(arguments[i], i));
-                        _value.splice(index, 0, args[args.length - 1]);
+                        o = defineNewObservable(index, arguments[i], function (v) { _value.splice(index, 0, v); });
                         defineNewProperty(_value.length - 1);
+                        args.push(o.val._get());
                         index++;
                     }
                     fixArrayIndex();
@@ -1201,7 +1193,6 @@ cog.observable = function (value, callback, parent, keys) {
                         amount: valueLength,
                         keys: cog.shallowClone(_keys)
                     });
-
                     return removed;
                 }
             });
@@ -1241,7 +1232,7 @@ cog.observable = function (value, callback, parent, keys) {
         } else {
             _value = {};
             for (var i in value) {
-                _value[i] = defineNewObservable(value[i], i);
+                defineNewObservable(i, value[i]);
                 defineNewProperty(i);
             }
         }
