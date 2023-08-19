@@ -1134,7 +1134,7 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var i, ln, args = [];
+                    var i, ln, args = [], o;
                     for (i = 0, ln = arguments.length; i < ln; i++) {
                         o = defineNewObservable(i, arguments[i], function (v) { _value.splice(i, 0, v); });
                         defineNewProperty(_value.length - 1);
@@ -1171,7 +1171,7 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function (index, howMany) {
-                    var removed = [], item, args = [index, howMany], valueLength = _value.length;
+                    var removed = [], item, args = [index, howMany], valueLength = _value.length, o;
                     index = index == null ? 0 : index < 0 ? valueLength + index : index;
                     howMany = howMany == null ? valueLength - index : howMany > 0 ? howMany : 0;
                     while (howMany--) {
