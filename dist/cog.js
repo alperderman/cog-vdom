@@ -954,7 +954,7 @@ cog.alter = function (keys, val) {
     cog.set(keys, val, true);
 };
 cog.observable = function (value, callback, parent, keys) {
-    if (value instanceof cog.observable) { return value; }
+    if (value instanceof this.constructor) { return value; }
     var _self = this, _value, _init = false, _keys, _parent;
     if (checkType(callback) !== 'function') {
         callback = function () { };
@@ -990,7 +990,7 @@ cog.observable = function (value, callback, parent, keys) {
     function defineNewObservable(key, val, func) {
         var valueKeys = cog.shallowClone(_keys);
         valueKeys.push(key);
-        if (val instanceof cog.observable) {
+        if (val instanceof this.constructor) {
             val = new cog.observable(val[cog.keyword.get], callback, _self, valueKeys);
         } else {
             val = new cog.observable(val, callback, _self, valueKeys);
