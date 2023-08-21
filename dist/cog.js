@@ -8,7 +8,7 @@ cog.nodes = {};
 cog.props = [];
 cog.templates = {};
 cog.repeats = {};
-cog.bound = [];
+cog.bound = {};
 cog.tasks = [];
 cog.isRebind = false;
 cog.encapVar = null;
@@ -199,6 +199,7 @@ cog.bind = function (dom, arg) {
                                     cog.pushNode(nodeSplitToken[1], { prop: prop });
                                 }
                             }
+
                             if (propType == "if") {
                                 if (cog.if(attrContentParse)) {
                                     obj.node.style.display = "";
@@ -849,17 +850,23 @@ cog.rebindNodes = function (token) {
     }
 };
 cog.rebindBound = function (token) {
-    var i, bounds, bound;
-    if (typeof token !== 'string') {
-        token = token.join(".");
+    var i, len, keys, bounds, bound;
+    if (typeof token === 'string') {
+        token = token.split(".");
     }
-    if (cog.bound.hasOwnProperty(token)) {
-        bounds = cog.bound[token];
-        for (i in bounds) {
-            bound = bounds[i];
-            cog.rebindRepeats(bound);
-            cog.rebindNodes(bound);
+    len = token.length;
+    keys = "";
+    for (i = 0; i < len; i++) {
+        keys = keys + token[i];
+        if (cog.bound.hasOwnProperty(keys)) {
+            bounds = cog.bound[keys];
+            for (ii in bounds) {
+                bound = bounds[ii];
+                cog.rebindRepeats(bound);
+                cog.rebindNodes(bound);
+            }
         }
+        keys = keys + ".";
     }
 };
 cog.addBound = function (dataKeys, targetKeys) {
