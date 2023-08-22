@@ -1085,7 +1085,6 @@ cog.observable = function (value, callback, parent, keys) {
             return normalizedKeys(_self[cog.keyword.refkeys]);
         }
     });
-
     Object.defineProperty(_self, cog.keyword.parent, {
         configurable: false,
         enumerable: false,
