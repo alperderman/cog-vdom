@@ -39,6 +39,7 @@ cog.keyword = {
     type: "_type",
     key: "_key",
     keys: "_keys",
+    refkeys: "_refkeys",
     parent: "_parent",
     index: "_index",
     prevent: "_prevent"
@@ -199,7 +200,6 @@ cog.bind = function (dom, arg) {
                                     cog.pushNode(nodeSplitToken[1], { prop: prop });
                                 }
                             }
-
                             if (propType == "if") {
                                 if (cog.if(attrContentParse)) {
                                     obj.node.style.display = "";
@@ -980,6 +980,13 @@ cog.observable = function (value, callback, parent, keys) {
         var typeString = Object.prototype.toString.call(input);
         return typeString.slice(8, typeString.length - 1).toLowerCase();
     }
+    function normalizedKeys(keys) {
+        var i, arr = [];
+        for (i in keys) {
+            arr.push(keys[i].k);
+        }
+        return arr;
+    }
     function defineNewProperty(key) {
         if (!_self.hasOwnProperty(key)) {
             Object.defineProperty(_self, key, {
@@ -995,8 +1002,8 @@ cog.observable = function (value, callback, parent, keys) {
         }
     }
     function defineNewObservable(key, val, func) {
-        var valueKeys = cog.shallowClone(_keys);
-        valueKeys.push(key);
+        var valueKeys = _self[cog.keyword.refkeys].slice();
+        valueKeys.push({ k: key });
         if (val instanceof this.constructor) {
             val = new cog.observable(val[cog.keyword.get], callback, _self, valueKeys);
         } else {
@@ -1007,14 +1014,13 @@ cog.observable = function (value, callback, parent, keys) {
         } else {
             _value[key] = val;
         }
-        return { val: val, keys: valueKeys };
+        return val;
     }
     function fixArrayIndex() {
-        var val, i, ln = _value.length;
+        var keys, i, ln = _value.length;
         for (i = 0, ln; i < ln; i++) {
-            val = cog.shallowClone(_value[i][cog.keyword.keys]);
-            val[val.length - 1] = i;
-            _value[i][cog.keyword.keys] = val;
+            keys = _value[i][cog.keyword.refkeys];
+            keys[keys.length - 1].k = i;
         }
     }
     Object.defineProperty(_self, cog.keyword.get, {
@@ -1047,8 +1053,8 @@ cog.observable = function (value, callback, parent, keys) {
             if (_init) {
                 callback({
                     action: "set",
-                    value: o.val[cog.keyword.get],
-                    keys: cog.shallowClone(o.keys)
+                    value: o[cog.keyword.get],
+                    keys: o[cog.keyword.keys]
                 });
             }
         }
@@ -1066,12 +1072,20 @@ cog.observable = function (value, callback, parent, keys) {
             return _self[cog.keyword.keys][_self[cog.keyword.keys].length - 1];
         }
     });
-    Object.defineProperty(_self, cog.keyword.keys, {
+    Object.defineProperty(_self, cog.keyword.refkeys, {
         configurable: false,
         enumerable: false,
         writable: true,
         value: _keys
     });
+    Object.defineProperty(_self, cog.keyword.keys, {
+        configurable: false,
+        enumerable: false,
+        get: function () {
+            return normalizedKeys(_self[cog.keyword.refkeys]);
+        }
+    });
+
     Object.defineProperty(_self, cog.keyword.parent, {
         configurable: false,
         enumerable: false,
@@ -1100,7 +1114,7 @@ cog.observable = function (value, callback, parent, keys) {
                         index = _value.length;
                         o = defineNewObservable(index, arguments[i], function (v) { _value.push(v); });
                         defineNewProperty(index);
-                        args.push(o.val[cog.keyword.get]);
+                        args.push(o[cog.keyword.get]);
                     }
                     if (_init) {
                         callback({
@@ -1108,7 +1122,7 @@ cog.observable = function (value, callback, parent, keys) {
                             args: args,
                             index: valueLength,
                             amount: argumentsLength,
-                            keys: cog.shallowClone(_keys)
+                            keys: _self[cog.keyword.keys]
                         });
                     }
                     return _value.length;
@@ -1127,7 +1141,7 @@ cog.observable = function (value, callback, parent, keys) {
                         callback({
                             action: "pop",
                             index: valueLength,
-                            keys: cog.shallowClone(_keys)
+                            keys: _self[cog.keyword.keys]
                         });
                         return item;
                     }
@@ -1142,13 +1156,13 @@ cog.observable = function (value, callback, parent, keys) {
                     for (i = 0, ln = arguments.length; i < ln; i++) {
                         o = defineNewObservable(i, arguments[i], function (v) { _value.splice(i, 0, v); });
                         defineNewProperty(_value.length - 1);
-                        args.push(o.val[cog.keyword.get]);
+                        args.push(o[cog.keyword.get]);
                     }
                     fixArrayIndex();
                     callback({
                         action: "unshift",
                         args: args,
-                        keys: cog.shallowClone(_keys)
+                        keys: _self[cog.keyword.keys]
                     });
                     return _value.length;
                 }
@@ -1164,7 +1178,7 @@ cog.observable = function (value, callback, parent, keys) {
                         fixArrayIndex();
                         callback({
                             action: "shift",
-                            keys: cog.shallowClone(_keys)
+                            keys: _self[cog.keyword.keys]
                         });
                         return item;
                     }
@@ -1186,7 +1200,7 @@ cog.observable = function (value, callback, parent, keys) {
                     for (var i = 2, ln = arguments.length; i < ln; i++) {
                         o = defineNewObservable(index, arguments[i], function (v) { _value.splice(index, 0, v); });
                         defineNewProperty(_value.length - 1);
-                        args.push(o.val[cog.keyword.get]);
+                        args.push(o[cog.keyword.get]);
                         index++;
                     }
                     fixArrayIndex();
@@ -1195,7 +1209,7 @@ cog.observable = function (value, callback, parent, keys) {
                         args: args,
                         index: index,
                         amount: valueLength,
-                        keys: cog.shallowClone(_keys)
+                        keys: _self[cog.keyword.keys]
                     });
                     return removed;
                 }
