@@ -10,14 +10,14 @@
 
 <body>
 
-    <h1 #style="{{style}}:{{color}};">{{greet}}</h1>
+    <h1 _style="{{style}}:{{color}};">{{greet}}</h1>
     <h1 cog-event="click:toggleBool" cog-prop1="if:[{{bool}}, {style:{color:'red'}}, {if:[{{bool2}}, {style:{color:'blue'}}, {style:{color:'green'}}]}]">{{greet}} PROP</h1>
     <h1>{{arr.0}}</h1>
-    <p>{{#greet}} &lt;- this is an escaped token</p>
+    <p>{{_greet}} &lt;- this is an escaped token</p>
     <h3>{{greetColor}}</h3>
 
     <div cog-set="temp:nameTemp;item">
-        <h3>{{item.name}}</h3>
+        <h3 _style="{{style}}:{{color}};">{{item.name}}</h3>
         <hr>
         <h3>{{item.job}}</h3>
     </div>

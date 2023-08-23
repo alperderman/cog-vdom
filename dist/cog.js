@@ -15,7 +15,7 @@ cog.encapVar = null;
 cog.cache = true;
 cog.label = {
     head: "head",
-    escape: "#",
+    escape: "_",
     prop: "cog-prop",
     set: "cog-set",
     source: "cog-src",
@@ -47,7 +47,7 @@ cog.keyword = {
 cog.token = {
     open: "{{",
     close: "}}",
-    escape: "#"
+    escape: "_"
 };
 cog.regex = {
     head: new RegExp("<head[^>]*>((.|[\\\n\\\r])*)<\\\/head>", "im"),
@@ -762,7 +762,7 @@ cog.rebindNodes = function (token) {
                                         attrContentObjProp = prop.old["class"];
                                     }
                                     for (ii in attrContentObjProp) {
-                                        obj.node.classList.remove(attrContentObjProp[ii]);
+                                        prop.node.classList.remove(attrContentObjProp[ii]);
                                     }
                                 }
                                 if (prop.old.hasOwnProperty("context")) {
@@ -792,7 +792,7 @@ cog.rebindNodes = function (token) {
                                         attrContentObjProp = attrContentObj["class"];
                                     }
                                     for (ii in attrContentObjProp) {
-                                        obj.node.classList.add(attrContentObjProp[ii]);
+                                        prop.node.classList.add(attrContentObjProp[ii]);
                                     }
                                 }
                                 if (attrContentObj.hasOwnProperty("context")) {
@@ -1330,45 +1330,61 @@ cog.eventListener = function (event) {
 cog.eventHandler = function (event, elem) {
     if (!elem) { elem = event.target; }
     if (typeof elem.getAttribute !== 'function') { return; }
-    var events, prevent = false, i;
-    if (elem.getAttribute(cog.label.live) != null) {
-        events = cog.eval("({" + elem.getAttribute(cog.label.live) + "})");
-        events = cog.propCondition(events);
-        if (events) {
-            if (!events.hasOwnProperty("event")) {
-                events.event = "change";
-            }
-            if (events.event == event.type) {
-                if (!events.hasOwnProperty("data")) {
-                    events.data = "value";
+    var events, attrEvents, prevent = false, i, ii, attr;
+    attr = elem.getAttribute(cog.label.live);
+    if (attr != null) {
+        attr = attr.trim();
+        if (attr[0] == "{") {
+            attrEvents = cog.eval("([" + attr + "])");
+        } else {
+            attrEvents = cog.eval("([{" + attr + "}])");
+        }
+        for (i in attrEvents) {
+            events = cog.propCondition(attrEvents[i]);
+            if (events) {
+                if (!events.hasOwnProperty("event")) {
+                    events.event = "change";
                 }
-                if (typeof elem[events.data] !== "undefined") {
-                    events.data = elem[events.data];
-                } else {
-                    events.data = cog.eval(events.data);
+                if (events.event == event.type) {
+                    if (!events.hasOwnProperty("data")) {
+                        events.data = "value";
+                    }
+                    if (typeof elem[events.data] !== "undefined") {
+                        events.data = elem[events.data];
+                    } else {
+                        events.data = cog.eval(events.data);
+                    }
+                    cog.set(events.live, events.data);
                 }
-                cog.set(events.live, events.data);
-            }
-            if (events.hasOwnProperty(cog.keyword.prevent) && cog.if(events[cog.keyword.prevent])) {
-                prevent = true;
+                if (events.hasOwnProperty(cog.keyword.prevent) && cog.if(events[cog.keyword.prevent])) {
+                    prevent = true;
+                }
             }
         }
     }
-    if (elem.getAttribute(cog.label.event) != null) {
-        events = cog.eval("({" + elem.getAttribute(cog.label.event) + "})");
-        events = cog.propCondition(events);
-        if (events) {
-            for (i in events) {
-                if (i == event.type) {
-                    if (typeof events[i] === 'function') {
-                        events[i]();
-                    } else {
-                        cog.eval(events[i]);
+    attr = elem.getAttribute(cog.label.event);
+    if (attr != null) {
+        attr = attr.trim();
+        if (attr[0] == "{") {
+            attrEvents = cog.eval("([" + attr + "])");
+        } else {
+            attrEvents = cog.eval("([{" + attr + "}])");
+        }
+        for (i in attrEvents) {
+            events = cog.propCondition(attrEvents[i]);
+            if (events) {
+                for (ii in events) {
+                    if (ii == event.type) {
+                        if (typeof events[ii] === 'function') {
+                            events[ii]();
+                        } else {
+                            cog.eval(events[ii]);
+                        }
                     }
                 }
-            }
-            if (events.hasOwnProperty(cog.keyword.prevent) && cog.if(events[cog.keyword.prevent])) {
-                prevent = true;
+                if (events.hasOwnProperty(cog.keyword.prevent) && cog.if(events[cog.keyword.prevent])) {
+                    prevent = true;
+                }
             }
         }
     }
