@@ -10,9 +10,9 @@
 <body>
     <form>
         <div>username:</div>
-        <input cog-prop="context:{value:'{{form.username}}'}" cog-live="live:'form.username', event:'input'" type="text">
+        <input cog-prop="context:{value:{{form.username}}}" cog-live="live:'form.username', event:'input'" type="text">
         <div>password:</div>
-        <input cog-prop="context:{value:'{{form.password}}'}" cog-live="live:'form.password', event:'input'" type="password">
+        <input cog-prop="context:{value:{{form.password}}}" cog-live="live:'form.password', event:'input'" type="password">
         <div>male:</div>
         <input cog-live="live:'form.gender'" type="radio" name="gender" value="male">
         <div>female:</div>
@@ -44,9 +44,9 @@
             car: ""
         };
         cog.data.formJSON = function () {
-            return JSON.stringify(cog.get("form"));
+            return JSON.stringify(cog.get("form")._get);
         };
-        cog.bound.push(["form", "formJSON"]);
+        cog.addBound("form", "formJSON");
         cog.render();
     </script>
 </body>

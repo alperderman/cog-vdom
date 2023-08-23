@@ -8,11 +8,11 @@
 
 </head>
 <body>
-    <input cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input'" type="text">
+    <input cog-prop="context:{value:{{input}}}" cog-live="live:'input', event:'input'" type="text">
     <button cog-event="click:'addToList()'">Add</button>
-    <div cog-repeat="todo,list,item">
+    <div cog-repeat="todo;item;list">
         <p>
-            <span cog-prop="style:{textDecoration: 'line-through'}, if:'!{{item.active}}'">{{item.text}}</span>
+            <span cog-prop="if:[!{{item.active}}, {style:{textDecoration: 'line-through'}}]">{{item.text}}</span>
             <button data-id="{{item._key}}" cog-event="click:'removeFromList()'">Delete</button>
             <button data-id="{{item._key}}" cog-event="click:'strikeItem()'">Complete</button>
         </p>

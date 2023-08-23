@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta http-equiv="x-ua-compatible" content="ie=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SHOP</title>
-
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHOP</title>
 </head>
+
 <body>
-    <div>{{products.0.title}} {{#products.0.title}}<span style="font-size: 0.7rem;">&lt;- (this is a comment token)</span></div>
+
+    <h2>SHOP</h2>
     <hr>
-    <div>{{name}}</div>
-    <hr>
+    <button onclick='cog.data.products.unshift({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, rating:6, category:"smartphones"});'>UNSHIFT</button>
+    <button onclick="cog.data.products.splice(5,4)">SPLICE</button>
+    <button onclick="cog.data.products.shift()">SHIFT</button>
     <table>
-        <tbody cog-repeat="table,products,i">
-            <tr>
-                <td cog-prop="style:{color:'{{colors}}'}, if:'\'{{i.title}}\' == \'women\\\'s shoes\''">{{i._index}} {{i.title}} {{colors}} </td>
+        <tbody cog-repeat="products;i;products">
+            <tr cog-prop="if:[{{i.title}} == 'Huawei P30', {style:{color:{{color}}}}]">
+                <td>{{i._index}} {{i.title}}</td>
                 <td>{{i.description}}</td>
                 <td>{{i.price}} $</td>
                 <td>{{i.rating}}</td>
@@ -23,44 +26,21 @@
             </tr>
         </tbody>
     </table>
-    <hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr><hr>
-    <table>
-        <tbody cog-repeat="table,products,i">
-            <tr>
-                <td cog-prop="style:{color:'{{colors}}'}, if:'\'{{i.title}}\' == \'women\\\'s shoes\''">{{i._index}} {{i.title}} {{colors}} </td>
-                <td>{{i.description}}</td>
-                <td>{{i.price}} $</td>
-                <td>{{i.rating}}</td>
-                <td>{{i.category}}</td>
-            </tr>
-        </tbody>
-    </table>
+    <button onclick='cog.data.products.push({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, rating:6, category:"smartphones"});'>PUSH</button>
+    <button onclick="cog.data.products.pop()">POP</button>
+    <button onclick="cog.data.products.splice(4293,5)">SPLICE</button>
 
 
-    <button cog-event="click:'addToProducts()'">PUSH</button>
+
     <script src="dist/cog.js"></script>
     <script>
-        cog.data.colors = "#4f8";
-        cog.data.name = "TESTING OUT NOWWWWWWW!!!!!!!! WOOOHOOOO";
-        cog.bound.push(["colors", "products"]);
-        addToProducts = function() {
-            cog.alter("products", function(obj){
-                obj.unshift({
-                "title": "WOOWOWOWPHONE 10213",
-                "description": "An apple mobile which is nothing like apple",
-                "price": 549,
-                "rating": 4.69,
-                "category": "smartphones",
-                });
-                return obj;
-            });
-        };
+        cog.data.color = "#f83";
         cog.xhr("products.json", function(xhr) {
-          cog.data.products = JSON.parse(xhr.responseText).products;
-          cog.data.products = cog.data.products.concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products);
-          cog.render();
+            cog.data.products = JSON.parse(xhr.responseText).products;
+            cog.data.products = cog.data.products.concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products);
+            cog.render();
         });
-        
     </script>
 </body>
+
 </html>

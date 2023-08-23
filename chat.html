@@ -5,16 +5,15 @@
 <meta http-equiv="x-ua-compatible" content="ie=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CHAT</title>
-
 </head>
 <body>
     
-    <div cog-repeat="log,chat,item" id="chat" cog-once>
+    <div cog-repeat="log;item;chat" id="chat">
         <p>
             <span cog-prop="style:{color:'#14f'}">{{item.user}}:</span><span>{{item.text}}</span>
         </p>
     </div>
-    <input cog-prop="context:{value:'{{input}}'}" cog-live="live:'input', event:'input'" type="text">
+    <input cog-prop="context:{value:{{input}}}" cog-live="live:'input', event:'input'" type="text">
     <button cog-event="click:'addChat()'">Send</button>
     <script src="dist/cog.js"></script>
     <script>
@@ -36,12 +35,9 @@
         addChat = function () {
             if (cog.get("input") != "") {
                 cog.alter("chat", function(arr){
-                    arr.push({text:cog.get("input"), user:"alper"});
+                    arr.push({text:cog.get("input"), user:"username"});
                     return arr;
                 });
-                var token = "chat."+(cog.get("chat._count")-1);
-                var temp = cog.template({id:"log", token:token, alias:"item", fragment:true});
-                document.getElementById("chat").appendChild(temp);
                 cog.set("input", "");
             }
         };
