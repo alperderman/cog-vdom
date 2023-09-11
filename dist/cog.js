@@ -36,6 +36,7 @@ cog.keyword = {
     this: "_this",
     get: "_get",
     set: "_set",
+    value: "_value",
     type: "_type",
     key: "_key",
     keys: "_keys",
@@ -999,7 +1000,7 @@ cog.observable = function (value, callback, parent, keys) {
                 configurable: true,
                 enumerable: true,
                 get: function () {
-                    return _value[key];
+                    return _self[cog.keyword.value][key];
                 },
                 set: function (val) {
                     _self[cog.keyword.set].apply(_self, [val, key]);
@@ -1018,14 +1019,18 @@ cog.observable = function (value, callback, parent, keys) {
         if (typeof func === 'function') {
             func(val);
         } else {
-            _value[key] = val;
+            if (_self[cog.keyword.value][key] instanceof cog.observable) {
+                _self[cog.keyword.value][key][cog.keyword.value] = val[cog.keyword.value];
+            } else {
+                _self[cog.keyword.value][key] = val;
+            }
         }
         return val;
     }
     function fixArrayIndex() {
-        var keys, i, ln = _value.length;
+        var keys, i, ln = _self[cog.keyword.value].length;
         for (i = 0, ln; i < ln; i++) {
-            keys = _value[i][cog.keyword.refkeys];
+            keys = _self[cog.keyword.value][i][cog.keyword.refkeys];
             keys[keys.length - 1].k = i;
         }
     }
@@ -1045,7 +1050,7 @@ cog.observable = function (value, callback, parent, keys) {
                 }
                 return data;
             } else {
-                return _value;
+                return _self[cog.keyword.value];
             }
         }
     });
@@ -1065,11 +1070,18 @@ cog.observable = function (value, callback, parent, keys) {
             }
         }
     });
+    Object.defineProperty(_self, cog.keyword.value, {
+        configurable: false,
+        enumerable: false,
+        writable: true,
+        value: _value
+    });
     Object.defineProperty(_self, cog.keyword.type, {
         configurable: false,
         enumerable: false,
-        writable: false,
-        value: checkType(value)
+        get: function () {
+            return checkType(value);
+        }
     });
     Object.defineProperty(_self, cog.keyword.key, {
         configurable: false,
@@ -1108,16 +1120,16 @@ cog.observable = function (value, callback, parent, keys) {
     }
     if (_self[cog.keyword.type] === 'array' || _self[cog.keyword.type] === 'object') {
         if (_self[cog.keyword.type] === 'array') {
-            _value = [];
+            _self[cog.keyword.value] = [];
             Object.defineProperty(_self, "push", {
                 configurable: false,
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var index, args = [], valueLength = _value.length, argumentsLength = arguments.length, o;
+                    var index, args = [], valueLength = _self[cog.keyword.value].length, argumentsLength = arguments.length, o;
                     for (var i = 0, ln = argumentsLength; i < ln; i++) {
-                        index = _value.length;
-                        o = defineNewObservable(index, arguments[i], function (v) { _value.push(v); });
+                        index = _self[cog.keyword.value].length;
+                        o = defineNewObservable(index, arguments[i], function (v) { _self[cog.keyword.value].push(v); });
                         defineNewProperty(index);
                         args.push(o[cog.keyword.get]);
                     }
@@ -1130,7 +1142,7 @@ cog.observable = function (value, callback, parent, keys) {
                             keys: _self[cog.keyword.keys]
                         });
                     }
-                    return _value.length;
+                    return _self[cog.keyword.value].length;
                 }
             });
             Object.defineProperty(_self, "pop", {
@@ -1138,10 +1150,10 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var valueLength = _value.length;
+                    var valueLength = _self[cog.keyword.value].length;
                     if (valueLength > -1) {
                         var index = valueLength - 1,
-                            item = _value.pop();
+                            item = _self[cog.keyword.value].pop();
                         delete _self[index];
                         callback({
                             action: "pop",
@@ -1157,8 +1169,8 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    if (_value.length > -1) {
-                        item = _value.reverse();
+                    if (_self[cog.keyword.value].length > -1) {
+                        item = _self[cog.keyword.value].reverse();
                         fixArrayIndex();
                         callback({
                             action: "reverse",
@@ -1173,8 +1185,8 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    if (_value.length > -1) {
-                        item = _value.sort();
+                    if (_self[cog.keyword.value].length > -1) {
+                        item = _self[cog.keyword.value].sort();
                         fixArrayIndex();
                         callback({
                             action: "sort",
@@ -1191,8 +1203,8 @@ cog.observable = function (value, callback, parent, keys) {
                 value: function () {
                     var i, ln, args = [], o;
                     for (i = 0, ln = arguments.length; i < ln; i++) {
-                        o = defineNewObservable(i, arguments[i], function (v) { _value.splice(i, 0, v); });
-                        defineNewProperty(_value.length - 1);
+                        o = defineNewObservable(i, arguments[i], function (v) { _self[cog.keyword.value].splice(i, 0, v); });
+                        defineNewProperty(_self[cog.keyword.value].length - 1);
                         args.push(o[cog.keyword.get]);
                     }
                     fixArrayIndex();
@@ -1201,7 +1213,7 @@ cog.observable = function (value, callback, parent, keys) {
                         args: args,
                         keys: _self[cog.keyword.keys]
                     });
-                    return _value.length;
+                    return _self[cog.keyword.value].length;
                 }
             });
             Object.defineProperty(_self, "shift", {
@@ -1209,9 +1221,9 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    if (_value.length > -1) {
-                        var item = _value.shift();
-                        delete _self[_value.length];
+                    if (_self[cog.keyword.value].length > -1) {
+                        var item = _self[cog.keyword.value].shift();
+                        delete _self[_self[cog.keyword.value].length];
                         fixArrayIndex();
                         callback({
                             action: "shift",
@@ -1226,17 +1238,17 @@ cog.observable = function (value, callback, parent, keys) {
                 enumerable: false,
                 writable: false,
                 value: function (index, howMany) {
-                    var removed = [], item, args = [index, howMany], valueLength = _value.length, o;
+                    var removed = [], item, args = [index, howMany], valueLength = _self[cog.keyword.value].length, o;
                     index = index == null ? 0 : index < 0 ? valueLength + index : index;
                     howMany = howMany == null ? valueLength - index : howMany > 0 ? howMany : 0;
                     while (howMany--) {
-                        item = _value.splice(index, 1)[0];
+                        item = _self[cog.keyword.value].splice(index, 1)[0];
                         removed.push(item);
-                        delete _self[_value.length];
+                        delete _self[_self[cog.keyword.value].length];
                     }
                     for (var i = 2, ln = arguments.length; i < ln; i++) {
-                        o = defineNewObservable(index, arguments[i], function (v) { _value.splice(index, 0, v); });
-                        defineNewProperty(_value.length - 1);
+                        o = defineNewObservable(index, arguments[i], function (v) { _self[cog.keyword.value].splice(index, 0, v); });
+                        defineNewProperty(_self[cog.keyword.value].length - 1);
                         args.push(o[cog.keyword.get]);
                         index++;
                     }
@@ -1255,11 +1267,11 @@ cog.observable = function (value, callback, parent, keys) {
                 configurable: false,
                 enumerable: false,
                 get: function () {
-                    return _value.length;
+                    return _self[cog.keyword.value].length;
                 },
                 set: function (val) {
                     var n = Number(val);
-                    var length = _value.length;
+                    var length = _self[cog.keyword.value].length;
                     if (n % 1 === 0 && n >= 0) {
                         if (n < length) {
                             _self.splice(n);
@@ -1269,7 +1281,7 @@ cog.observable = function (value, callback, parent, keys) {
                     } else {
                         throw new RangeError("Invalid array length");
                     }
-                    _value.length = n;
+                    _self[cog.keyword.value].length = n;
                     return val;
                 }
             });
@@ -1285,14 +1297,14 @@ cog.observable = function (value, callback, parent, keys) {
             });
             _self.push.apply(_self, value);
         } else {
-            _value = {};
+            _self[cog.keyword.value] = {};
             for (var i in value) {
                 defineNewObservable(i, value[i]);
                 defineNewProperty(i);
             }
         }
     } else {
-        _value = value;
+        _self[cog.keyword.value] = value;
     }
     _init = true;
 };
