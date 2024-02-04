@@ -23,7 +23,7 @@
     </div>
 
     <div cog-if="{{bool}}">BOOL is: {{bool}}</div>
-
+    <div>{{obj.func}}</div>
     <div cog-temp="nameTemp;item;person"></div>
 
     <input cog-live="live:'input', event:'input'">
@@ -54,11 +54,7 @@
         <hr>
     </div>
     <hr><hr><hr><hr>
-    <div cog-repeat="fruits;item;fruits">
-        <p>{{item._index}}</p>
-        <p>{{item}}</p>
-        <hr>
-    </div>
+    <div cog-repeat="fruits;item;fruits"></div>
     
 
 
@@ -103,7 +99,7 @@
 
         cog.data.fruits = ["apple", "pear", "banana"];
         cog.data.arr = [1, 2, 3, 4];
-        cog.data.obj = { name: "alex", func:function(v){return v.join(".")} };
+        cog.data.obj = { name: "alex", func:function(parent, target){return target.join(".")} };
         cog.data.prim = "nice JOB!";
         cog.render();
     </script>

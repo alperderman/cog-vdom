@@ -10,7 +10,7 @@
 <body>
     <input cog-prop="context:{value:{{input}}}" cog-live="live:'input', event:'input'" type="text">
     <button cog-event="click:'addToList()'">Add</button>
-    <div cog-repeat="todo;item;list">
+    <div cog-repeat="todo;item;list" cog-reverse>
         <p>
             <span cog-prop="if:[!{{item.active}}, {style:{textDecoration: 'line-through'}}]">{{item.text}}</span>
             <button data-id="{{item._key}}" cog-event="click:'removeFromList()'">Delete</button>
