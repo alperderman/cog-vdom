@@ -59,8 +59,13 @@ cog.regex = {
 };
 
 cog.render = function (layoutSrc) {
-    var layout;
+    var layout, scripts, i;
     step_start();
+    function convert_data() {
+        cog.data = new cog.observable(cog.data, function (a) {
+            cog.tasks.push(a);
+        });
+    }
     function step_start() {
         cog.tasks = new cog.observable(cog.tasks, function (a) {
             if (!cog.isRebind) {
@@ -80,15 +85,20 @@ cog.render = function (layoutSrc) {
             }, { method: "GET" });
         } else {
             cog.setElems(function () {
-                cog.data = new cog.observable(cog.data, function (a) {
-                    cog.tasks.push(a);
-                });
+                convert_data();
                 document.dispatchEvent(new CustomEvent(cog.event.beforeRender));
                 if (cog.isElement(layoutSrc)) {
                     cog.bind(layoutSrc);
                 } else {
                     cog.bind();
                 }
+                scripts = document.querySelectorAll("script["+ cog.label.await +"]");
+                cog.loadScriptsNS(scripts, function () {
+                    for (i = 0; i < scripts.length; i++) {
+                        scripts[i].removeAttribute(cog.label.await);
+                    }
+                });
+                cog.scrollToHash();
                 setTimeout(function () {
                     document.dispatchEvent(new CustomEvent(cog.event.afterRender));
                 }, 0);
@@ -111,9 +121,7 @@ cog.render = function (layoutSrc) {
         }
         setTimeout(function () {
             cog.setElems(function () {
-                cog.data = new cog.observable(cog.data, function (a) {
-                    cog.tasks.push(a);
-                });
+                convert_data();
                 step_bind();
             });
         }, 0);
@@ -130,14 +138,16 @@ cog.render = function (layoutSrc) {
     }
     function step_scripts() {
         cog.loadScriptsNS(document.querySelectorAll("script"), function () {
+            scripts = document.querySelectorAll("script["+ cog.label.await +"]");
+            for (i = 0; i < scripts.length; i++) {
+                scripts[i].removeAttribute(cog.label.await);
+            }
             step_finish();
         });
     }
     function step_finish() {
         cog.DOMLoad();
-        if (window.location.hash.slice(1) && document.getElementById(window.location.hash.slice(1))) {
-            document.getElementById(window.location.hash.slice(1)).scrollIntoView();
-        }
+        cog.scrollToHash();
         setTimeout(function () {
             document.dispatchEvent(new CustomEvent(cog.event.afterRender));
         }, 0);
@@ -1346,6 +1356,29 @@ cog.observable = function (value, callback, parent, keys) {
     }
     _init = true;
 };
+cog.scrollToHash = function () {
+    if (window.location.hash.slice(1) && document.getElementById(window.location.hash.slice(1))) {
+        document.getElementById(window.location.hash.slice(1)).scrollIntoView();
+    }
+};
+cog.extractAssets = function (elem) {
+    if (elem == null) { elem = document; }
+    var i, links = elem.getElementsByTagName("link"), link, styles = elem.getElementsByTagName("style"), style, scripts = elem.getElementsByTagName("script"), script;
+    for (i = 0; i < links.length; i++) {
+        link = links[i];
+        document.head.appendChild(link);
+        link.href = link.href;
+    }
+    for (i = 0; i < styles.length; i++) {
+        style = styles[i];
+        document.head.appendChild(style);
+    }
+    for (i = 0; i < scripts.length; i++) {
+        script = scripts[i];
+        script.setAttribute(cog.label.await, "");
+        document.body.appendChild(script);
+    }
+};
 cog.setElems = function (callback) {
     cog.loadContents(function () {
         var setElem, setAttr, setAttrSplit, setType, setKey, setKeys, setTemp, setTempId, setTempAlias, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head, tempNode, tempAttr, tempId, tempAlias;
@@ -1369,9 +1402,11 @@ cog.setElems = function (callback) {
                 cog.set(setKeys, setElem.innerText);
             }
             if (setType == "html") {
+                cog.extractAssets(setElem);
                 cog.set(setKeys, cog.elemFragment(setElem));
             }
             if (setType == "temp") {
+                cog.extractAssets(setElem);
                 setTemp = setKey.split(";");
                 setTempId = setTemp[0].trim();
                 setTempAlias = setTemp[1].split(",");
@@ -1404,7 +1439,7 @@ cog.setElems = function (callback) {
         }
         for (i = 0; i < heads.length; i++) {
             head = heads[i];
-            head.removeAttribute("head");
+            head.removeAttribute(cog.label.head);
             document.head.appendChild(head);
         }
         if (typeof callback === 'function') {
@@ -1614,8 +1649,8 @@ cog.loadContents = function (callback) {
     node = document.querySelector("[" + cog.label.source + "]:not([" + cog.label.await + "])");
     if (node) {
         nodeAttr = node.getAttribute(cog.label.source);
-        srcObj = cog.strToObj(nodeAttr);
-        if (!srcObj) {
+        srcObj = cog.eval("({" + nodeAttr + "})");
+        if (typeof srcObj !== "object") {
             srcObj = { url: nodeAttr };
         }
         if (srcObj.cache != null) {

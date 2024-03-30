@@ -22,9 +22,16 @@
         <h3>{{item.job}}</h3>
     </div>
 
+    <div cog-set="temp:cardTemp;card">
+        <div cog-src="card_template.html"></div>
+    </div>
+
     <div cog-if="{{bool}}">BOOL is: {{bool}}</div>
     <div>{{obj.func}}</div>
+
     <div cog-temp="nameTemp;item;person"></div>
+
+    <div cog-temp="cardTemp;card;cardData"></div>
 
     <input cog-live="live:'input', event:'input'">
     <p>{{input}}</p>
@@ -96,6 +103,7 @@
             {id:"2",name:"Aaron", job:"CFO", tags:["hah", "ok"]},
             {id:"3",name:"Adam", job:"CCO", tags:["that", "this", "there"]}
         ];
+        cog.data.cardData = {title:"TITLE!!!" ,content:"This is card content!", share:"Share", info:"Info"}
 
         cog.data.fruits = ["apple", "pear", "banana"];
         cog.data.arr = [1, 2, 3, 4];
