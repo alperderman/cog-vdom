@@ -21,7 +21,7 @@
     <button onclick="cog.data.products.splice(cog.data.products.length-10,5)">SPLICE</button>
     <table>
         <tbody cog-repeat="productsTemp;i;products">
-            <tr cog-prop="if:[{{i.title}} == 'Huawei P30', {style:{color:{{color}}}}]">
+            <tr cog-prop="if:[{{i.title}} == 'Huawei P30', {style:{color:{{color}}}}]" cog-prop2="if:[{{i._index}} % 2 == 0, {style:{backgroundColor:'#eee'}}]">
                 <td>{{i._index}} {{i.title}}</td>
                 <td>{{i.description}}</td>
                 <td cog-prop="if:[{{i.priceCondition}}, {style:{color:'#f00'}}]">{{i.price}} $</td>

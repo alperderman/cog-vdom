@@ -16,6 +16,7 @@ cog.cache = true;
 cog.label = {
     head: "head",
     escape: "_",
+    escapeTag: "cog-escape",
     prop: "cog-prop",
     set: "cog-set",
     source: "cog-src",
@@ -59,7 +60,7 @@ cog.regex = {
 };
 
 cog.render = function (layoutSrc) {
-    var layout, scripts, i;
+    var i, layout, scripts;
     step_start();
     function convert_data() {
         cog.data = new cog.observable(cog.data, function (a) {
@@ -92,16 +93,13 @@ cog.render = function (layoutSrc) {
                 } else {
                     cog.bind();
                 }
-                scripts = document.querySelectorAll("script["+ cog.label.await +"]");
+                scripts = document.querySelectorAll("script[" + cog.label.await + "]");
                 cog.loadScriptsNS(scripts, function () {
                     for (i = 0; i < scripts.length; i++) {
                         scripts[i].removeAttribute(cog.label.await);
                     }
                 });
-                cog.scrollToHash();
-                setTimeout(function () {
-                    document.dispatchEvent(new CustomEvent(cog.event.afterRender));
-                }, 0);
+                step_finish();
             });
         }
     }
@@ -138,17 +136,18 @@ cog.render = function (layoutSrc) {
     }
     function step_scripts() {
         cog.loadScriptsNS(document.querySelectorAll("script"), function () {
-            scripts = document.querySelectorAll("script["+ cog.label.await +"]");
+            scripts = document.querySelectorAll("script[" + cog.label.await + "]");
             for (i = 0; i < scripts.length; i++) {
                 scripts[i].removeAttribute(cog.label.await);
             }
+            cog.DOMLoad();
             step_finish();
         });
     }
     function step_finish() {
-        cog.DOMLoad();
-        cog.scrollToHash();
         setTimeout(function () {
+            cog.cleanEscapeTags();
+            cog.scrollToHash();
             document.dispatchEvent(new CustomEvent(cog.event.afterRender));
         }, 0);
     }
@@ -1361,6 +1360,13 @@ cog.scrollToHash = function () {
         document.getElementById(window.location.hash.slice(1)).scrollIntoView();
     }
 };
+cog.cleanEscapeTags = function () {
+    var i, elems = document.querySelectorAll("[" + cog.label.escapeTag + "]"), elem;
+    for (i = 0; i < elems.length; i++) {
+        elem = elems[i];
+        elem.removeAttribute(cog.label.escapeTag);
+    }
+};
 cog.extractAssets = function (elem) {
     if (elem == null) { elem = document; }
     var i, links = elem.getElementsByTagName("link"), link, styles = elem.getElementsByTagName("style"), style, scripts = elem.getElementsByTagName("script"), script;
@@ -1574,31 +1580,33 @@ cog.getAttributes = function (attributes) {
 };
 cog.createDOMMap = function (element, isSVG, isScript, isRepeat, isTemplate) {
     return Array.prototype.map.call(element.childNodes, (function (node) {
-        var details = {
-            content: node.childNodes && node.childNodes.length > 0 ? null : node.textContent,
-            attrs: node.nodeType !== 1 ? [] : cog.getAttributes(node.attributes),
-            type: node.nodeType === 3 ? 'text' : (node.nodeType === 8 ? 'comment' : node.tagName.toLowerCase()),
-            node: node
-        };
-        var dasRepeat, dasTemplate;
-        details.isSVG = isSVG || details.type === 'svg';
-        details.isScript = isScript || details.type === 'script';
-        if (isRepeat) {
-            details.isRepeat = true;
-            dasRepeat = true;
-        } else {
-            details.isRepeat = false;
-            dasRepeat = (node.hasAttribute && node.hasAttribute(cog.label.repeat));
+        if (!node.hasAttribute || !node.hasAttribute(cog.label.escapeTag)) {
+            var details = {
+                content: node.childNodes && node.childNodes.length > 0 ? null : node.textContent,
+                attrs: node.nodeType !== 1 ? [] : cog.getAttributes(node.attributes),
+                type: node.nodeType === 3 ? 'text' : (node.nodeType === 8 ? 'comment' : node.tagName.toLowerCase()),
+                node: node
+            };
+            var dasRepeat, dasTemplate;
+            details.isSVG = isSVG || details.type === 'svg';
+            details.isScript = isScript || details.type === 'script';
+            if (isRepeat) {
+                details.isRepeat = true;
+                dasRepeat = true;
+            } else {
+                details.isRepeat = false;
+                dasRepeat = (node.hasAttribute && node.hasAttribute(cog.label.repeat));
+            }
+            if (isTemplate) {
+                details.isTemplate = true;
+                dasTemplate = true;
+            } else {
+                details.isTemplate = false;
+                dasTemplate = (node.hasAttribute && node.hasAttribute(cog.label.repeat));
+            }
+            details.children = cog.createDOMMap(node, details.isSVG, details.isScript, dasRepeat, dasTemplate);
+            return details;
         }
-        if (isTemplate) {
-            details.isTemplate = true;
-            dasTemplate = true;
-        } else {
-            details.isTemplate = false;
-            dasTemplate = (node.hasAttribute && node.hasAttribute(cog.label.repeat));
-        }
-        details.children = cog.createDOMMap(node, details.isSVG, details.isScript, dasRepeat, dasTemplate);
-        return details;
     }));
 };
 cog.elemFragment = function (elem) {
