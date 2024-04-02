@@ -1661,6 +1661,9 @@ cog.loadContents = function (callback) {
         if (typeof srcObj !== "object") {
             srcObj = { url: nodeAttr };
         }
+        if (srcObj.text == null || srcObj.text == 'false') {
+            srcObj.text = false;
+        }
         if (srcObj.cache != null) {
             if (srcObj.cache != 'false') {
                 srcObj.cache = true;
@@ -1672,7 +1675,12 @@ cog.loadContents = function (callback) {
             node.setAttribute(cog.label.await, "");
             cog.xhr(srcObj.url, function (xhr) {
                 if (xhr.status == 200) {
-                    node.outerHTML = xhr.responseText;
+                    if (srcObj.text) {
+                        node.parentNode.insertBefore(document.createTextNode(xhr.responseText), node);
+                        node.parentNode.removeChild(node);
+                    } else {
+                        node.outerHTML = xhr.responseText;
+                    }
                 }
             }, { method: srcObj.method, data: srcObj.data, type: srcObj.type, cache: srcObj.cache });
             cog.loadContents(callback);
