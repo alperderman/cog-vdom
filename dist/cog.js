@@ -578,6 +578,9 @@ cog.pushNode = function (keys, node) {
             }
         }
         if (i == keysLength - 1) {
+            if (typeof ref[key][cog.keyword.this] === 'undefined') {
+                ref[key][cog.keyword.this] = [];
+            }
             nodesLength = ref[key][cog.keyword.this].push(node);
             result = ref[key][cog.keyword.this][nodesLength - 1];
         } else {
