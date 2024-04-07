@@ -90,13 +90,16 @@ cog.render = function (layoutSrc) {
                 } else {
                     cog.bind();
                 }
-                scripts = document.querySelectorAll("script[" + cog.label.await + "]");
-                cog.loadScriptsNS(scripts, function () {
-                    for (i = 0; i < scripts.length; i++) {
-                        scripts[i].removeAttribute(cog.label.await);
-                    }
-                });
-                step_finish();
+                setTimeout(function () {
+                    cog.cleanEscapeTags();
+                    scripts = document.querySelectorAll("script[" + cog.label.await + "]");
+                    cog.loadScriptsNS(scripts, function () {
+                        for (i = 0; i < scripts.length; i++) {
+                            scripts[i].removeAttribute(cog.label.await);
+                        }
+                        step_finish();
+                    });
+                }, 0);
             });
         }
     }
@@ -126,6 +129,7 @@ cog.render = function (layoutSrc) {
         setTimeout(function () {
             cog.bind(document.body, {
                 callback: function () {
+                    cog.cleanEscapeTags();
                     step_scripts();
                 }
             });
@@ -143,7 +147,6 @@ cog.render = function (layoutSrc) {
     }
     function step_finish() {
         setTimeout(function () {
-            cog.cleanEscapeTags();
             cog.scrollToHash();
             document.dispatchEvent(new CustomEvent(cog.event.afterRender));
         }, 0);
