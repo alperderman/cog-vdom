@@ -29,8 +29,6 @@ cog.label = {
     await: "cog-await"
 };
 cog.event = {
-    beforeData: "COGBeforeData",
-    afterData: "COGAfterData",
     beforeRender: "COGBeforeRender",
     afterRender: "COGAfterRender"
 };
