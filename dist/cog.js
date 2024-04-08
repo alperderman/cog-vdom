@@ -255,7 +255,7 @@ cog.bind = function (dom, arg) {
                 } else {
                     attrContent = document.createElement("span");
                     attrContent.textContent = attrVal;
-                    cog.replaceTextNode(attrContent, cog.splitTokens(attrVal), function (pureToken, content, parent, oldNode) {
+                    cog.replaceTextNode(attrContent, cog.splitTokens(attrVal), function (token, pureToken, content, parent, oldNode) {
                         if (cog.isElement(content)) {
                             newNode = cog.bind(content.cloneNode(true));
                         } else {
@@ -276,7 +276,7 @@ cog.bind = function (dom, arg) {
             }
         }
         if (cog.regex.token.test(obj.content)) {
-            cog.replaceTextNode(obj.node, cog.splitTokens(obj.content), function (pureToken, content, parent, oldNode) {
+            cog.replaceTextNode(obj.node, cog.splitTokens(obj.content), function (token, pureToken, content, parent, oldNode) {
                 if (cog.isElement(content)) {
                     newNode = cog.bind(content.cloneNode(true));
                 } else {
@@ -313,8 +313,14 @@ cog.propCondition = function (obj) {
 };
 cog.replaceTextNode = function (elem, replace, callback) {
     if (Object.keys(replace).length === 0) { return; }
-    var iterator = document.createNodeIterator(elem, NodeFilter.SHOW_TEXT, function () { return NodeFilter.FILTER_ACCEPT; }, false), parent, idx, oldNode, token, content, pureToken;
-    while (parent = iterator.nextNode()) {
+    var iterator = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT, function () { return NodeFilter.FILTER_ACCEPT; }, false), nodes = [], i, parent, idx, oldNode, token, content, pureToken;
+    while (iterator.nextNode()) {
+        if (cog.regex.token.test(iterator.currentNode.nodeValue)) {
+            nodes.push(iterator.currentNode);
+        }
+    }
+    i = 0;
+    while (parent = nodes[i]) {
         for (pureToken in replace) {
             token = cog.token.open + pureToken + cog.token.close;
             idx = parent.nodeValue.indexOf(token);
@@ -322,8 +328,14 @@ cog.replaceTextNode = function (elem, replace, callback) {
             content = replace[pureToken];
             oldNode = parent.splitText(idx);
             oldNode.nodeValue = oldNode.nodeValue.replace(token, '');
-            callback(pureToken, content, parent.parentNode, oldNode);
+            callback(token, pureToken, content, parent.parentNode, oldNode);
+            if (cog.regex.token.test(oldNode.nodeValue)) {
+                nodes.splice(i + 1, 0, oldNode);
+            } else {
+                break;
+            }
         }
+        i++;
     }
 };
 cog.splitTokens = function (str, isList) {
@@ -380,7 +392,7 @@ cog.template = function (arg) {
                             nodeSplitTokens = cog.splitTokens(attrVal, true);
                             props.push({ node: obj.node, attr: attrKey });
                             prop = props[props.length - 1];
-                            cog.replaceTextNode(attrContent, nodeSplitTokens, function (pureToken, content, parent, oldNode) {
+                            cog.replaceTextNode(attrContent, nodeSplitTokens, function (token, pureToken, content, parent, oldNode) {
                                 tokenArr = pureToken.split(".");
                                 aliasKeyArrResult = false;
                                 for (ii = 0; ii < aliasKeysLength; ii++) {
@@ -412,9 +424,7 @@ cog.template = function (arg) {
                                     }
                                     alias[aliasKey].push({ prop: prop, node: newNode });
                                 } else {
-                                    parent.insertBefore(document.createTextNode(cog.token.open), oldNode);
-                                    parent.insertBefore(document.createTextNode(pureToken), oldNode);
-                                    parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
+                                    parent.insertBefore(document.createTextNode(token), oldNode);
                                 }
                             });
                             obj.node.setAttribute(attrKey, attrContent.textContent);
@@ -422,7 +432,7 @@ cog.template = function (arg) {
                         }
                     }
                     if (cog.regex.token.test(obj.content)) {
-                        cog.replaceTextNode(obj.node, cog.splitTokens(obj.content, true), function (pureToken, content, parent, oldNode) {
+                        cog.replaceTextNode(obj.node, cog.splitTokens(obj.content, true), function (token, pureToken, content, parent, oldNode) {
                             tokenArr = pureToken.split(".");
                             aliasKeyArrResult = false;
                             for (i = 0; i < aliasKeysLength; i++) {
@@ -449,9 +459,7 @@ cog.template = function (arg) {
                                 parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
                                 alias[aliasKey].push(newNode);
                             } else {
-                                parent.insertBefore(document.createTextNode(cog.token.open), oldNode);
-                                parent.insertBefore(document.createTextNode(pureToken), oldNode);
-                                parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
+                                parent.insertBefore(document.createTextNode(token), oldNode);
                             }
                         });
                     }
