@@ -153,7 +153,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bind = function (dom, arg) {
-    var i, ii, dommap, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
+    var i, ii, iterator, node, nodeAttr, nodeAttrs, nodeContent, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
     if (dom == null) { dom = document.body; }
     if (arg == null) { arg = {}; }
     if (arg.parent == null) { arg.parent = false; }
@@ -181,13 +181,22 @@ cog.bind = function (dom, arg) {
         }
     }
     cog.bindRepeats(dom, arg.parent);
-    dommap = cog.createDOMMap(dom);
-    cog.iterateDOMMap(dommap, function (obj) {
-        for (i = 0; i < obj.attrs.length; i++) {
-            attrKey = obj.attrs[i].attr;
-            attrVal = obj.attrs[i].value;
+    iterator = document.createTreeWalker(dom, NodeFilter.SHOW_ELEMENT, function (node) {
+        if (!node.hasAttribute(cog.label.escapeTag) && node.tagName !== 'SCRIPT') {
+            return NodeFilter.FILTER_ACCEPT;
+        } else {
+            return NodeFilter.FILTER_REJECT;
+        }
+    }, false);
+    while (node = iterator.nextNode()) {
+        nodeAttrs = node.attributes;
+        nodeContent = node.textContent;
+        for (i = 0; i < nodeAttrs.length; i++) {
+            nodeAttr = nodeAttrs[i];
+            attrKey = nodeAttr.name;
+            attrVal = nodeAttr.value;
             if (attrKey.substring(0, cog.label.escapeAttr.length) == cog.label.escapeAttr) {
-                obj.node.removeAttribute(attrKey);
+                node.removeAttribute(attrKey);
                 attrKey = attrKey.substring(cog.label.escapeAttr.length, attrKey.length);
             }
             if (attrKey.indexOf(cog.label.prop) === 0) {
@@ -198,7 +207,7 @@ cog.bind = function (dom, arg) {
                 propType = "attr";
             }
             if (cog.regex.token.test(attrVal) || propType != "attr") {
-                cog.props.push({ node: obj.node });
+                cog.props.push({ node: node });
                 prop = cog.props[cog.props.length - 1];
                 if (propType != "attr") {
                     attrContentParse = cog.evalParse(attrVal);
@@ -208,9 +217,9 @@ cog.bind = function (dom, arg) {
                     }
                     if (propType == "if") {
                         if (cog.if(attrContentParse)) {
-                            obj.node.style.display = "";
+                            node.style.display = "";
                         } else {
-                            obj.node.style.display = "none";
+                            node.style.display = "none";
                         }
                         prop.type = "if";
                         prop.content = attrContentParse;
@@ -221,7 +230,7 @@ cog.bind = function (dom, arg) {
                             if (attrContentObj.hasOwnProperty("style")) {
                                 attrContentObjProp = attrContentObj["style"];
                                 for (ii in attrContentObjProp) {
-                                    obj.node.style[ii] = attrContentObjProp[ii];
+                                    node.style[ii] = attrContentObjProp[ii];
                                 }
                             }
                             if (attrContentObj.hasOwnProperty("class")) {
@@ -231,19 +240,19 @@ cog.bind = function (dom, arg) {
                                     attrContentObjProp = attrContentObj["class"];
                                 }
                                 for (ii in attrContentObjProp) {
-                                    obj.node.classList.add(attrContentObjProp[ii]);
+                                    node.classList.add(attrContentObjProp[ii]);
                                 }
                             }
                             if (attrContentObj.hasOwnProperty("context")) {
                                 attrContentObjProp = attrContentObj["context"];
                                 for (ii in attrContentObjProp) {
-                                    obj.node[ii] = attrContentObjProp[ii];
+                                    node[ii] = attrContentObjProp[ii];
                                 }
                             }
                             if (attrContentObj.hasOwnProperty("attr")) {
                                 attrContentObjProp = attrContentObj["attr"];
                                 for (ii in attrContentObjProp) {
-                                    obj.node.setAttribute(ii, attrContentObjProp[ii]);
+                                    node.setAttribute(ii, attrContentObjProp[ii]);
                                 }
                             }
                         }
@@ -251,7 +260,7 @@ cog.bind = function (dom, arg) {
                         prop.content = attrContentParse;
                         prop.old = attrContentObj;
                     }
-                    obj.node.removeAttribute(attrKey);
+                    node.removeAttribute(attrKey);
                 } else {
                     attrContent = document.createElement("span");
                     attrContent.textContent = attrVal;
@@ -268,15 +277,15 @@ cog.bind = function (dom, arg) {
                         parent.insertBefore(newNode, oldNode);
                         cog.pushNode(pureToken, { prop: prop, node: newNode });
                     });
-                    obj.node.setAttribute(attrKey, attrContent.textContent);
+                    node.setAttribute(attrKey, attrContent.textContent);
                     prop.type = "attr";
                     prop.attr = attrKey;
                     prop.content = attrContent;
                 }
             }
         }
-        if (cog.regex.token.test(obj.content)) {
-            cog.replaceTextNode(obj.node, cog.splitTokens(obj.content), function (token, pureToken, content, parent, oldNode) {
+        if (cog.regex.token.test(nodeContent)) {
+            cog.replaceTextNode(node, cog.splitTokens(nodeContent), function (token, pureToken, content, parent, oldNode) {
                 if (cog.isElement(content)) {
                     newNode = cog.bind(content.cloneNode(true));
                 } else {
@@ -290,7 +299,7 @@ cog.bind = function (dom, arg) {
                 cog.pushNode(pureToken, newNode);
             });
         }
-    });
+    }
     if (typeof arg.callback === 'function') {
         arg.callback();
     }
@@ -313,13 +322,17 @@ cog.propCondition = function (obj) {
 };
 cog.replaceTextNode = function (elem, replace, callback) {
     if (Object.keys(replace).length === 0) { return; }
-    var iterator = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT, function () { return NodeFilter.FILTER_ACCEPT; }, false), nodes = [], i, parent, idx, oldNode, token, content, pureToken;
-    while (iterator.nextNode()) {
-        if (cog.regex.token.test(iterator.currentNode.nodeValue)) {
-            nodes.push(iterator.currentNode);
+    var nodes = [], i = 0, parent, idx, oldNode, token, content, pureToken;
+    var iterator = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT, function (node) {
+        if (cog.regex.token.test(node.nodeValue)) {
+            return NodeFilter.FILTER_ACCEPT;
+        } else {
+            return NodeFilter.FILTER_REJECT;
         }
+    }, false);
+    while (iterator.nextNode()) {
+        nodes.push(iterator.currentNode);
     }
-    i = 0;
     while (parent = nodes[i]) {
         for (pureToken in replace) {
             token = cog.token.open + pureToken + cog.token.close;
@@ -362,7 +375,7 @@ cog.splitTokens = function (str, isList) {
     return result;
 };
 cog.template = function (arg) {
-    var i, ii, iii, aliasKeysLength, aliasKeys, aliasKey, aliasKeyArr, aliasKeyArrLength, aliasKeyArrResult, aliasReplace, aliasNode, aliasNodeItem, dommap, alias, tempNode, props, prop, cloneNode, newNode, tokenArr, attrContent, attrKey, attrVal, nodeSplitTokens;
+    var i, ii, iii, iterator, node, nodeAttr, nodeAttrs, nodeContent, aliasKeysLength, aliasKeys, aliasKey, aliasKeyArr, aliasKeyArrLength, aliasKeyArrResult, aliasReplace, aliasNode, aliasNodeItem, alias, tempNode, props, prop, cloneNode, newNode, tokenArr, attrContent, attrKey, attrVal, nodeSplitTokens;
     if (arg.id == null) { return; }
     if (arg.fragment == null) { arg.fragment = false; }
     if (arg.bind == null) { arg.bind = false; }
@@ -380,70 +393,38 @@ cog.template = function (arg) {
             alias = cog.templates[arg.id]["alias"];
             props = cog.templates[arg.id]["props"];
             aliasKeys = arg.alias;
-            dommap = cog.createDOMMap(tempNode);
-            cog.iterateDOMMap(dommap, function (obj) {
-                if (!obj.isRepeat && !obj.isTemplate) {
-                    for (i = 0; i < obj.attrs.length; i++) {
-                        attrKey = obj.attrs[i].attr;
-                        attrVal = obj.attrs[i].value;
-                        if (cog.regex.token.test(attrVal)) {
-                            attrContent = document.createElement("span");
-                            attrContent.textContent = attrVal;
-                            nodeSplitTokens = cog.splitTokens(attrVal, true);
-                            props.push({ node: obj.node, attr: attrKey });
-                            prop = props[props.length - 1];
-                            cog.replaceTextNode(attrContent, nodeSplitTokens, function (token, pureToken, content, parent, oldNode) {
-                                tokenArr = pureToken.split(".");
-                                aliasKeyArrResult = false;
-                                for (ii = 0; ii < aliasKeysLength; ii++) {
-                                    aliasKey = aliasKeys[ii];
-                                    aliasKeyArr = aliasKey.split(".");
-                                    aliasKeyArrLength = aliasKeyArr.length;
-                                    for (iii = 0; iii < aliasKeyArrLength; iii++) {
-                                        if (aliasKeyArr[iii] != tokenArr[iii]) {
-                                            break;
-                                        }
-                                        if (iii == aliasKeyArrLength - 1) {
-                                            aliasKeyArrResult = true;
-                                        }
-                                    }
-                                    if (aliasKeyArrResult) {
-                                        break;
-                                    }
-                                }
-                                if (aliasKeyArrResult) {
-                                    newNode = document.createTextNode(aliasKey);
-                                    if (attrKey == cog.label.repeat || attrKey == cog.label.temp) {
-                                        parent.insertBefore(newNode, oldNode);
-                                        parent.insertBefore(document.createTextNode(pureToken.replace(aliasKey, '')), oldNode);
-                                    } else {
-                                        parent.insertBefore(document.createTextNode(cog.token.open), oldNode);
-                                        parent.insertBefore(newNode, oldNode);
-                                        parent.insertBefore(document.createTextNode(pureToken.replace(aliasKey, '')), oldNode);
-                                        parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
-                                    }
-                                    alias[aliasKey].push({ prop: prop, node: newNode });
-                                } else {
-                                    parent.insertBefore(document.createTextNode(token), oldNode);
-                                }
-                            });
-                            obj.node.setAttribute(attrKey, attrContent.textContent);
-                            prop["content"] = attrContent;
-                        }
-                    }
-                    if (cog.regex.token.test(obj.content)) {
-                        cog.replaceTextNode(obj.node, cog.splitTokens(obj.content, true), function (token, pureToken, content, parent, oldNode) {
+            iterator = document.createTreeWalker(tempNode, NodeFilter.SHOW_ELEMENT, function (node) {
+                if (!node.hasAttribute(cog.label.escapeTag) && !node.hasAttribute(cog.label.repeat) && !node.hasAttribute(cog.label.temp) && node.tagName !== 'SCRIPT') {
+                    return NodeFilter.FILTER_ACCEPT;
+                } else {
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }, false);
+            while (node = iterator.nextNode()) {
+                nodeAttrs = node.attributes;
+                nodeContent = node.textContent;
+                for (i = 0; i < nodeAttrs.length; i++) {
+                    nodeAttr = nodeAttrs[i];
+                    attrKey = nodeAttr.name;
+                    attrVal = nodeAttr.value;
+                    if (cog.regex.token.test(attrVal)) {
+                        attrContent = document.createElement("span");
+                        attrContent.textContent = attrVal;
+                        nodeSplitTokens = cog.splitTokens(attrVal, true);
+                        props.push({ node: node, attr: attrKey });
+                        prop = props[props.length - 1];
+                        cog.replaceTextNode(attrContent, nodeSplitTokens, function (token, pureToken, content, parent, oldNode) {
                             tokenArr = pureToken.split(".");
                             aliasKeyArrResult = false;
-                            for (i = 0; i < aliasKeysLength; i++) {
-                                aliasKey = aliasKeys[i];
+                            for (ii = 0; ii < aliasKeysLength; ii++) {
+                                aliasKey = aliasKeys[ii];
                                 aliasKeyArr = aliasKey.split(".");
                                 aliasKeyArrLength = aliasKeyArr.length;
-                                for (ii = 0; ii < aliasKeyArrLength; ii++) {
-                                    if (aliasKeyArr[ii] != tokenArr[ii]) {
+                                for (iii = 0; iii < aliasKeyArrLength; iii++) {
+                                    if (aliasKeyArr[iii] != tokenArr[iii]) {
                                         break;
                                     }
-                                    if (ii == aliasKeyArrLength - 1) {
+                                    if (iii == aliasKeyArrLength - 1) {
                                         aliasKeyArrResult = true;
                                     }
                                 }
@@ -453,18 +434,57 @@ cog.template = function (arg) {
                             }
                             if (aliasKeyArrResult) {
                                 newNode = document.createTextNode(aliasKey);
-                                parent.insertBefore(document.createTextNode(cog.token.open), oldNode);
-                                parent.insertBefore(newNode, oldNode);
-                                parent.insertBefore(document.createTextNode(pureToken.replace(aliasKey, '')), oldNode);
-                                parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
-                                alias[aliasKey].push(newNode);
+                                if (attrKey == cog.label.repeat || attrKey == cog.label.temp) {
+                                    parent.insertBefore(newNode, oldNode);
+                                    parent.insertBefore(document.createTextNode(pureToken.replace(aliasKey, '')), oldNode);
+                                } else {
+                                    parent.insertBefore(document.createTextNode(cog.token.open), oldNode);
+                                    parent.insertBefore(newNode, oldNode);
+                                    parent.insertBefore(document.createTextNode(pureToken.replace(aliasKey, '')), oldNode);
+                                    parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
+                                }
+                                alias[aliasKey].push({ prop: prop, node: newNode });
                             } else {
                                 parent.insertBefore(document.createTextNode(token), oldNode);
                             }
                         });
+                        node.setAttribute(attrKey, attrContent.textContent);
+                        prop["content"] = attrContent;
                     }
                 }
-            });
+                if (cog.regex.token.test(nodeContent)) {
+                    cog.replaceTextNode(node, cog.splitTokens(nodeContent, true), function (token, pureToken, content, parent, oldNode) {
+                        tokenArr = pureToken.split(".");
+                        aliasKeyArrResult = false;
+                        for (i = 0; i < aliasKeysLength; i++) {
+                            aliasKey = aliasKeys[i];
+                            aliasKeyArr = aliasKey.split(".");
+                            aliasKeyArrLength = aliasKeyArr.length;
+                            for (ii = 0; ii < aliasKeyArrLength; ii++) {
+                                if (aliasKeyArr[ii] != tokenArr[ii]) {
+                                    break;
+                                }
+                                if (ii == aliasKeyArrLength - 1) {
+                                    aliasKeyArrResult = true;
+                                }
+                            }
+                            if (aliasKeyArrResult) {
+                                break;
+                            }
+                        }
+                        if (aliasKeyArrResult) {
+                            newNode = document.createTextNode(aliasKey);
+                            parent.insertBefore(document.createTextNode(cog.token.open), oldNode);
+                            parent.insertBefore(newNode, oldNode);
+                            parent.insertBefore(document.createTextNode(pureToken.replace(aliasKey, '')), oldNode);
+                            parent.insertBefore(document.createTextNode(cog.token.close), oldNode);
+                            alias[aliasKey].push(newNode);
+                        } else {
+                            parent.insertBefore(document.createTextNode(token), oldNode);
+                        }
+                    });
+                }
+            }
         }
     }
     if (cog.templates[arg.id] != null && arg.node == null) {
@@ -1511,44 +1531,6 @@ cog.addEventListenerAll = function (target, listener, capture) {
 cog.isNodeList = function (nodes) {
     var stringRepr = Object.prototype.toString.call(nodes);
     return typeof nodes === 'object' && /^\[object (HTMLCollection|NodeList|Object)\]$/.test(stringRepr) && (typeof nodes.length === 'number') && (nodes.length === 0 || (typeof nodes[0] === "object" && nodes[0].nodeType > 0));
-};
-cog.getAttributes = function (attributes) {
-    return Array.prototype.map.call(attributes, function (attribute) {
-        return {
-            attr: attribute.name,
-            value: attribute.value
-        };
-    });
-};
-cog.iterateDOMMap = function (map, callback) {
-    var i;
-    for (i = 0; i < map.length; i++) {
-        node = map[i];
-        callback(node);
-        if (node.children.length > 0) {
-            cog.iterateDOMMap(node.children, callback);
-        }
-    }
-};
-cog.createDOMMap = function (element, isRepeat, isTemplate) {
-    return Array.prototype.filter.call(element.childNodes, (function (node) {
-        if (node.nodeType === 1 && !node.hasAttribute(cog.label.escapeTag) && node.tagName.toLowerCase() !== 'script') {
-            return true;
-        } else {
-            return false;
-        }
-    })).map(function (node) {
-        var details = {
-            content: node.textContent,
-            attrs: cog.getAttributes(node.attributes),
-            type: node.tagName.toLowerCase(),
-            node: node
-        };
-        details.isRepeat = isRepeat || node.hasAttribute(cog.label.repeat);
-        details.isTemplate = isTemplate || node.hasAttribute(cog.label.temp);
-        details.children = cog.createDOMMap(node, details.isRepeat, details.isTemplate);
-        return details;
-    });
 };
 cog.elemFragment = function (elem) {
     var fragment = document.createDocumentFragment();
