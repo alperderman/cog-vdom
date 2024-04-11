@@ -47,7 +47,8 @@ cog.keyword = {
 };
 cog.token = {
     open: "{{",
-    close: "}}"
+    close: "}}",
+    escape: "_"
 };
 cog.regex = {
     head: new RegExp("<head[^>]*>((.|[\\\n\\\r])*)<\\\/head>", "im"),
@@ -604,7 +605,7 @@ cog.bindRepeats = function (dom, parent) {
             repeatAlias[i] = repeatAlias[i].trim();
             repeatTokenObj[repeatAlias[i]] = repeatToken[i];
         }
-        if (repeatNode.getAttribute(cog.label.reverse) != null) {
+        if (repeatNode.hasAttribute(cog.label.reverse)) {
             repeatReverse = true;
             repeatNode.removeAttribute(cog.label.reverse);
         } else {
@@ -732,7 +733,6 @@ cog.rebindRepeats = function (token) {
                 delete cog.repeats[token][i];
             }
         }
-
     }
 };
 cog.rebind = function () {
@@ -961,6 +961,10 @@ cog.get = function () {
         } else {
             keys = keys.concat(arguments[i]);
         }
+    }
+    if (keys[0].substring(0, cog.token.escape.length) == cog.token.escape) {
+        token = keys.join(".");
+        return cog.token.open + token.substring(cog.token.escape.length, token.length) + cog.token.close;
     }
     keysLength = keys.length;
     for (i = 0; i < keysLength; i++) {
