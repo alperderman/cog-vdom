@@ -34,6 +34,7 @@ cog.keyword = {
     iterate: "_iterate",
     value: "_value",
     type: "_type",
+    token: "_token",
     key: "_key",
     keys: "_keys",
     refkeys: "_refkeys",
@@ -231,7 +232,7 @@ cog.bind = function (dom, arg) {
                 cog.props.push({ node: node });
                 prop = cog.props[cog.props.length - 1];
                 if (propType != "attr") {
-                    attrContentParse = cog.evalParse(attrVal);
+                    attrContentParse = cog.prepareTokenStr(attrVal);//
                     nodeSplitTokens = cog.splitTokens(attrVal, true);
                     for (nodeSplitToken in nodeSplitTokens) {
                         ob = cog.get(nodeSplitToken, true);
@@ -242,7 +243,7 @@ cog.bind = function (dom, arg) {
                         }
                     }
                     if (propType == "if") {
-                        if (cog.if(attrContentParse)) {
+                        if (cog.if(cog.constructTokenStr(attrContentParse))) {
                             node.style.display = "";
                         } else {
                             node.style.display = "none";
@@ -250,7 +251,7 @@ cog.bind = function (dom, arg) {
                         prop.type = "if";
                         prop.content = attrContentParse;
                     } else {
-                        attrContentObj = cog.eval("({" + attrContentParse + "})");
+                        attrContentObj = cog.eval("({" + cog.constructTokenStr(attrContentParse) + "})");
                         attrContentObj = cog.propCondition(attrContentObj);
                         if (attrContentObj) {
                             if (attrContentObj.hasOwnProperty("style")) {
@@ -436,7 +437,7 @@ cog.rebind = function () {
         cog.tasks.splice(0, 1);
     }
 };
-cog.spliceRepeats = function () {
+cog.spliceRepeats = function (ob, index, remove, add) {
 
     /*
     var i, ii, iii, repeat, content, contentLength, repeatChilds, repeatChild, repeatChildsLength, repeatAlias, repeatTemp;
@@ -501,7 +502,7 @@ cog.spliceRepeats = function () {
         }
     }*/
 };
-cog.rebindNodes = function (nodes, content) {// MAKE NEW PROP SYSTEM; NEW PROP STRING CONSTRUCTOR WITH OBSERVABLE REFERENCES INSTEAD OF TOKENS
+cog.rebindNodes = function (nodes, content) {
     var i, ii, node, prop, attrContentObj, attrContentObjProp;
     for (i = 0; i < nodes.length; i++) {
         node = nodes[i];
@@ -509,7 +510,7 @@ cog.rebindNodes = function (nodes, content) {// MAKE NEW PROP SYSTEM; NEW PROP S
             prop = node.prop;
             if (cog.isInDocument(prop.node)) {
                 if (prop.type == "prop") {
-                    attrContentObj = cog.eval("({" + prop.content + "})");
+                    attrContentObj = cog.eval("({" + cog.constructTokenStr(prop.content) + "})");
                     attrContentObj = cog.propCondition(attrContentObj);
                     if (prop.old) {
                         if (prop.old.hasOwnProperty("style")) {
@@ -573,7 +574,7 @@ cog.rebindNodes = function (nodes, content) {// MAKE NEW PROP SYSTEM; NEW PROP S
                     }
                     prop.old = attrContentObj;
                 } else if (prop.type == "if") {
-                    if (cog.if(prop.content)) {
+                    if (cog.if(cog.constructTokenStr(prop.content))) {
                         prop.node.style.display = "";
                     } else {
                         prop.node.style.display = "none";
@@ -909,6 +910,20 @@ cog.observable = function (value, callback, parent) {
         var typeString = Object.prototype.toString.call(input);
         return typeString.slice(8, typeString.length - 1).toLowerCase();
     }
+    function getKeyByValue(obj, val) {
+        if (Array.isArray(obj)) {
+            return obj.indexOf(val);
+        } else {
+            var key;
+            for (key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    if (obj[key] === val){
+                        return key;
+                    }
+                }
+            }
+        }
+    }
     Object.defineProperty(_self, "defineNewObservable", {
         configurable: false,
         enumerable: false,
@@ -1008,6 +1023,18 @@ cog.observable = function (value, callback, parent) {
                     }
                 });
             }
+        }
+    });
+    Object.defineProperty(_self, cog.keyword.token, {
+        configurable: false,
+        enumerable: false,
+        get: function () {
+            var keys = [], selfParent = _self, selfValue = _self;
+            while (selfParent = selfParent[cog.keyword.parent]) {
+                keys.unshift(getKeyByValue(selfParent[cog.keyword.value], selfValue));
+                selfValue = selfParent;
+            }
+            return keys.join(".");
         }
     });
     Object.defineProperty(_self, cog.keyword.get, {
@@ -1415,10 +1442,35 @@ cog.splitTokens = function (str, isList) {
     }
     return result;
 };
-cog.evalParse = function (str) {
-    var token, result = str, nodeSplitTokens = cog.splitTokens(str, true);
-    for (token in nodeSplitTokens) {
-        result = result.replace(new RegExp(cog.token.open + token + cog.token.close, 'g'), "cog.get('" + token + "')");
+cog.prepareTokenStr = function (str) {
+    var m, result = [], content;
+    cog.regex.node.lastIndex = 0;
+    while ((m = cog.regex.node.exec(str)) !== null) {
+        if (m.index === cog.regex.node.lastIndex) {
+            cog.regex.node.lastIndex++;
+        }
+        if (m[0] != "") {
+            if (m[1] !== undefined) {
+                content = cog.get(m[1], true);
+                if (content !== undefined) {
+                    result.push(content);
+                }
+            } else {
+                result.push(m[0]);
+            }
+        }
+    }
+    return result;
+};
+cog.constructTokenStr = function (arr) {
+    var i, val, result = "";
+    for (i = 0;i < arr.length;i++) {
+        val = arr[i];
+        if (val instanceof cog.observable) {
+            result = result + val[cog.keyword.get];
+        } else {
+            result = result + val;
+        }
     }
     return result;
 };
