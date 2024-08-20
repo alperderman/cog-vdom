@@ -58,35 +58,16 @@ cog.regex = {
     node: new RegExp("(?:" + cog.token.open + "(.*?)" + cog.token.close + ")|([^]*?)(?=" + cog.token.open + "|$)", "gm")
 };
 
-cog.render2 = function () {
-    step_start();
-    function convert_data() {
-        cog.data = new cog.observable(cog.data, function (a) {
-            cog.tasks.push(a);
-        });
-    }
-    function step_start() {
-        cog.tasks = new cog.observable(cog.tasks, function (a) {
-            if (!cog.isRebind) {
-                cog.isRebind = true;
-                setTimeout(function () {
-                    console.log(cog.tasks._value);
-                    cog.isRebind = false;
-                }, 0);
-            }
-        });
-        convert_data();
-    }
-};
 cog.render = function (layoutSrc) {
     var i, layout, scripts;
     step_start();
     function convert_data() {
         cog.data = new cog.observable(cog.data, function (a) {
             cog.tasks.push(a);
+            cog.rebind();
         });
     }
-    function step_start() {
+    function step_start() {/*
         cog.tasks = new cog.observable(cog.tasks, function (a) {
             if (!cog.isRebind) {
                 cog.isRebind = true;
@@ -95,7 +76,7 @@ cog.render = function (layoutSrc) {
                     cog.isRebind = false;
                 }, 0);
             }
-        });
+        });*/
         if (typeof layoutSrc === "string") {
             cog.xhr(layoutSrc, function (xhr) {
                 if (xhr.status == 200) {
@@ -232,7 +213,7 @@ cog.bind = function (dom, arg) {
                 cog.props.push({ node: node });
                 prop = cog.props[cog.props.length - 1];
                 if (propType != "attr") {
-                    attrContentParse = cog.prepareTokenStr(attrVal);//
+                    attrContentParse = cog.prepareTokenStr(attrVal);
                     nodeSplitTokens = cog.splitTokens(attrVal, true);
                     for (nodeSplitToken in nodeSplitTokens) {
                         ob = cog.get(nodeSplitToken, true);
@@ -362,27 +343,25 @@ cog.bindRepeats = function (dom, parent) {
         repeatData = cog.get(repeatDataToken, true);
         if (typeof repeatData !== 'undefined') {
             repeatDataLength = repeatData.length;
-        } else {
-            repeatDataLength = 0;
-        }
-        repeatDataKey = repeatId + ":" + repeatToken.join(",");
-        repeatNode.innerHTML = "";
-        if (repeatData[cog.keyword.repeats].hasOwnProperty(repeatDataKey)) {
-            repeatNode.innerHTML = repeatData[cog.keyword.repeats][repeatDataKey]["owner"].innerHTML;
-            repeatData[cog.keyword.repeats][repeatDataKey]["clone"].push(repeatNode);
-        } else {
-            repeatData[cog.keyword.repeats][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], alias: cog.shallowClone(repeatTokenObj), clone: [], childs: [], inner: [] };
-            if (parent) {
-                parent.inner.push(repeatData);
-            }
-            repeatData[cog.keyword.repeats][repeatDataKey]["childs"] = [];
-            for (i = 0; i < repeatDataLength; i++) {
-                repeatTokenObj[repeatAlias[0]] = repeatDataToken + "." + i;
-                repeatTemp = cog.template({ id: repeatId, data: repeatTokenObj, fragment: false, bind: true, parent: repeatData[cog.keyword.repeats][repeatDataKey] });
-                repeatData[cog.keyword.repeats][repeatDataKey]["childs"][i] = [];
-                while (repeatTemp.firstChild) {
-                    repeatData[cog.keyword.repeats][repeatDataKey]["childs"][i].push(repeatTemp.firstChild);
-                    repeatNode.appendChild(repeatTemp.firstChild);
+            repeatDataKey = repeatId + ":" + repeatToken.join(",");
+            repeatNode.innerHTML = "";
+            if (repeatData[cog.keyword.repeats].hasOwnProperty(repeatDataKey)) {
+                repeatNode.innerHTML = repeatData[cog.keyword.repeats][repeatDataKey]["owner"].innerHTML;
+                repeatData[cog.keyword.repeats][repeatDataKey]["clone"].push(repeatNode);
+            } else {
+                repeatData[cog.keyword.repeats][repeatDataKey] = { owner: repeatNode, template: repeatId, dataAlias: repeatAlias[0], alias: cog.shallowClone(repeatTokenObj), clone: [], childs: [], inner: [] };
+                if (parent) {
+                    parent["inner"].push(repeatData);
+                }
+                repeatData[cog.keyword.repeats][repeatDataKey]["childs"] = [];
+                for (i = 0; i < repeatDataLength; i++) {
+                    repeatTokenObj[repeatAlias[0]] = repeatDataToken + "." + i;
+                    repeatTemp = cog.template({ id: repeatId, data: repeatTokenObj, fragment: false, bind: true, parent: repeatData[cog.keyword.repeats][repeatDataKey] });
+                    repeatData[cog.keyword.repeats][repeatDataKey]["childs"][i] = [];
+                    while (repeatTemp.firstChild) {
+                        repeatData[cog.keyword.repeats][repeatDataKey]["childs"][i].push(repeatTemp.firstChild);
+                        repeatNode.appendChild(repeatTemp.firstChild);
+                    }
                 }
             }
         }
@@ -391,14 +370,43 @@ cog.bindRepeats = function (dom, parent) {
 cog.rebind = function () {
     var i, task, ob;
     while (task = cog.tasks[0]) {
-        task = task[cog.keyword.get];
         ob = task.ob;
         if (task.action == "set") {
             ob[cog.keyword.iterate](function (cob) {
                 cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
                 cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
             });
+            //if it is an array, get diff (create basic diffing solution with .indexOf native function) then process with spliceRepeats
+        } else {
+            ob[cog.keyword.iterate](function (cob) {
+                cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            });
         }
+        
+        if (task.action == "unshift") {
+            cog.spliceRepeats(ob, task.index, task.remove, task.add);
+        }
+        if (task.action == "shift") {
+            cog.spliceRepeats(ob, task.index, task.remove, task.add);
+        }
+        if (task.action == "push") {
+            cog.spliceRepeats(ob, task.index, task.remove, task.add);
+        }
+        if (task.action == "pop") {
+            console.log(task);
+            cog.spliceRepeats(ob, task.index, task.remove, task.add);
+        }
+        if (task.action == "splice") {
+            cog.spliceRepeats(ob, task.index, task.remove, task.add);
+        }
+        /*
+        if (task.action == "reverse") {
+            cog.rebindNodes(token);
+        }
+        if (task.action == "sort") {
+            cog.rebindNodes(token);
+        }*/
+        
 
         //FINISH REBIND, REBINDREPEATS, AND BOUND FUNCTIONALITY
 
@@ -438,7 +446,44 @@ cog.rebind = function () {
     }
 };
 cog.spliceRepeats = function (ob, index, remove, add) {
-
+    var i, ii, iii, repeats = ob[cog.keyword.repeats], repeat, repeatChilds, repeatChild, sumIndex, repeatAlias, repeatTemp, repeatNewChilds;
+    for (i in repeats) {
+        repeat = repeats[i];
+        if (cog.isInDocument(repeat["owner"])) {
+            repeatChilds = repeat["childs"];
+            //remove
+            for (ii = 0; ii < remove;ii++) {
+                repeatChild = repeatChilds[index + ii];
+                for (iii in repeatChild) {
+                    repeatChild[iii].parentNode.removeChild(repeatChild[iii]);
+                }
+            }
+            //add
+            for (ii = 0; ii < add;ii++) {
+                sumIndex = index + ii;
+                repeatChild = repeatChilds[sumIndex];
+                repeatAlias = cog.shallowClone(repeat["alias"]);
+                repeatAlias[repeat["dataAlias"]] = ob[cog.keyword.token] + "." + sumIndex;
+                repeatTemp = cog.template({ id: repeat["template"], data: repeatAlias, fragment: false, bind: true, parent: repeat });
+                repeatNewChilds = [];
+                while (repeatTemp.firstChild) {
+                    repeatNewChilds.push(repeatTemp.firstChild);
+                    if (repeatChild) {
+                        repeatChild[0].parentNode.insertBefore(repeatTemp.firstChild, repeatChild[0]);
+                    } else {
+                        repeat["owner"].appendChild(repeatTemp.firstChild);
+                    }
+                }
+                repeatChilds.splice(sumIndex, 0, repeatNewChilds);
+            }
+            //clone
+            for (ii in repeat["clone"]) {
+                repeat["clone"][ii].innerHTML = repeat["owner"].innerHTML;
+            }
+        } else {
+            delete ob[cog.keyword.repeats][i];
+        }
+    }
     /*
     var i, ii, iii, repeat, content, contentLength, repeatChilds, repeatChild, repeatChildsLength, repeatAlias, repeatTemp;
     if (typeof token !== 'string') {
@@ -604,6 +649,7 @@ cog.rebindNodes = function (nodes, content) {
         }
     }
 };
+//REMOVE INNER REPEATS? and FINISH BOUND
 cog.addBound = function (dataKeys, targetKeys) {
 
 };
@@ -694,7 +740,7 @@ cog.template = function (arg) {
             props = cog.templates[arg.id]["props"];
             aliasKeys = arg.alias;
             iterator = document.createTreeWalker(tempNode, NodeFilter.SHOW_ELEMENT, function (node) {
-                if (!node.hasAttribute(cog.label.escapeTag) && !node.hasAttribute(cog.label.repeat) && !node.hasAttribute(cog.label.temp) && node.tagName !== 'SCRIPT') {
+                if (!node.hasAttribute(cog.label.escapeTag) && node.tagName !== 'SCRIPT') {
                     return NodeFilter.FILTER_ACCEPT;
                 } else {
                     return NodeFilter.FILTER_REJECT;
@@ -937,8 +983,8 @@ cog.observable = function (value, callback, parent) {
                     val = new cog.observable(val, callback, _self);
                 }
                 func(val);
+                return val;
             } else {
-                //KEEP ORIGINAL OBSERVABLE
                 definee = _self[cog.keyword.value][key];
                 if (definee instanceof cog.observable) {
                     type = definee[cog.keyword.type];
@@ -952,7 +998,6 @@ cog.observable = function (value, callback, parent) {
                             if (obKeys.length > 0) {
                                 var obExists = true, obVal = val, obType, i;
                                 for (i in obKeys) {
-
                                     if (obVal[cog.keyword.value].hasOwnProperty(obKeys[i])) {
                                         obVal = obVal[cog.keyword.value][obKeys[i]];
                                     } else {
@@ -987,13 +1032,13 @@ cog.observable = function (value, callback, parent) {
                                 }
                             }
                         });
-                        val = definee;
                     } else {
                         if (val instanceof cog.observable) {
                             val = val[cog.keyword.get];
                         }
                         definee[cog.keyword.value] = val;
                     }
+                    return definee;
                 } else {
                     if (val instanceof cog.observable) {
                         val = new cog.observable(val[cog.keyword.get], callback, _self);
@@ -1001,9 +1046,9 @@ cog.observable = function (value, callback, parent) {
                         val = new cog.observable(val, callback, _self);
                     }
                     _self[cog.keyword.value][key] = val;
+                    return val;
                 }
             }
-            return val;
         }
     });
     Object.defineProperty(_self, "defineNewProperty", {
@@ -1153,7 +1198,7 @@ cog.observable = function (value, callback, parent) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var index, args = [], valueLength = _self[cog.keyword.value].length, argumentsLength = arguments.length, o;
+                    var index, ln, args = [], valueLength = _self[cog.keyword.value].length, argumentsLength = arguments.length, o;
                     for (var i = 0, ln = argumentsLength; i < ln; i++) {
                         index = _self[cog.keyword.value].length;
                         o = _self.defineNewObservable(index, arguments[i], function (v) {
@@ -1168,7 +1213,7 @@ cog.observable = function (value, callback, parent) {
                             action: "push",
                             args: args,
                             index: valueLength,
-                            amount: argumentsLength,
+                            add: argumentsLength,
                             ob: _self
                         });
                     }
@@ -1187,7 +1232,8 @@ cog.observable = function (value, callback, parent) {
                         delete _self[index];
                         callback({
                             action: "pop",
-                            index: valueLength,
+                            index: valueLength-1,
+                            remove: 1,
                             ob: _self
                         });
                         return item;
@@ -1235,8 +1281,8 @@ cog.observable = function (value, callback, parent) {
                 enumerable: false,
                 writable: false,
                 value: function () {
-                    var i, ln, args = [], o, index;
-                    for (i = 0, ln = arguments.length; i < ln; i++) {
+                    var i, ln, argumentsLength = arguments.length, args = [], o, index;
+                    for (i = 0, ln = argumentsLength; i < ln; i++) {
                         o = _self.defineNewObservable(i, arguments[i], function (v) {
                             _self[cog.keyword.value].splice(i, 0, v);
                             for (index in _self[cog.keyword.value]) {
@@ -1249,6 +1295,8 @@ cog.observable = function (value, callback, parent) {
                     callback({
                         action: "unshift",
                         args: args,
+                        index: 0,
+                        add: argumentsLength,
                         ob: _self
                     });
                     return _self[cog.keyword.value].length;
@@ -1267,6 +1315,8 @@ cog.observable = function (value, callback, parent) {
                         }
                         callback({
                             action: "shift",
+                            index: 0,
+                            remove: 1,
                             ob: _self
                         });
                         return item;
@@ -1281,6 +1331,7 @@ cog.observable = function (value, callback, parent) {
                     var removed = [], item, args = [index, howMany], valueLength = _self[cog.keyword.value].length, o, i, ln;
                     index = index == null ? 0 : index < 0 ? valueLength + index : index;
                     howMany = howMany == null ? valueLength - index : howMany > 0 ? howMany : 0;
+                    var pargs = [index, howMany];
                     while (howMany--) {
                         item = _self[cog.keyword.value].splice(index, 1)[0];
                         removed.push(item);
@@ -1300,8 +1351,9 @@ cog.observable = function (value, callback, parent) {
                     callback({
                         action: "splice",
                         args: args,
-                        index: index,
-                        amount: valueLength,
+                        index: pargs[0],
+                        remove: pargs[1],
+                        add: arguments.length-2 < 0 ? 0 : arguments.length-2,
                         ob: _self
                     });
                     return removed;
@@ -1352,8 +1404,6 @@ cog.observable = function (value, callback, parent) {
     }
     _init = true;
 };
-
-
 
 //ESSENTAILS
 
@@ -1820,4 +1870,4 @@ cog.getScript = function (url, callback) {
         }
     }, { method: "GET" });
 };
-//cog.init();
+cog.init();
