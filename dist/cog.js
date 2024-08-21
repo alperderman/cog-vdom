@@ -4,8 +4,7 @@ var cog = {};
 cog.data = {};
 cog.props = [];
 cog.templates = {};
-cog.tasks = [];
-cog.isRebind = false;
+cog.isRendered = false;
 cog.encapVar = null;
 cog.cache = true;
 cog.label = {
@@ -63,20 +62,10 @@ cog.render = function (layoutSrc) {
     step_start();
     function convert_data() {
         cog.data = new cog.observable(cog.data, function (a) {
-            cog.tasks.push(a);
-            cog.rebind();
+            cog.rebind(a);
         });
     }
-    function step_start() {/*
-        cog.tasks = new cog.observable(cog.tasks, function (a) {
-            if (!cog.isRebind) {
-                cog.isRebind = true;
-                setTimeout(function () {
-                    cog.rebind();
-                    cog.isRebind = false;
-                }, 0);
-            }
-        });*/
+    function step_start() {
         if (typeof layoutSrc === "string") {
             cog.xhr(layoutSrc, function (xhr) {
                 if (xhr.status == 200) {
@@ -151,6 +140,7 @@ cog.render = function (layoutSrc) {
     function step_finish() {
         setTimeout(function () {
             cog.scrollToHash();
+            cog.isRendered = true;
             document.dispatchEvent(new CustomEvent(cog.event.afterRender));
         }, 0);
     }
@@ -367,50 +357,63 @@ cog.bindRepeats = function (dom, parent) {
         }
     }
 };
-cog.rebind = function () {
-    var i, task, ob;
-    while (task = cog.tasks[0]) {
-        ob = task.ob;
-        if (task.action == "set") {
-            ob[cog.keyword.iterate](function (cob) {
-                cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
-                cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
-                cog.correctIndex(cob);
-                cog.cloneRepeats(cob);
-            });
-        } else {
-            ob[cog.keyword.iterate](function (cob) {
-                cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
-            });
-        }
+cog.rebind = function (task) {
+    var ob;
+    ob = task.ob;
 
-        if (task.action == "unshift") {
-            cog.spliceRepeats(ob, task.index, task.remove, task.add);
-        }
-        if (task.action == "shift") {
-            cog.spliceRepeats(ob, task.index, task.remove, task.add);
-        }
-        if (task.action == "push") {
-            cog.spliceRepeats(ob, task.index, task.remove, task.add);
-        }
-        if (task.action == "pop") {
-            cog.spliceRepeats(ob, task.index, task.remove, task.add);
-        }
-        if (task.action == "splice") {
-            cog.spliceRepeats(ob, task.index, task.remove, task.add);
-        }
-
-        if (task.action == "reverse") {
-            cog.correctIndex(ob);
-        }
-        if (task.action == "sort") {//FIX SORT PROBLEM WITH OBSERVABLES
-            cog.correctIndex(ob);
-        }
-
-        cog.cloneRepeats(ob);
-        //FINISH BOUND FUNCTIONALITY
-
-        cog.tasks.splice(0, 1);
+    if (task.action == "unshift") {
+        cog.spliceRepeats(ob, task.index, task.remove, task.add);
+    }
+    if (task.action == "shift") {
+        cog.spliceRepeats(ob, task.index, task.remove, task.add);
+    }
+    if (task.action == "push") {
+        cog.spliceRepeats(ob, task.index, task.remove, task.add);
+    }
+    if (task.action == "pop") {
+        cog.spliceRepeats(ob, task.index, task.remove, task.add);
+    }
+    if (task.action == "splice") {
+        cog.spliceRepeats(ob, task.index, task.remove, task.add);
+    }
+    if (task.action == "reverse") {
+        cog.correctIndex(ob);
+    }
+    if (task.action == "sort") {//FIX SORT PROBLEM WITH OBSERVABLES
+        cog.correctIndex(ob);
+    }
+    //REMOVE INNER REPEATS?
+    if (task.action == "set") {
+        ob[cog.keyword.iterate](function (cob) {
+            cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
+            cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            cog.correctIndex(cob);
+            cog.rebound(cob);
+        });
+    } 
+    if (task.action == "push" || task.action == "pop") {
+        ob[cog.keyword.iterate](function (cob) {
+            cog.rebound(cob);
+        });
+    }
+    if (task.action == "unshift" || task.action == "shift" || task.action == "splice" || task.action == "reverse" || task.action == "sort" ) {
+        ob[cog.keyword.iterate](function (cob) {
+            cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            cog.rebound(cob);
+        });
+    }
+    cog.cloneRepeats(ob);
+};
+cog.rebound = function (ob) {
+    var i, bob;
+    for (i in ob[cog.keyword.bound]) {
+        bob = ob[cog.keyword.bound][i];
+        bob[cog.keyword.iterate](function (cob) {
+            cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
+            cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            cog.correctIndex(cob);
+        });
+        cog.cloneRepeats(bob);
     }
 };
 cog.correctIndex = function (ob) {
@@ -463,13 +466,16 @@ cog.correctIndex = function (ob) {
     }
 };
 cog.cloneRepeats = function (ob) {
-    var i, ii, repeats = ob[cog.keyword.repeats], repeat;
-    for (i in repeats) {
-        repeat = repeats[i];
-        for (ii in repeat["clone"]) {
-            repeat["clone"][ii].innerHTML = repeat["owner"].innerHTML;
+    var i, ii, repeats, repeat;
+    ob[cog.keyword.iterate](function (cob) {
+        repeats = cob[cog.keyword.repeats];
+        for (i in repeats) {
+            repeat = repeats[i];
+            for (ii in repeat["clone"]) {
+                repeat["clone"][ii].innerHTML = repeat["owner"].innerHTML;
+            }
         }
-    }
+    });
 };
 cog.spliceRepeats = function (ob, index, remove, add) {
     var i, ii, iii, repeats = ob[cog.keyword.repeats], repeat, repeatChilds, repeatChild, repeatBeforeChildNodes, sumIndex, repeatAlias, repeatTemp, repeatNewChilds;
@@ -510,73 +516,10 @@ cog.spliceRepeats = function (ob, index, remove, add) {
                 }
                 repeatChilds.splice(sumIndex, 0, { ob: ob[sumIndex], nodes: repeatNewChilds });
             }
-            
         } else {
             delete ob[cog.keyword.repeats][i];
         }
     }
-    /*
-    var i, ii, iii, repeat, content, contentLength, repeatChilds, repeatChild, repeatChildsLength, repeatAlias, repeatTemp;
-    if (typeof token !== 'string') {
-        token = token.join(".");
-    }
-    if (cog.repeats.hasOwnProperty(token)) {
-        content = cog.get(token);
-        if (typeof content !== 'undefined') {
-            contentLength = content.length;
-        } else {
-            contentLength = 0;
-        }
-        for (i in cog.repeats[token]) {
-            repeat = cog.repeats[token][i];
-            if (cog.isInDocument(repeat.owner)) {
-                repeatChilds = repeat["childs"];
-                repeatChildsLength = repeatChilds.length;
-                if (repeatChildsLength > contentLength) {
-                    for (ii = repeatChildsLength - 1; ii >= contentLength; ii--) {
-                        repeatChild = repeatChilds[ii];
-                        for (iii in repeatChild) {
-                            repeatChild[iii].parentNode.removeChild(repeatChild[iii]);
-                        }
-                        repeatChilds.pop();
-                    }
-                }
-                if (repeatChildsLength < contentLength) {
-                    if (!repeat.reverse) {
-                        for (ii = repeatChildsLength; ii < contentLength; ii++) {
-                            repeatAlias = cog.shallowClone(repeat.alias);
-                            repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
-                            repeatTemp = cog.template({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, parent: repeat });
-                            repeat["childs"][ii] = [];
-                            while (repeatTemp.firstChild) {
-                                repeat["childs"][ii].push(repeatTemp.firstChild);
-                                repeat.owner.appendChild(repeatTemp.firstChild);
-                            }
-                        }
-                    } else {
-                        for (ii = repeatChildsLength; ii < contentLength; ii++) {
-                            repeatAlias = cog.shallowClone(repeat.alias);
-                            repeatAlias[repeat.dataAlias] = repeat.data + "." + ii;
-                            repeatTemp = cog.template({ id: repeat.template, data: repeatAlias, fragment: false, bind: true, parent: repeat });
-                            repeat["childs"][ii] = [];
-                            while (repeatTemp.firstChild) {
-                                repeat["childs"][ii].push(repeatTemp.firstChild);
-                                repeat.owner.insertBefore(repeatTemp.firstChild, repeat.owner.firstChild);
-                            }
-                        }
-                    }
-                }
-                for (ii in repeat["inner"]) {
-                    cog.rebindRepeats(repeat["inner"][ii]);
-                }
-                for (ii in repeat["clone"]) {
-                    repeat["clone"][ii].innerHTML = repeat.owner.innerHTML;
-                }
-            } else {
-                delete cog.repeats[token][i];
-            }
-        }
-    }*/
 };
 cog.rebindNodes = function (nodes, content) {
     var i, ii, node, prop, attrContentObj, attrContentObjProp;
@@ -680,12 +623,39 @@ cog.rebindNodes = function (nodes, content) {
         }
     }
 };
-//REMOVE INNER REPEATS? and FINISH BOUND
 cog.addBound = function (dataKeys, targetKeys) {
-
+    if (!cog.isRendered) {
+        document.addEventListener(cog.event.afterRender, function () {
+            cog.addBound(dataKeys, targetKeys);
+        });
+    } else {
+        var changed = cog.get(dataKeys, true), changee = cog.get(targetKeys, true);
+        if (typeof changed !== 'undefined' && typeof changee !== 'undefined') {
+            if (changed[cog.keyword.bound].indexOf(changee) === -1) {
+                changed[cog.keyword.bound].push(changee);
+            }
+            if (changee[cog.keyword.bound].indexOf(changed) === -1) {
+                changee[cog.keyword.bound].push(changed);
+            }
+        }
+    }
 };
 cog.removeBound = function (dataKeys, targetKeys) {
-
+    if (!cog.isRendered) {
+        document.addEventListener(cog.event.afterRender, function () {
+            cog.removeBound(dataKeys, targetKeys);
+        });
+    } else {
+        var changed = cog.get(dataKeys, true), changee = cog.get(targetKeys, true);
+        if (typeof changed !== 'undefined' && typeof changee !== 'undefined') {
+            if (changed[cog.keyword.bound].indexOf(changee) !== -1) {
+                changed[cog.keyword.bound].splice(changed[cog.keyword.bound].indexOf(changee), 1);
+            }
+            if (changee[cog.keyword.bound].indexOf(changed) !== -1) {
+                changee[cog.keyword.bound].splice(changee[cog.keyword.bound].indexOf(changed), 1);
+            }
+        }
+    }
 };
 cog.get = function (keys, ob) {
     var i, parentKeys, key, keysLength, ref = cog.data, refType;
@@ -1027,21 +997,26 @@ cog.observable = function (value, callback, parent) {
                         }
                         definee[cog.keyword.iterate](function (ob, obKeys) {
                             if (obKeys.length > 0) {
-                                var obExists = true, obVal = val, obType, i;
+                                var obExists = true, obVal = val, obType, i, ii, obKey;
                                 for (i in obKeys) {
-                                    if (obVal[cog.keyword.value].hasOwnProperty(obKeys[i])) {
-                                        obVal = obVal[cog.keyword.value][obKeys[i]];
+                                    obKey = obKeys[i];
+                                    if (obVal[cog.keyword.value].hasOwnProperty(obKey)) {
+
+                                        obVal = obVal[cog.keyword.value][obKey];
+
                                     } else {
                                         obExists = false;
                                         //DELETE
                                         //clean nodes, repeats and props on DOM because they dont exist anymore
-                                        if (type === 'array') {
-                                            ob[cog.keyword.parent][cog.keyword.value].splice(obKeys[i], 1);
+                                        if (ob[cog.keyword.parent][cog.keyword.type] === 'array') {
+                                            for (ii = obKey; ii < ob[cog.keyword.parent].length; ii++) {
+                                                delete ob[cog.keyword.parent][ii];
+                                            }
+                                            ob[cog.keyword.parent][cog.keyword.value].splice(obKey, ob[cog.keyword.parent].length - obKey);
                                         } else {
-                                            delete ob[cog.keyword.parent][cog.keyword.value][obKeys[i]];
+                                            delete ob[cog.keyword.parent][obKey];
+                                            delete ob[cog.keyword.parent][cog.keyword.value][obKey];
                                         }
-                                        delete ob[cog.keyword.parent][obKeys[i]];
-
 
                                         break;
                                     }
@@ -1557,7 +1532,7 @@ cog.constructTokenStr = function (arr) {
     for (i = 0; i < arr.length; i++) {
         val = arr[i];
         if (val instanceof cog.observable) {
-            result = result + val[cog.keyword.get];
+            result = result + 'cog.get("' + val[cog.keyword.token] + '")';
         } else {
             result = result + val;
         }
