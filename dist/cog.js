@@ -139,7 +139,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bind = function (dom, callback) {
-    var i, ii, iterator, node, ob, nodeAttr, nodeAttrs, nodeContent, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
+    var i, ii, iterator, node, ob, nodeAttr, nodeAttrs, newNodeAttrs, nodeContent, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
     if (dom == null) { dom = document.body; }
     while (tempNode = dom.querySelector("[" + cog.label.temp + "]")) {
         tempAttr = tempNode.getAttribute(cog.label.temp).split(";");
@@ -174,9 +174,14 @@ cog.bind = function (dom, callback) {
     }, false);
     while (node = iterator.nextNode()) {
         nodeAttrs = node.attributes;
+        newNodeAttrs = [];
         nodeContent = node.textContent;
         for (i = 0; i < nodeAttrs.length; i++) {
             nodeAttr = nodeAttrs[i];
+            newNodeAttrs.push({ name: nodeAttr.name, value: nodeAttr.value });
+        }
+        for (i = 0; i < newNodeAttrs.length; i++) {
+            nodeAttr = newNodeAttrs[i];
             attrKey = nodeAttr.name;
             attrVal = nodeAttr.value;
             if (attrKey.substring(0, cog.label.escapeAttr.length) == cog.label.escapeAttr) {
@@ -366,9 +371,6 @@ cog.rebind = function (task) {
     if (task.action == "reverse") {
         cog.correctIndex(ob);
     }
-    if (task.action == "sort") {
-        cog.correctIndex(ob);
-    }
     if (task.action == "set") {
         ob[cog.keyword.iterate](function (cob) {
             cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
@@ -382,7 +384,7 @@ cog.rebind = function (task) {
             cog.rebound(cob);
         });
     }
-    if (task.action == "unshift" || task.action == "shift" || task.action == "splice" || task.action == "reverse" || task.action == "sort") {
+    if (task.action == "unshift" || task.action == "shift" || task.action == "splice" || task.action == "reverse") {
         ob[cog.keyword.iterate](function (cob) {
             cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
             cog.rebound(cob);
@@ -1246,16 +1248,9 @@ cog.observable = function (value, callback, parent) {
                 writable: false,
                 value: function () {
                     if (_self[cog.keyword.value].length > -1) {
-                        var item = _self[cog.keyword.get], index;
+                        var item = _self[cog.keyword.get];
                         item.sort();
                         _self[cog.keyword.parent][cog.keyword.set](item, _self[cog.keyword.key]);
-                        for (index in _self[cog.keyword.value]) {
-                            _self[cog.keyword.value][index][cog.keyword.index] = index;
-                        }
-                        callback({
-                            action: "sort",
-                            ob: _self
-                        });
                         return item;
                     }
                 }
@@ -1494,7 +1489,7 @@ cog.splitTokens = function (str, isList) {
     return result;
 };
 cog.prepareTokenStr = function (str) {
-    var m, result = [], content;
+    var m, result = [], content, tokens;
     cog.regex.node.lastIndex = 0;
     while ((m = cog.regex.node.exec(str)) !== null) {
         if (m.index === cog.regex.node.lastIndex) {
@@ -1504,7 +1499,12 @@ cog.prepareTokenStr = function (str) {
             if (m[1] !== undefined) {
                 content = cog.get(m[1], true);
                 if (content !== undefined) {
-                    result.push(content);
+                    tokens = m[1].split(".");
+                    if (tokens[tokens.length - 1] == cog.keyword.index) {
+                        result.push({ ob: content, index: true });
+                    } else {
+                        result.push({ ob: content });
+                    }
                 }
             } else {
                 result.push(m[0]);
@@ -1517,8 +1517,12 @@ cog.constructTokenStr = function (arr) {
     var i, val, result = "";
     for (i = 0; i < arr.length; i++) {
         val = arr[i];
-        if (val instanceof cog.observable) {
-            result = result + 'cog.get("' + val[cog.keyword.token] + '")';
+        if (typeof val === 'object') {
+            result = result + 'cog.get("' + val.ob[cog.keyword.token];
+            if (val.index) {
+                result = result + "." + cog.keyword.index;
+            }
+            result = result + '")';
         } else {
             result = result + val;
         }
