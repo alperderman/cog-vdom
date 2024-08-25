@@ -31,11 +31,12 @@
             { "user": "Pamela", "text": "its all my fault, I should've been more careful" },
             { "user": "Jane", "text": "don't blame yourself, some things are just meant to happen" }
         ];
+        cog.data.username = "[YOU]";
         cog.data.input = "";
         addChat = function () {
             if (cog.get("input") != "") {
                 cog.alter("chat", function(arr){
-                    arr.push({text:cog.get("input"), user:"username"});
+                    arr.push({text:cog.get("input"), user:cog.get("username")});
                     return arr;
                 });
                 cog.set("input", "");

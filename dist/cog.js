@@ -29,9 +29,11 @@ cog.keyword = {
     get: "_get",
     set: "_set",
     iterate: "_iterate",
+    iterateParent: "_iterateParent",
     value: "_value",
     type: "_type",
     token: "_token",
+    keys: "_keys",
     key: "_key",
     parent: "_parent",
     index: "_index",
@@ -390,6 +392,9 @@ cog.rebind = function (task) {
             cog.rebound(cob);
         });
     }
+    ob[cog.keyword.iterateParent](function (pob) {
+        cog.rebound(pob);
+    });
     cog.cloneRepeats(ob);
 };
 cog.rebound = function (ob) {
@@ -1046,12 +1051,19 @@ cog.observable = function (value, callback, parent) {
         configurable: false,
         enumerable: false,
         get: function () {
-            var keys = [], selfParent = _self, selfValue = _self;
-            while (selfParent = selfParent[cog.keyword.parent]) {
-                keys.unshift(cog.getKeyByValue(selfParent[cog.keyword.value], selfValue));
-                selfValue = selfParent;
-            }
-            return keys.join(".");
+            return _self[cog.keyword.keys].join(".");
+        }
+    });
+    Object.defineProperty(_self, cog.keyword.keys, {
+        configurable: false,
+        enumerable: false,
+        get: function () {
+            var keys = [], selfChildren = _self;
+            _self[cog.keyword.iterateParent](function (selfParent) {
+                keys.unshift(cog.getKeyByValue(selfParent[cog.keyword.value], selfChildren));
+                selfChildren = selfParent;
+            });
+            return keys;
         }
     });
     Object.defineProperty(_self, cog.keyword.key, {
@@ -1069,7 +1081,7 @@ cog.observable = function (value, callback, parent) {
         configurable: false,
         enumerable: false,
         get: function () {
-            var obType = _self[cog.keyword.type];
+            var obType = _self[cog.keyword.type], keys, parentKeys;
             if (obType === 'array' || obType === 'object') {
                 var data, i;
                 if (obType === 'array') {
@@ -1081,6 +1093,11 @@ cog.observable = function (value, callback, parent) {
                     data[i] = _self[i][cog.keyword.get];
                 }
                 return data;
+            } else if (obType === 'function') {
+                keys = _self[cog.keyword.keys];
+                parentKeys = cog.shallowClone(keys);
+                parentKeys.pop();
+                return _self[cog.keyword.value](parentKeys, keys);
             } else {
                 return _self[cog.keyword.value];
             }
@@ -1115,6 +1132,19 @@ cog.observable = function (value, callback, parent) {
                     for (obKey in _self[cog.keyword.value]) {
                         _self[cog.keyword.value][obKey][cog.keyword.iterate](func, obKeys.concat([obKey]));
                     }
+                }
+            }
+        }
+    });
+    Object.defineProperty(_self, cog.keyword.iterateParent, {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: function (func) {
+            if (typeof func === 'function') {
+                var parent = _self;
+                while (parent = parent[cog.keyword.parent]) {
+                    func(parent);
                 }
             }
         }
@@ -1309,6 +1339,7 @@ cog.observable = function (value, callback, parent) {
                 enumerable: false,
                 writable: false,
                 value: function (index, howMany) {
+                    index = parseInt(index), howMany = parseInt(howMany);
                     var removed = [], item, args = [index, howMany], valueLength = _self[cog.keyword.value].length, o, i, ln;
                     index = index == null ? 0 : index < 0 ? valueLength + index : index;
                     howMany = howMany == null ? valueLength - index : howMany > 0 ? howMany : 0;

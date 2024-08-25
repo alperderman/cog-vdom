@@ -44,7 +44,7 @@
             car: ""
         };
         cog.data.formJSON = function () {
-            return JSON.stringify(cog.get("form")._get);
+            return JSON.stringify(cog.get("form._get"));
         };
         cog.addBound("form", "formJSON");
         cog.render();

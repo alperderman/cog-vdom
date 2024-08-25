@@ -10,11 +10,11 @@
 <body>
     <input cog-prop="context:{value:{{input}}}" cog-live="live:'input', event:'input'" type="text">
     <button cog-event="click:'addToList()'">Add</button>
-    <div cog-repeat="todo;item;list" cog-reverse>
+    <div cog-repeat="todo;item;list">
         <p>
             <span cog-prop="if:[!{{item.active}}, {style:{textDecoration: 'line-through'}}]">{{item.text}}</span>
-            <button data-id="{{item._key}}" cog-event="click:'removeFromList()'">Delete</button>
-            <button data-id="{{item._key}}" cog-event="click:'strikeItem()'">Complete</button>
+            <button data-id="{{item._index}}" cog-event="click:'removeFromList()'">Delete</button>
+            <button data-id="{{item._index}}" cog-event="click:'strikeItem()'">Complete</button>
         </p>
     </div>
     <script src="dist/cog.js"></script>
@@ -24,7 +24,7 @@
         addToList = function () {
             if (cog.get("input") != "") {
                 cog.alter("list", function(arr){
-                    arr.push({text:cog.get("input"), active:true});
+                    arr.unshift({text:cog.get("input"), active:true});
                     return arr;
                 });
                 cog.set("input", "");
