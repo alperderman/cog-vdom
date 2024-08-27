@@ -1,28 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta http-equiv="x-ua-compatible" content="ie=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FORM</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FORM</title>
 
 </head>
+
 <body>
     <form>
         <div>username:</div>
         <input cog-prop="context:{value:{{form.username}}}" cog-live="live:'form.username', event:'input'" type="text">
         <div>password:</div>
-        <input cog-prop="context:{value:{{form.password}}}" cog-live="live:'form.password', event:'input'" type="password">
+        <input cog-prop="context:{value:{{form.password}}}" cog-live="live:'form.password', event:'input'"
+            type="password">
         <div>male:</div>
         <input cog-live="live:'form.gender'" type="radio" name="gender" value="male">
         <div>female:</div>
         <input cog-live="live:'form.gender'" type="radio" name="gender" value="female">
         <div>pizza:</div>
-        <input cog-live="live:'form.favFood.food_pizza', data:'checked'" type="checkbox" name="food_pizza" value="Pizza">
+        <input cog-live="live:'form.favFood.food_pizza', data:'checked'" type="checkbox" name="food_pizza"
+            value="Pizza">
         <div>burger:</div>
-        <input cog-live="live:'form.favFood.food_burger', data:'checked'" type="checkbox" name="food_burger" value="Burger">
+        <input cog-live="live:'form.favFood.food_burger', data:'checked'" type="checkbox" name="food_burger"
+            value="Burger">
         <div>beans:</div>
-        <input cog-live="live:'form.favFood.food_beans', data:'checked'" type="checkbox" name="food_beans" value="Beans">
+        <input cog-live="live:'form.favFood.food_beans', data:'checked'" type="checkbox" name="food_beans"
+            value="Beans">
         <div>car:</div>
         <select cog-live="live:'form.car'" name="car">
             <option selected disabled>Choose</option>
@@ -40,14 +46,15 @@
             username: "",
             password: "",
             gender: "",
-            favFood: {food_pizza: false, food_burger: false, food_beans: false},
+            favFood: { food_pizza: false, food_burger: false, food_beans: false },
             car: ""
         };
         cog.data.formJSON = function () {
-            return JSON.stringify(cog.get("form._get"));
+            return JSON.stringify(cog.get("form"));
         };
         cog.addBound("form", "formJSON");
         cog.render();
     </script>
 </body>
+
 </html>

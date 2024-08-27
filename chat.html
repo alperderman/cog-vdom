@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta http-equiv="x-ua-compatible" content="ie=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CHAT</title>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHAT</title>
 </head>
+
 <body>
-    
+
     <div cog-repeat="log;item;chat" id="chat">
         <p>
             <span cog-prop="style:{color:'#14f'}">{{item.user}}:</span><span>{{item.text}}</span>
@@ -35,14 +37,12 @@
         cog.data.input = "";
         addChat = function () {
             if (cog.get("input") != "") {
-                cog.alter("chat", function(arr){
-                    arr.push({text:cog.get("input"), user:cog.get("username")});
-                    return arr;
-                });
+                cog.data.chat.push({ text: cog.get("input"), user: cog.get("username") });
                 cog.set("input", "");
             }
         };
         cog.render();
     </script>
 </body>
+
 </html>

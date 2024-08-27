@@ -661,9 +661,7 @@ cog.get = function (keys, ob) {
         }
         if (!ob && ref instanceof cog.observable) {
             refType = ref[cog.keyword.type];
-            if (refType !== 'object' && refType !== 'array') {
-                ref = ref[cog.keyword.get];
-            }
+            ref = ref[cog.keyword.get];
         }
     }
     if (typeof ref === 'function') {
@@ -673,16 +671,12 @@ cog.get = function (keys, ob) {
     }
     return ref;
 };
-cog.set = function (keys, val, func) {
+cog.set = function (keys, val) {
     var i, key, keysLength, ref = cog.data, content = cog.get(keys);
-    if (func == null) { func = false; }
     if (typeof keys === 'string') {
         keys = keys.split(".");
     }
     keysLength = keys.length;
-    if (func && typeof val === 'function') {
-        val = val(content);
-    }
     for (i = 0; i < keysLength; i++) {
         key = keys[i];
         if (i == keysLength - 1 && content !== val) {
@@ -702,9 +696,6 @@ cog.set = function (keys, val, func) {
             ref = ref[key];
         }
     }
-};
-cog.alter = function (keys, val) {
-    cog.set(keys, val, true);
 };
 cog.template = function (arg) {
     var i, ii, iii, iterator, node, nodeAttr, nodeAttrs, nodeContent, aliasKeysLength, aliasKeys, aliasKey, aliasKeyArr, aliasKeyArrLength, aliasKeyArrResult, aliasReplace, aliasNode, aliasNodeItem, alias, tempNode, props, prop, cloneNode, newNode, tokenArr, attrContent, attrKey, attrVal, nodeSplitTokens;
