@@ -264,11 +264,7 @@ cog.bind = function (dom, callback) {
                         if (cog.isElement(content)) {
                             newNode = cog.bind(content.cloneNode(true));
                         } else {
-                            if (typeof content !== 'object') {
-                                newNode = document.createTextNode(content);
-                            } else {
-                                newNode = document.createTextNode(JSON.stringify(content[cog.keyword.get]));
-                            }
+                            newNode = document.createTextNode(content);
                         }
                         parent.insertBefore(newNode, oldNode);
                         ob = cog.get(pureToken, true);
@@ -290,11 +286,7 @@ cog.bind = function (dom, callback) {
                 if (cog.isElement(content)) {
                     newNode = cog.bind(content.cloneNode(true));
                 } else {
-                    if (typeof content !== 'object') {
-                        newNode = document.createTextNode(content);
-                    } else {
-                        newNode = document.createTextNode(JSON.stringify(content[cog.keyword.get]));
-                    }
+                    newNode = document.createTextNode(content);
                 }
                 parent.insertBefore(newNode, oldNode);
                 ob = cog.get(pureToken, true);
@@ -375,7 +367,7 @@ cog.rebind = function (task) {
     }
     if (task.action == "set") {
         ob[cog.keyword.iterate](function (cob) {
-            cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
+            cog.rebindNodes(cob[cog.keyword.nodes], cog.get(cob));
             cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
             cog.correctIndex(cob);
             cog.rebound(cob);
@@ -402,7 +394,7 @@ cog.rebound = function (ob) {
     for (i in ob[cog.keyword.bound]) {
         bob = ob[cog.keyword.bound][i];
         bob[cog.keyword.iterate](function (cob) {
-            cog.rebindNodes(cob[cog.keyword.nodes], cob[cog.keyword.get]);
+            cog.rebindNodes(cob[cog.keyword.nodes], cog.get(cob));
             cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
             cog.correctIndex(cob);
         });
@@ -615,14 +607,12 @@ cog.addBound = function (dataKeys, targetKeys) {
             cog.addBound(dataKeys, targetKeys);
         });
     } else {
-        var changed = cog.get(dataKeys, true), changee = cog.get(targetKeys, true);
-        if (typeof changed !== 'undefined' && typeof changee !== 'undefined') {
-            if (changed[cog.keyword.bound].indexOf(changee) === -1) {
-                changed[cog.keyword.bound].push(changee);
-            }
-            if (changee[cog.keyword.bound].indexOf(changed) === -1) {
-                changee[cog.keyword.bound].push(changed);
-            }
+        var dataKey = cog.get(dataKeys, true), targetKey = cog.get(targetKeys, true);
+        if (dataKey[cog.keyword.bound].indexOf(targetKey) === -1) {
+            dataKey[cog.keyword.bound].push(targetKey);
+        }
+        if (targetKey[cog.keyword.bound].indexOf(dataKey) === -1) {
+            targetKey[cog.keyword.bound].push(dataKey);
         }
     }
 };
@@ -632,39 +622,48 @@ cog.removeBound = function (dataKeys, targetKeys) {
             cog.removeBound(dataKeys, targetKeys);
         });
     } else {
-        var changed = cog.get(dataKeys, true), changee = cog.get(targetKeys, true);
-        if (typeof changed !== 'undefined' && typeof changee !== 'undefined') {
-            if (changed[cog.keyword.bound].indexOf(changee) !== -1) {
-                changed[cog.keyword.bound].splice(changed[cog.keyword.bound].indexOf(changee), 1);
-            }
-            if (changee[cog.keyword.bound].indexOf(changed) !== -1) {
-                changee[cog.keyword.bound].splice(changee[cog.keyword.bound].indexOf(changed), 1);
-            }
+        var dataKey = cog.get(dataKeys, true), targetKey = cog.get(targetKeys, true);
+        if (dataKey[cog.keyword.bound].indexOf(targetKey) !== -1) {
+            dataKey[cog.keyword.bound].splice(dataKey[cog.keyword.bound].indexOf(targetKey), 1);
+        }
+        if (targetKey[cog.keyword.bound].indexOf(dataKey) !== -1) {
+            targetKey[cog.keyword.bound].splice(targetKey[cog.keyword.bound].indexOf(dataKey), 1);
         }
     }
 };
 cog.get = function (keys, ob) {
-    var i, parentKeys, key, keysLength, ref = cog.data, refType;
-    if (ob == null) { ob = false; }
-    if (typeof keys === 'string') {
-        keys = keys.split(".");
-    }
-    keysLength = keys.length;
-    if (ob && keys[keysLength - 1] == cog.keyword.index) {
-        keys.pop();
-        return cog.get(keys, true);
-    }
-    for (i = 0; i < keysLength; i++) {
-        key = keys[i];
-        if (!ref.hasOwnProperty(key)) {
-            return undefined;
-        }
-        ref = ref[key];
-    }
-    if (!ob && ref instanceof cog.observable) {
+    var i, parentKeys, key, keysLength, ref, refType;
+    if (keys instanceof cog.observable) {
+        if (ob) { return keys; }
+        ref = keys;
+        keys = ref[cog.keyword.keys];
         refType = ref[cog.keyword.type];
         if (refType !== 'object' && refType !== 'array') {
             ref = ref[cog.keyword.get];
+        }
+    } else {
+        ref = cog.data;
+        if (ob == null) { ob = false; }
+        if (typeof keys === 'string') {
+            keys = keys.split(".");
+        }
+        keysLength = keys.length;
+        if (ob && keys[keysLength - 1] == cog.keyword.index) {
+            keys.pop();
+            return cog.get(keys, true);
+        }
+        for (i = 0; i < keysLength; i++) {
+            key = keys[i];
+            if (!ref.hasOwnProperty(key)) {
+                return undefined;
+            }
+            ref = ref[key];
+        }
+        if (!ob && ref instanceof cog.observable) {
+            refType = ref[cog.keyword.type];
+            if (refType !== 'object' && refType !== 'array') {
+                ref = ref[cog.keyword.get];
+            }
         }
     }
     if (typeof ref === 'function') {
@@ -1081,7 +1080,7 @@ cog.observable = function (value, callback, parent) {
         configurable: false,
         enumerable: false,
         get: function () {
-            var obType = _self[cog.keyword.type], keys, parentKeys;
+            var obType = _self[cog.keyword.type];
             if (obType === 'array' || obType === 'object') {
                 var data, i;
                 if (obType === 'array') {
@@ -1093,11 +1092,6 @@ cog.observable = function (value, callback, parent) {
                     data[i] = _self[i][cog.keyword.get];
                 }
                 return data;
-            } else if (obType === 'function') {
-                keys = _self[cog.keyword.keys];
-                parentKeys = cog.shallowClone(keys);
-                parentKeys.pop();
-                return _self[cog.keyword.value](parentKeys, keys);
             } else {
                 return _self[cog.keyword.value];
             }
