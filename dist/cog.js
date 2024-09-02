@@ -237,7 +237,9 @@ cog.bind = function (dom, callback) {
                                     attrContentObjProp = attrContentObj["class"];
                                 }
                                 for (ii in attrContentObjProp) {
-                                    node.classList.add(attrContentObjProp[ii]);
+                                    if (attrContentObjProp[ii]) {
+                                        node.classList.add(attrContentObjProp[ii]);
+                                    }
                                 }
                             }
                             if (attrContentObj.hasOwnProperty("context")) {
@@ -524,7 +526,9 @@ cog.rebindNodes = function (nodes, content) {
                                 attrContentObjProp = prop.old["class"];
                             }
                             for (ii in attrContentObjProp) {
-                                prop.node.classList.remove(attrContentObjProp[ii]);
+                                if (attrContentObjProp[ii]) {
+                                    prop.node.classList.remove(attrContentObjProp[ii]);
+                                }
                             }
                         }
                         if (prop.old.hasOwnProperty("context")) {
@@ -554,7 +558,9 @@ cog.rebindNodes = function (nodes, content) {
                                 attrContentObjProp = attrContentObj["class"];
                             }
                             for (ii in attrContentObjProp) {
-                                prop.node.classList.add(attrContentObjProp[ii]);
+                                if (attrContentObjProp[ii]) {
+                                    prop.node.classList.add(attrContentObjProp[ii]);
+                                }
                             }
                         }
                         if (attrContentObj.hasOwnProperty("context")) {
