@@ -4,7 +4,7 @@ cog.data = {};
 cog.props = [];
 cog.templates = {};
 cog.isRendered = false;
-cog.encapVar = null;
+cog.encap = null;
 cog.cache = true;
 cog.label = {
     head: "head",
@@ -22,6 +22,7 @@ cog.label = {
     await: "cog-await"
 };
 cog.event = {
+    target: null,
     beforeRender: "COGBeforeRender",
     afterRender: "COGAfterRender"
 };
@@ -1597,6 +1598,7 @@ cog.eventHandler = function (event, elem) {
     if (!elem) { elem = event.target; }
     if (typeof elem.getAttribute !== 'function') { return; }
     var events, attrEvents, prevent = false, i, ii, attr;
+    cog.event.target = elem;
     attr = elem.getAttribute(cog.label.live);
     if (attr != null) {
         attr = attr.trim();
@@ -1659,8 +1661,9 @@ cog.eventHandler = function (event, elem) {
     }
 };
 cog.addEventListenerAll = function (target, listener, capture) {
+    var key;
     if (capture == null) { capture = false; }
-    for (var key in target) {
+    for (key in target) {
         if (/^on/.test(key)) {
             target.addEventListener(key.substr(2), listener, capture);
         }
@@ -1674,11 +1677,11 @@ cog.elemFragment = function (elem) {
     return fragment;
 };
 cog.encapEval = function () {
-    try { return eval(cog.encapVar); } catch (e) { }
+    try { return eval(cog.encap); } catch (e) { }
 };
 cog.if = function (str) {
     if (typeof str === 'string') {
-        cog.encapVar = str;
+        cog.encap = str;
         if (cog.encapEval()) {
             return true;
         } else {
@@ -1689,7 +1692,7 @@ cog.if = function (str) {
     }
 };
 cog.eval = function (str) {
-    cog.encapVar = str;
+    cog.encap = str;
     return cog.encapEval();
 };
 cog.isElement = function (elem) {
