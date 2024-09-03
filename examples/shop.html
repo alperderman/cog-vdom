@@ -36,17 +36,17 @@
       </div>
       <div class="col-12 col-md-9">
         <!--CART-->
-        <button cog-if="{{cartLength}} &lt;= 0" class="btn btn-primary position-relative">
+        <button cog-if="{{cart._length}} &lt;= 0" class="btn btn-primary position-relative">
           <i class="fa-solid fa-cart-shopping"></i>
           <span
-            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{cartLength}}</span>
+            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{cart._length}}</span>
         </button>
-        <div cog-if="{{cartLength}} > 0" class="btn-group">
+        <div cog-if="{{cart._length}} > 0" class="btn-group">
           <button class="btn btn-primary dropdown-toggle position-relative" data-bs-toggle="dropdown"
             data-bs-auto-close="outside" aria-expanded="false">
             <i class="fa-solid fa-cart-shopping"></i>
             <span
-              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{cartLength}}</span>
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{cart._length}}</span>
           </button>
           <ul class="dropdown-menu p-2" style="width: 300px;">
             <div class="position-fixed start-0 top-0 p-3">
@@ -67,7 +67,7 @@
                   </button>
                 </div>
               </div>
-              <hr cog-if="{{item._index}}+1 != {{cartLength}}" data-prop="if:'%item._row% != %cart._count%'"
+              <hr cog-if="{{item._index}}+1 != {{cart._length}}" data-prop="if:'%item._row% != %cart._count%'"
                 class="dropdown-divider">
             </div>
           </ul>
@@ -77,12 +77,12 @@
           cog-prop="context:{value:{{search}}}" class="form-control mb-3 mt-3" placeholder="Search" type="text">
         <div class="row">
           <div class="col-6">
-            <p class="text-start m-0" cog-if="{{productsFilteredLength}} != {{productsLength}}">
-              Filtered <span class="fw-bold">{{productsFilteredLength}}</span> items
+            <p class="text-start m-0" cog-if="{{productsFiltered._length}} != {{products._length}}">
+              Filtered <span class="fw-bold">{{productsFiltered._length}}</span> items
             </p>
           </div>
           <div class="col-6">
-            <p class="text-end m-0">Total of <span class="fw-bold">{{productsLength}}</span> items</p>
+            <p class="text-end m-0">Total of <span class="fw-bold">{{products._length}}</span> items</p>
           </div>
         </div>
         <!--PRODUCTS TABLE-->
@@ -125,17 +125,8 @@
     cog.data.products = null;
     cog.data.tcolor = "";
     cog.data.productsFiltered = null;
-    cog.data.productsLength = function () {
-      return cog.get("products").length;
-    };
-    cog.data.productsFilteredLength = function () {
-      return cog.get("productsFiltered").length;
-    };
     cog.data.categories = ["all"];
     cog.data.cart = [];
-    cog.data.cartLength = function () {
-      return cog.get("cart").length;
-    };
     cog.data.cartTotal = function () {
       var total = 0, cart = cog.get("cart");
       cart.forEach(function (item) {
@@ -149,9 +140,6 @@
     var toast = new bootstrap.Toast(document.getElementById("toast"));
 
     // binding function tokens with the tokens that have been used inside them so that any element that uses these function tokens will be refreshed respectfully
-    cog.addBound("products", "productsLength");
-    cog.addBound("productsFiltered", "productsFilteredLength");
-    cog.addBound("cart", "cartLength");
     cog.addBound("cart", "cartTotal");
 
     // FUNCTIONS

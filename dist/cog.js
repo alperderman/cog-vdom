@@ -37,10 +37,11 @@ cog.keyword = {
     keys: "_keys",
     key: "_key",
     parent: "_parent",
+    length: "_length",
     index: "_index",
-    indexNodes: "_indexNodes",
     prevent: "_prevent",
     nodes: "_nodes",
+    innerNodes: "_innerNodes",
     repeats: "_repeats",
     bound: "_bound"
 };
@@ -206,11 +207,7 @@ cog.bind = function (dom, callback) {
                     nodeSplitTokens = cog.splitTokens(attrVal, true);
                     for (nodeSplitToken in nodeSplitTokens) {
                         ob = cog.get(nodeSplitToken, true);
-                        if (cog.isIndex(nodeSplitToken)) {
-                            ob[cog.keyword.indexNodes].push({ prop: prop });
-                        } else {
-                            ob[cog.keyword.nodes].push({ prop: prop });
-                        }
+                        cog.pushNode(nodeSplitToken, ob, { prop: prop });
                     }
                     if (propType == "if") {
                         if (cog.if(cog.constructTokenStr(attrContentParse))) {
@@ -271,11 +268,7 @@ cog.bind = function (dom, callback) {
                         }
                         parent.insertBefore(newNode, oldNode);
                         ob = cog.get(pureToken, true);
-                        if (cog.isIndex(pureToken)) {
-                            ob[cog.keyword.indexNodes].push({ prop: prop, node: newNode });
-                        } else {
-                            ob[cog.keyword.nodes].push({ prop: prop, node: newNode });
-                        }
+                        cog.pushNode(pureToken, ob, { prop: prop, node: newNode });
                     });
                     node.setAttribute(attrKey, attrContent.textContent);
                     prop.type = "attr";
@@ -293,11 +286,7 @@ cog.bind = function (dom, callback) {
                 }
                 parent.insertBefore(newNode, oldNode);
                 ob = cog.get(pureToken, true);
-                if (cog.isIndex(pureToken)) {
-                    ob[cog.keyword.indexNodes].push(newNode);
-                } else {
-                    ob[cog.keyword.nodes].push(newNode);
-                }
+                cog.pushNode(pureToken, ob, newNode);
             });
         }
     }
@@ -371,19 +360,28 @@ cog.rebind = function (task) {
     if (task.action == "set") {
         ob[cog.keyword.iterate](function (cob) {
             cog.rebindNodes(cob[cog.keyword.nodes], cog.get(cob));
-            cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            cog.rebindNodes(cob[cog.keyword.innerNodes][cog.keyword.index], cob[cog.keyword.index]);
+            cog.rebindNodes(cob[cog.keyword.innerNodes][cog.keyword.length], cob[cog.keyword.length]);
             cog.correctIndex(cob);
             cog.rebound(cob);
         });
     }
     if (task.action == "push" || task.action == "pop") {
+        cog.rebindNodes(ob[cog.keyword.innerNodes][cog.keyword.length], ob[cog.keyword.length]);
         ob[cog.keyword.iterate](function (cob) {
             cog.rebound(cob);
         });
     }
-    if (task.action == "unshift" || task.action == "shift" || task.action == "splice" || task.action == "reverse") {
+    if (task.action == "unshift" || task.action == "shift" || task.action == "splice") {
+        cog.rebindNodes(ob[cog.keyword.innerNodes][cog.keyword.length], ob[cog.keyword.length]);
         ob[cog.keyword.iterate](function (cob) {
-            cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            cog.rebindNodes(cob[cog.keyword.innerNodes][cog.keyword.index], cob[cog.keyword.index]);
+            cog.rebound(cob);
+        });
+    }
+    if (task.action == "reverse") {
+        ob[cog.keyword.iterate](function (cob) {
+            cog.rebindNodes(cob[cog.keyword.innerNodes][cog.keyword.index], cob[cog.keyword.index]);
             cog.rebound(cob);
         });
     }
@@ -398,7 +396,8 @@ cog.rebound = function (ob) {
         bob = ob[cog.keyword.bound][i];
         bob[cog.keyword.iterate](function (cob) {
             cog.rebindNodes(cob[cog.keyword.nodes], cog.get(cob));
-            cog.rebindNodes(cob[cog.keyword.indexNodes], cob[cog.keyword.index]);
+            cog.rebindNodes(cob[cog.keyword.innerNodes][cog.keyword.index], cob[cog.keyword.index]);
+            cog.rebindNodes(cob[cog.keyword.innerNodes][cog.keyword.length], cob[cog.keyword.length]);
             cog.correctIndex(cob);
         });
         cog.cloneRepeats(bob);
@@ -639,7 +638,7 @@ cog.removeBound = function (dataKeys, targetKeys) {
     }
 };
 cog.get = function (keys, ob) {
-    var i, parentKeys, key, keysLength, ref, refType;
+    var i, parentKeys, key, keysLength, ref, refType, lastKey;
     if (keys instanceof cog.observable) {
         if (ob) { return keys; }
         ref = keys;
@@ -655,7 +654,8 @@ cog.get = function (keys, ob) {
             keys = keys.split(".");
         }
         keysLength = keys.length;
-        if (ob && keys[keysLength - 1] == cog.keyword.index) {
+        lastKey = keys[keysLength - 1];
+        if (ob && (lastKey == cog.keyword.index || lastKey == cog.keyword.length)) {
             keys.pop();
             return cog.get(keys, true);
         }
@@ -926,7 +926,9 @@ cog.setElems = function (callback) {
 };
 cog.observable = function (value, callback, parent) {
     if (value instanceof cog.observable) { return value; }
-    var _self = this, _value, _init = false, _parent, _bound = [], _nodes = [], _index, _indexNodes = [], _repeats = {}, _obType;
+    var _self = this, _value, _init = false, _parent, _bound = [], _nodes = [], _index, _innerNodes = {}, _repeats = {}, _obType;
+    _innerNodes[cog.keyword.index] = [];
+    _innerNodes[cog.keyword.length] = [];
     if (typeof callback !== 'function') {
         callback = function () { };
     }
@@ -1153,11 +1155,11 @@ cog.observable = function (value, callback, parent) {
         writable: true,
         value: _index
     });
-    Object.defineProperty(_self, cog.keyword.indexNodes, {
+    Object.defineProperty(_self, cog.keyword.innerNodes, {
         configurable: false,
         enumerable: false,
         writable: true,
-        value: _indexNodes
+        value: _innerNodes
     });
     Object.defineProperty(_self, cog.keyword.repeats, {
         configurable: false,
@@ -1189,6 +1191,19 @@ cog.observable = function (value, callback, parent) {
         enumerable: false,
         writable: false,
         value: _parent
+    });
+    Object.defineProperty(_self, cog.keyword.length, {
+        configurable: false,
+        enumerable: false,
+        get: function () {
+            var type = _self[cog.keyword.type];
+            if (type === 'array' || type === 'string') {
+                return _self[cog.keyword.value].length;
+            }
+            if (type === 'object') {
+                return Object.keys(_self[cog.keyword.value]).length;
+            }
+        }
     });
     if (_parent && _parent[cog.keyword.type] === 'array') {
         _self[cog.keyword.index] = _parent[cog.keyword.value].indexOf(_self);
@@ -1378,8 +1393,6 @@ cog.observable = function (value, callback, parent) {
                         } else if (n > length) {
                             _self.push.apply(_self, new Array(n - length));
                         }
-                    } else {
-                        throw new RangeError("Invalid array length");
                     }
                     _self[cog.keyword.value].length = n;
                     return val;
@@ -1412,6 +1425,12 @@ cog.checkType = function (input) {
     var typeString = Object.prototype.toString.call(input);
     return typeString.slice(8, typeString.length - 1).toLowerCase();
 };
+cog.getLastKey = function (keys) {
+    if (typeof keys === 'string') {
+        keys = keys.split(".");
+    }
+    return keys[keys.length - 1];
+};
 cog.getKeyByValue = function (obj, val) {
     if (Array.isArray(obj)) {
         return obj.indexOf(val);
@@ -1426,12 +1445,6 @@ cog.getKeyByValue = function (obj, val) {
         }
     }
 };
-cog.isIndex = function (keys) {
-    if (typeof keys === 'string') {
-        keys = keys.split(".");
-    }
-    return keys[keys.length - 1] == cog.keyword.index;
-};
 cog.isInDocument = function (el) {
     var html = document.body.parentNode;
     while (el) {
@@ -1441,6 +1454,14 @@ cog.isInDocument = function (el) {
         el = el.parentNode;
     }
     return false;
+};
+cog.pushNode = function (keys, ob, node) {
+    var lastKey = cog.getLastKey(keys);
+    if (lastKey == cog.keyword.index || lastKey == cog.keyword.length) {
+        ob[cog.keyword.innerNodes][lastKey].push(node);
+    } else {
+        ob[cog.keyword.nodes].push(node);
+    }
 };
 cog.propCondition = function (obj) {
     if (obj.hasOwnProperty("if")) {
@@ -1512,7 +1533,7 @@ cog.splitTokens = function (str, isList) {
     return result;
 };
 cog.prepareTokenStr = function (str) {
-    var m, result = [], content, tokens;
+    var m, result = [], content, lastKey;
     cog.regex.node.lastIndex = 0;
     while ((m = cog.regex.node.exec(str)) !== null) {
         if (m.index === cog.regex.node.lastIndex) {
@@ -1522,9 +1543,9 @@ cog.prepareTokenStr = function (str) {
             if (m[1] !== undefined) {
                 content = cog.get(m[1], true);
                 if (content !== undefined) {
-                    tokens = m[1].split(".");
-                    if (tokens[tokens.length - 1] == cog.keyword.index) {
-                        result.push({ ob: content, index: true });
+                    lastKey = cog.getLastKey(m[1]);
+                    if (lastKey == cog.keyword.index || lastKey == cog.keyword.length) {
+                        result.push({ ob: content, keyword: lastKey });
                     } else {
                         result.push({ ob: content });
                     }
@@ -1542,8 +1563,8 @@ cog.constructTokenStr = function (arr) {
         val = arr[i];
         if (typeof val === 'object') {
             result = result + 'cog.get("' + val.ob[cog.keyword.token];
-            if (val.index) {
-                result = result + "." + cog.keyword.index;
+            if (val.keyword) {
+                result = result + "." + val.keyword;
             }
             result = result + '")';
         } else {

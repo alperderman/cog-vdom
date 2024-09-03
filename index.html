@@ -44,10 +44,13 @@
     <br><br><br>
     <h2>REPEATS</h2>
     <hr>
+    <p>total of {{people._length}} people</p>
+    <hr>
     <div cog-repeat="people;item;people">
         <p>{{item._index}}</p>
         <p>{{item.name}}</p>
         <p>{{item.job}}</p>
+        <p>tag length: {{item.tags._length}}</p>
         <div cog-repeat="tags;item, pep;{{item.tags}}, {{item}}">
             <span>{{pep._index}}</span>
             <span>{{item._index}}</span>
