@@ -1196,13 +1196,7 @@ cog.observable = function (value, callback, parent) {
         configurable: false,
         enumerable: false,
         get: function () {
-            var type = _self[cog.keyword.type];
-            if (type === 'array' || type === 'string') {
-                return _self[cog.keyword.value].length;
-            }
-            if (type === 'object') {
-                return Object.keys(_self[cog.keyword.value]).length;
-            }
+            return _self[cog.keyword.value].length;
         }
     });
     if (_parent && _parent[cog.keyword.type] === 'array') {
