@@ -186,14 +186,14 @@
       var i, id = cog.event.target.getAttribute("product-id"), cart = cog.data.cart, addToQuantity = false, existingItem, product, products;
       for (i = 0; i < cart.length; i++) {
         item = cart[i];
-        if (item.id._get == id) {
+        if (cog.get(item.id) == id) {
           addToQuantity = true;
           existingItem = item;
           break;
         }
       }
       if (addToQuantity) {
-        existingItem["quantity"] = existingItem["quantity"]._get + 1;
+        existingItem["quantity"] = cog.get(existingItem["quantity"]) + 1;
         cog.set("toast.product", existingItem["title"]);
         cog.set("toast.bg", cog.get("toast.add.bg"));
         cog.set("toast.text", cog.get("toast.add.text"));
@@ -218,7 +218,7 @@
       var i, id = cog.event.target.getAttribute("product-id"), cart = cog.data.cart, item;
       for (i = 0; i < cart.length; i++) {
         item = cart[i];
-        if (item.id._get == id) {
+        if (cog.get(item.id) == id) {
           cart.splice(i, 1);
           cog.set("toast.product", item["title"]);
           cog.set("toast.bg", cog.get("toast.remove.bg"));

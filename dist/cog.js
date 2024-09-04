@@ -859,41 +859,6 @@ cog.template = function (arg) {
 cog.setElems = function (callback) {
     cog.loadContents(function () {
         var setElem, setAttr, setAttrSplit, setType, setKey, setKeys, setTemp, setTempId, setTempAlias, i, links = document.getElementsByTagName("link"), link, heads = document.querySelectorAll("[" + cog.label.head + "]"), head, tempNode, tempAttr, tempId, tempAlias;
-        while (setElem = document.querySelector("[" + cog.label.set + "]")) {
-            setAttr = setElem.getAttribute(cog.label.set);
-            setAttrSplit = setAttr.split(":");
-            setType = setAttrSplit[0].trim();
-            setKey = setAttrSplit[1].trim();
-            setKeys = setKey.split(".");
-            if (setType == "json") {
-                propData = cog.isJSON(setElem.textContent);
-                if (propData) {
-                    cog.set(setKeys, propData);
-                }
-            }
-            if (setType == "raw") {
-                propData = cog.eval("(" + setElem.textContent + ")");
-                cog.set(setKeys, propData);
-            }
-            if (setType == "text") {
-                cog.set(setKeys, setElem.textContent);
-            }
-            if (setType == "html") {
-                cog.extractAssets(setElem);
-                cog.set(setKeys, cog.elemFragment(setElem));
-            }
-            if (setType == "temp") {
-                cog.extractAssets(setElem);
-                setTemp = setKey.split(";");
-                setTempId = setTemp[0].trim();
-                setTempAlias = setTemp[1].split(",");
-                for (i in setTempAlias) {
-                    setTempAlias[i] = setTempAlias[i].trim();
-                }
-                cog.template({ id: setTempId, node: setElem, alias: setTempAlias });
-            }
-            setElem.parentNode.removeChild(setElem);
-        }
         while (tempNode = document.querySelector("[" + cog.label.repeat + "]:not([" + cog.label.await + "])")) {
             tempAttr = tempNode.getAttribute(cog.label.repeat).split(";");
             tempId = tempAttr[0].trim();
@@ -921,6 +886,45 @@ cog.setElems = function (callback) {
         }
         if (typeof callback === 'function') {
             callback();
+        }
+        while (setElem = document.querySelector("[" + cog.label.set + "]")) {
+            setAttr = setElem.getAttribute(cog.label.set);
+            setAttrSplit = setAttr.split(":");
+            setType = setAttrSplit[0].trim();
+            setKey = setAttrSplit[1].trim();
+            setKeys = setKey.split(".");
+            if (setType == "json") {
+                propData = cog.isJSON(setElem.textContent);
+                if (propData) {
+                    cog.set(setKeys, propData);
+                }
+            }
+            if (setType == "raw") {
+                propData = cog.eval("(" + setElem.textContent + ")");
+                cog.set(setKeys, propData);
+            }
+            if (setType == "text") {
+                cog.set(setKeys, setElem.textContent);
+            }
+            if (setType == "html") {
+                cog.extractAssets(setElem);
+                cog.set(setKeys, cog.elemFragment(setElem));
+            }
+            if (setType == "temp") {
+                cog.extractAssets(setElem);
+                setTemp = setKey.split(";");
+                setTempId = setTemp[0].trim();
+                if (setTemp[1]) {
+                    setTempAlias = setTemp[1].split(",");
+                    for (i in setTempAlias) {
+                        setTempAlias[i] = setTempAlias[i].trim();
+                    }
+                } else {
+                    setTempAlias = null;
+                }
+                cog.template({ id: setTempId, node: setElem, alias: setTempAlias });
+            }
+            setElem.parentNode.removeChild(setElem);
         }
     });
 };
@@ -1450,6 +1454,7 @@ cog.isInDocument = function (el) {
     return false;
 };
 cog.pushNode = function (keys, ob, node) {
+    if (!(ob instanceof cog.observable)) { return; }
     var lastKey = cog.getLastKey(keys);
     if (lastKey == cog.keyword.index || lastKey == cog.keyword.length) {
         ob[cog.keyword.innerNodes][lastKey].push(node);
@@ -1458,7 +1463,7 @@ cog.pushNode = function (keys, ob, node) {
     }
 };
 cog.propCondition = function (obj) {
-    if (obj.hasOwnProperty("if")) {
+    if (obj && obj.hasOwnProperty("if")) {
         if (cog.if(obj.if[0])) {
             return cog.propCondition(obj.if[1]);
         } else {
