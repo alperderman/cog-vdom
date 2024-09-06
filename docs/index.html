@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CognitiveJS | Docs</title>
+</head>
+
+<body>
+
+  <div id="loading"
+    style="display: flex;justify-content: center;align-items: center;position: fixed;top:0;left:0;width: 100vw;height: 100vh;z-index: 1100;background-color: #fff;">
+    <div>
+      <img style="width:200px;" src="media/cog_logo.png">
+      <p style="text-align: center;">LOADING...</p>
+    </div>
+  </div>
+
+  <div cog-set="json:sidebar">
+    [
+      {"id":"intro", "title":"Introduction",
+        "sub":[
+        {"id":"intro_feat", "title":"Features"},
+        {"id":"intro_download", "title":"Download"},
+        {"id":"intro_usage", "title":"Basic Usage"}
+      ]},
+      {"id":"set", "title":"Defining Data",
+        "sub":[
+        {"id":"set_text", "title":"Plain Text"},
+        {"id":"set_json", "title":"JSON"},
+        {"id":"set_html", "title":"HTML"},
+        {"id":"set_raw", "title":"Raw Script"}
+      ]},
+      {"id":"prop", "title":"Properties",
+        "sub":[
+        {"id":"prop_style", "title":"Style"},
+        {"id":"prop_class", "title":"Class"},
+        {"id":"prop_attr", "title":"Attribute"},
+        {"id":"prop_context", "title":"Context"}
+      ]},
+      {"id":"if", "title":"Conditional Rendering"},
+      {"id":"src", "title":"External Sources"},
+      {"id":"esc", "title":"Escape Definitions"},
+      {"id":"event", "title":"Node Events"},
+      {"id":"live", "title":"Live Tokens"},
+      {"id":"template", "title":"Templates"},
+      {"id":"repeat", "title":"Repeaters"},
+      {"id":"code", "title":"Code Side",
+        "sub":[
+        {"id":"code_ob", "title":"Understanding Observables"},
+        {"id":"code_gset", "title":"cog.get() and cog.set()"},
+        {"id":"code_bound", "title":"cog.addBound() and cog.removeBound()"},
+        {"id":"code_func", "title":"Function Tokens"},
+        {"id":"code_kw", "title":"Token Keywords"},
+        {"id":"code_event", "title":"Render Events and Cache"},
+        {"id":"code_prio", "title":"Render Priority"}
+      ]},
+      {"id":"prep", "title":"Pre-processing Render"},
+      {"id":"examples", "title":"Examples"}
+    ]
+  </div>
+
+  <div cog-set="json:examples">
+    [
+      {
+      "title":"To-Do List Example",
+      "desc":"Probably the most common and easy example to stress test the basic capabilities of the Cognitive.",
+      "link":"../examples/todo.html"
+      },
+      {
+      "title":"Form Example",
+      "desc":"Form example showcases the live bindings.",
+      "link":"../examples/form.html"
+      },
+      {
+      "title":"Shopping Example",
+      "desc":"Shopping example uses Cognitive in its full potential, it includes most of the features of the Cognitive.",
+      "link":"../examples/shop.html"
+      },
+      {
+      "title":"Chat Room Example",
+      "desc":"Chat Room Example demonstrates how to deal with dynamic data using repeaters and templates.",
+      "link":"../examples/chat.html"
+      }
+    ]
+  </div>
+
+  <div cog-set="json:docs">[]</div>
+
+  <div cog-set="html:docs.0">
+    <div cog-src="sections/intro.html"></div>
+  </div>
+
+  <div cog-set="html:docs.1">
+    <div cog-src="sections/prop.html"></div>
+  </div>
+
+  <div cog-set="html:docs.2">
+    <div cog-src="sections/bind.html"></div>
+  </div>
+
+  <div cog-set="html:docs.3">
+    <div cog-src="sections/pre.html"></div>
+  </div>
+
+  <div cog-set="html:docs.4">
+    <div cog-src="sections/utility.html"></div>
+  </div>
+
+  <div cog-set="html:docs.5">
+    <div cog-src="sections/examples.html"></div>
+  </div>
+
+  <div cog-set="temp:sidebar">
+    <nav cog-repeat="_sidebar;menu;sidebar" class="nav flex-column nav-pills">
+      <a cog-prop="attr:{href:'#'+{{menu.id}}}" class="nav-link">{{menu.title}}</a>
+      <div cog-if="{{menu.sub}}" cog-repeat="_sidebarSub;sub;{{menu.sub}}">
+        <a cog-prop="attr:{href:'#'+{{sub.id}}}" class="ms-4 py-0 nav-link">{{sub.title}}</a>
+      </div>
+    </nav>
+  </div>
+
+  <script src="../dist/cog.js"></script>
+  <script>
+    cog.cache = false;
+    function trimPreCode() {
+      var i, elems = document.querySelectorAll("pre code"), elem, html, pattern;
+      for (i = 0; i < elems.length; i++) {
+        elem = elems[i];
+        html = elem.innerHTML;
+        pattern = html.match(/\s*\n[\t\s]*/);
+        elem.innerHTML = html.replace(new RegExp(pattern, "g"), '\n').trim();
+        elem.parentNode.innerHTML = elem.parentNode.innerHTML.trim();
+      }
+    }
+    //document.addEventListener(cog.event.afterRender, trimPreCode);
+    document.addEventListener(cog.event.afterRender, function () {
+      document.getElementById("loading").parentElement.removeChild(document.getElementById("loading"));
+      //trimPreCode();
+    });
+    cog.render("layout.html");
+  </script>
+</body>
+
+</html>

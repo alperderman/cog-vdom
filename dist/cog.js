@@ -667,7 +667,6 @@ cog.get = function (keys, ob) {
             ref = ref[key];
         }
         if (!ob && ref instanceof cog.observable) {
-            refType = ref[cog.keyword.type];
             ref = ref[cog.keyword.get];
         }
     }
@@ -1722,7 +1721,7 @@ cog.eval = function (str) {
     return cog.encapEval();
 };
 cog.isElement = function (elem) {
-    return elem instanceof Element || elem instanceof HTMLDocument;
+    return elem instanceof DocumentFragment || elem instanceof Element || elem instanceof HTMLDocument;
 };
 cog.isJSON = function (str) {
     var o;
