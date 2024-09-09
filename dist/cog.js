@@ -678,28 +678,42 @@ cog.get = function (keys, ob) {
     return ref;
 };
 cog.set = function (keys, val) {
-    var i, key, keysLength, ref = cog.data, content = cog.get(keys);
-    if (typeof keys === 'string') {
-        keys = keys.split(".");
-    }
-    keysLength = keys.length;
-    for (i = 0; i < keysLength; i++) {
-        key = keys[i];
-        if (i == keysLength - 1 && content !== val) {
-            if (!ref.hasOwnProperty(key) && ref instanceof cog.observable) {
-                ref[cog.keyword.set](val, key);
-            } else {
-                ref[key] = val;
+    var i, key, keysLength, ref, content, parent;
+    if (keys instanceof cog.observable) {
+        ref = keys;
+        content = ref[cog.keyword.get];
+        if (content !== val) {
+            key = ref[cog.keyword.key];
+            parent = ref[cog.keyword.parent];
+            parent[key] = val;
+        }
+    } else {
+        ref = cog.data;
+        content = cog.get(keys);
+        if (content !== val) {
+            if (typeof keys === 'string') {
+                keys = keys.split(".");
             }
-        } else {
-            if (!ref.hasOwnProperty(key)) {
-                if (ref instanceof cog.observable) {
-                    ref[cog.keyword.set]({}, key);
+            keysLength = keys.length;
+            for (i = 0; i < keysLength; i++) {
+                key = keys[i];
+                if (i == keysLength - 1) {
+                    if (!ref.hasOwnProperty(key) && ref instanceof cog.observable) {
+                        ref[cog.keyword.set](val, key);
+                    } else {
+                        ref[key] = val;
+                    }
                 } else {
-                    ref[key] = {};
+                    if (!ref.hasOwnProperty(key)) {
+                        if (ref instanceof cog.observable) {
+                            ref[cog.keyword.set]({}, key);
+                        } else {
+                            ref[key] = {};
+                        }
+                    }
+                    ref = ref[key];
                 }
             }
-            ref = ref[key];
         }
     }
 };

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CognitiveJS | Sandbox</title>
+  <link href="markdown.css" rel="stylesheet">
+  <style>
+    html,body{height:100%;}
+    .editorWrapper {
+      height: 100%;
+    }
+    .editor {
+      position: relative;
+      height: 100%;
+      min-height: 300px;
+      overflow: auto;
+    }
+    .iframeWrapper {
+      height: 100%;
+    }
+    iframe {
+      position: relative;
+      border: 0;
+      height: 100%;
+      min-height: 300px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body class="bg-gray-light">
+  
+  <div class="row gutter-3" style="height:100%;">
+    <div class="column col-12">
+      <div class="box-shadow-2" style="height:100%;">
+        <div class="d-flex col-12 p-3 text-white bg-gray-dark">
+          <h1 class="text-uppercase">Sandbox</h1>
+          <button class="btn bg-green box-shadow-1 ml-auto mx-1" onclick="runEditor()">Render</button>
+        </div>
+        <div class="bg-white p-3 markdown" style="height:100%;">
+          <div class="row gutter-1" style="height:100%;">
+            <div class="column col-12 lg:col-6">
+              <h2 class="text-center">Code</h2>
+              <div class="editorWrapper">
+                <div class="editor" id="code">
+                  &lt;html>
+                  &lt;head>
+                      &lt;title>CognitiveJS&lt;/title>
+                  &lt;/head>
+                  &lt;body>
+  
+                      &lt;p>{{hello}}&lt;/p>
+  
+                      &lt;script src="../dist/cog.js">&lt;/script>
+                      &lt;script>
+                          cog.data.hello = "Hello World!";
+                          cog.render();
+                      &lt;/script>
+  
+                  &lt;/body>
+                  &lt;/html>
+                </div>
+              </div>
+            </div>
+            <div class="column col-12 lg:col-6">
+              <h2 class="text-center">Preview</h2>
+              <div class="iframeWrapper">
+                <iframe id="preview" class="col-12"></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="ace/ace.js"></script>
+  <script>
+    var editors = {};
+    function runEditor(){
+      var code = editors["code"].getValue();
+      document.getElementById('preview').contentWindow.document.open();
+      document.getElementById('preview').contentWindow.document.write(code);
+      document.getElementById('preview').contentWindow.document.close();
+    }
+    function setupEditor(id, mode) {
+      trimpre(document.getElementById(id));
+      editor = ace.edit(id);
+      editor.setTheme("ace/theme/tomorrow_night");
+      editor.getSession().setMode(mode);
+      editor.setOptions({
+        fontSize: "11pt",
+        showLineNumbers: true,
+        useWorker: false
+      });
+      editor.setShowPrintMargin(false);
+      editor.setBehavioursEnabled(false);
+      editors[id] = editor;
+      function trimpre(el) {
+        var html = el.innerHTML;
+        var pattern = html.match(/\s*\n[\t\s]*/);
+        el.innerHTML = html.replace(new RegExp(pattern, "g"),'\n').trim();
+      }
+    }
+    setupEditor("code", "ace/mode/html");
+    runEditor();
+  </script>
+</body>
+</html>
