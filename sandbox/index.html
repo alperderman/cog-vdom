@@ -1,110 +1,143 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CognitiveJS | Sandbox</title>
-  <link href="markdown.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    integrity="sha384-SOnAn/m2fVJCwnbEYgD4xzrPtvsXdElhOVvR8ND1YjB5nhGNwwf7nBQlhfAwHAZC" crossorigin="anonymous">
   <style>
-    html,body{height:100%;}
-    .editorWrapper {
+    html,
+    body {
       height: 100%;
     }
-    .editor {
-      position: relative;
-      height: 100%;
-      min-height: 300px;
-      overflow: auto;
+
+    .split {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
-    .iframeWrapper {
-      height: 100%;
+
+    .gutter {
+      background-color: transparent;
+      background-repeat: no-repeat;
+      background-position: 50%;
+      background-color: #eee;
     }
-    iframe {
-      position: relative;
-      border: 0;
+
+    .gutter.gutter-horizontal {
+      cursor: col-resize;
+      background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+    }
+
+    .gutter.gutter-vertical {
+      cursor: row-resize;
+      background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=');
+    }
+
+    .split.split-horizontal,
+    .gutter.gutter-horizontal {
       height: 100%;
-      min-height: 300px;
-      overflow: auto;
+      float: left;
     }
   </style>
 </head>
-<body class="bg-gray-light">
-  
-  <div class="row gutter-3" style="height:100%;">
-    <div class="column col-12">
-      <div class="box-shadow-2" style="height:100%;">
-        <div class="d-flex col-12 p-3 text-white bg-gray-dark">
-          <h1 class="text-uppercase">Sandbox</h1>
-          <button class="btn bg-green box-shadow-1 ml-auto mx-1" onclick="runEditor()">Render</button>
+
+<body>
+
+  <div class="container-fluid p-0 h-100">
+    <div class="h-100 d-flex flex-column">
+      <div class="row g-0 align-items-center bg-dark p-3">
+        <div class="col-auto text-white">
+          <h1>CognitiveJS | Sandbox</h1>
         </div>
-        <div class="bg-white p-3 markdown" style="height:100%;">
-          <div class="row gutter-1" style="height:100%;">
-            <div class="column col-12 lg:col-6">
-              <h2 class="text-center">Code</h2>
-              <div class="editorWrapper">
-                <div class="editor" id="code">
-                  &lt;html>
-                  &lt;head>
-                      &lt;title>CognitiveJS&lt;/title>
-                  &lt;/head>
-                  &lt;body>
-  
-                      &lt;p>{{hello}}&lt;/p>
-  
-                      &lt;script src="../dist/cog.js">&lt;/script>
-                      &lt;script>
-                          cog.data.hello = "Hello World!";
-                          cog.render();
-                      &lt;/script>
-  
-                  &lt;/body>
-                  &lt;/html>
-                </div>
-              </div>
-            </div>
-            <div class="column col-12 lg:col-6">
-              <h2 class="text-center">Preview</h2>
-              <div class="iframeWrapper">
-                <iframe id="preview" class="col-12"></iframe>
-              </div>
-            </div>
+        <div class="col-auto ms-auto">
+          <button type="button" class="btn btn-primary" onclick="runEditor()">Render</button>
+        </div>
+      </div>
+      <div class="row g-0 flex-grow-1">
+        <div id="codeWrapper" class="col-auto overflow-auto p-0">
+          <div class="h-100" id="code">
+            &lt;!DOCTYPE html>
+            &lt;html>
+            &lt;body>
+
+            &lt;p>{{hello}}&lt;/p>
+
+            &lt;script src="../dist/cog.js">&lt;/script>
+            &lt;script>
+            cog.data.hello = "Hello World!";
+            cog.render();
+            &lt;/script>
+
+            &lt;/body>
+            &lt;/html>
           </div>
+
+        </div>
+        <div id="previewWrapper" class="col-auto overflow-auto p-0">
+          <iframe class="h-100 w-100" id="preview"></iframe>
         </div>
       </div>
     </div>
   </div>
 
   <script src="ace/ace.js"></script>
+  <script src="split.js"></script>
   <script>
-    var editors = {};
-    function runEditor(){
-      var code = editors["code"].getValue();
+    var editor;
+    function codeFromUrl() {
+      var url = new URL(window.location.href);
+      var code = url.searchParams.get("code");
+      if (code != null) {
+        document.getElementById("code").textContent = code;
+      }
+    }
+    function trimPre(el) {
+      var el = document.getElementById("code");
+      var html = el.innerHTML;
+      var pattern = html.match(/\s*\n[\t\s]*/);
+      el.innerHTML = html.replace(new RegExp(pattern, "g"), '\n').trim();
+    }
+    function setupEditor() {
+      var e = ace.edit("code");
+      e.setTheme("ace/theme/tomorrow_night");
+      e.getSession().setMode("ace/mode/html");
+      e.setOptions({
+        fontSize: "11pt",
+        showLineNumbers: true,
+        useWorker: false,
+        wrap: true
+      });
+      e.setShowPrintMargin(false);
+      e.setBehavioursEnabled(false);
+      editor = e;
+    }
+    function runEditor() {
+      var code = editor.getValue();
       document.getElementById('preview').contentWindow.document.open();
       document.getElementById('preview').contentWindow.document.write(code);
       document.getElementById('preview').contentWindow.document.close();
     }
-    function setupEditor(id, mode) {
-      trimpre(document.getElementById(id));
-      editor = ace.edit(id);
-      editor.setTheme("ace/theme/tomorrow_night");
-      editor.getSession().setMode(mode);
-      editor.setOptions({
-        fontSize: "11pt",
-        showLineNumbers: true,
-        useWorker: false
-      });
-      editor.setShowPrintMargin(false);
-      editor.setBehavioursEnabled(false);
-      editors[id] = editor;
-      function trimpre(el) {
-        var html = el.innerHTML;
-        var pattern = html.match(/\s*\n[\t\s]*/);
-        el.innerHTML = html.replace(new RegExp(pattern, "g"),'\n').trim();
-      }
-    }
-    setupEditor("code", "ace/mode/html");
+    codeFromUrl();
+    trimPre();
+    setupEditor();
     runEditor();
+    Split(["#codeWrapper", "#previewWrapper"], {
+      sizes: [50, 50],
+      minSize: 300,
+      cursor: 'col-resize',
+      onDrag: function () {
+        editor.resize();
+      }
+    });
   </script>
 </body>
+
 </html>
