@@ -20,70 +20,70 @@
 
   <div cog-set="json:sidebar">
     [
-      {"id":"intro", "title":"Introduction",
-        "sub":[
-        {"id":"intro_feat", "title":"Features"},
-        {"id":"intro_download", "title":"Download"},
-        {"id":"intro_usage", "title":"Basic Usage"}
-      ]},
-      {"id":"set", "title":"Defining Data",
-        "sub":[
-        {"id":"set_text", "title":"Plain Text"},
-        {"id":"set_json", "title":"JSON"},
-        {"id":"set_html", "title":"HTML"},
-        {"id":"set_raw", "title":"Raw Script"}
-      ]},
-      {"id":"prop", "title":"Properties",
-        "sub":[
-        {"id":"prop_style", "title":"Style"},
-        {"id":"prop_class", "title":"Class"},
-        {"id":"prop_attr", "title":"Attribute"},
-        {"id":"prop_context", "title":"Context"}
-      ]},
-      {"id":"if", "title":"Conditional Rendering"},
-      {"id":"src", "title":"External Sources"},
-      {"id":"esc", "title":"Escape Definitions"},
-      {"id":"event", "title":"Node Events"},
-      {"id":"live", "title":"Live Tokens"},
-      {"id":"template", "title":"Templates"},
-      {"id":"repeat", "title":"Repeaters"},
-      {"id":"code", "title":"Code Side",
-        "sub":[
-        {"id":"code_ob", "title":"Understanding Observables"},
-        {"id":"code_gset", "title":"cog.get() and cog.set()"},
-        {"id":"code_bound", "title":"cog.addBound() and cog.removeBound()"},
-        {"id":"code_func", "title":"Function Tokens"},
-        {"id":"code_kw", "title":"Token Keywords"},
-        {"id":"code_event", "title":"Render Events and Cache"},
-        {"id":"code_prio", "title":"Render Priority"}
-      ]},
-      {"id":"prep", "title":"Pre-processing Render"},
-      {"id":"examples", "title":"Examples"}
+    {"id":"intro", "title":"Introduction",
+    "sub":[
+    {"id":"intro_feat", "title":"Features"},
+    {"id":"intro_download", "title":"Download"},
+    {"id":"intro_usage", "title":"Basic Usage"}
+    ]},
+    {"id":"set", "title":"Defining Data",
+    "sub":[
+    {"id":"set_text", "title":"Plain Text"},
+    {"id":"set_json", "title":"JSON"},
+    {"id":"set_html", "title":"HTML"},
+    {"id":"set_raw", "title":"Raw Script"}
+    ]},
+    {"id":"prop", "title":"Properties",
+    "sub":[
+    {"id":"prop_style", "title":"Style"},
+    {"id":"prop_class", "title":"Class"},
+    {"id":"prop_attr", "title":"Attribute"},
+    {"id":"prop_context", "title":"Context"}
+    ]},
+    {"id":"if", "title":"Conditional Rendering"},
+    {"id":"src", "title":"External Sources"},
+    {"id":"esc", "title":"Escape Definitions"},
+    {"id":"event", "title":"Node Events"},
+    {"id":"live", "title":"Live Tokens"},
+    {"id":"template", "title":"Templates"},
+    {"id":"repeat", "title":"Repeaters"},
+    {"id":"code", "title":"Code Side",
+    "sub":[
+    {"id":"code_ob", "title":"Understanding Observables"},
+    {"id":"code_gset", "title":"cog.get() and cog.set()"},
+    {"id":"code_bound", "title":"cog.addBound() and cog.removeBound()"},
+    {"id":"code_func", "title":"Function Tokens"},
+    {"id":"code_kw", "title":"Token Keywords"},
+    {"id":"code_event", "title":"Render Events and Cache"},
+    {"id":"code_prio", "title":"Render Priority"}
+    ]},
+    {"id":"prep", "title":"Pre-processing Render"},
+    {"id":"examples", "title":"Examples"}
     ]
   </div>
 
   <div cog-set="json:examples">
     [
-      {
-      "title":"To-Do List Example",
-      "desc":"Probably the most common and easy example to stress test the basic capabilities of the Cognitive.",
-      "link":"../examples/todo.html"
-      },
-      {
-      "title":"Form Example",
-      "desc":"Form example showcases the live bindings.",
-      "link":"../examples/form.html"
-      },
-      {
-      "title":"Shopping Example",
-      "desc":"Shopping example uses Cognitive in its full potential, it includes most of the features of the Cognitive.",
-      "link":"../examples/shop.html"
-      },
-      {
-      "title":"Chat Room Example",
-      "desc":"Chat Room Example demonstrates how to deal with dynamic data using repeaters and templates.",
-      "link":"../examples/chat.html"
-      }
+    {
+    "title":"To-Do List Example",
+    "desc":"Probably the most common and easy example to stress test the basic capabilities of the Cognitive.",
+    "link":"../examples/todo.html"
+    },
+    {
+    "title":"Form Example",
+    "desc":"Form example showcases the live bindings.",
+    "link":"../examples/form.html"
+    },
+    {
+    "title":"Chat Room Example",
+    "desc":"Chat Room Example demonstrates how to deal with dynamic data using repeaters and templates.",
+    "link":"../examples/chat.html"
+    },
+    {
+    "title":"Shopping Example",
+    "desc":"Shopping example uses Cognitive in its full potential, it includes most of the features of the Cognitive.",
+    "link":"../examples/shop.html"
+    }
     ]
   </div>
 
@@ -125,20 +125,8 @@
   <script src="../dist/cog.js"></script>
   <script>
     cog.cache = false;
-    function trimPreCode() {
-      var i, elems = document.querySelectorAll("pre code"), elem, html, pattern;
-      for (i = 0; i < elems.length; i++) {
-        elem = elems[i];
-        html = elem.innerHTML;
-        pattern = html.match(/\s*\n[\t\s]*/);
-        elem.innerHTML = html.replace(new RegExp(pattern, "g"), '\n').trim();
-        elem.parentNode.innerHTML = elem.parentNode.innerHTML.trim();
-      }
-    }
-    //document.addEventListener(cog.event.afterRender, trimPreCode);
     document.addEventListener(cog.event.afterRender, function () {
       document.getElementById("loading").parentElement.removeChild(document.getElementById("loading"));
-      //trimPreCode();
     });
     cog.render("layout.html");
   </script>

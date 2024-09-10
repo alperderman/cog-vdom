@@ -25,10 +25,9 @@
     }
 
     .gutter {
-      background-color: transparent;
       background-repeat: no-repeat;
       background-position: 50%;
-      background-color: #eee;
+      background-color: #444;
     }
 
     .gutter.gutter-horizontal {
@@ -58,7 +57,7 @@
           <h1>CognitiveJS | Sandbox</h1>
         </div>
         <div class="col-auto ms-auto">
-          <button type="button" class="btn btn-primary" onclick="runEditor()">Render</button>
+          <button type="button" class="btn btn-primary" onclick="sandbox.render()">Render</button>
         </div>
       </div>
       <div class="row g-0 flex-grow-1">
@@ -79,7 +78,6 @@
             &lt;/body>
             &lt;/html>
           </div>
-
         </div>
         <div id="previewWrapper" class="col-auto overflow-auto p-0">
           <iframe class="h-100 w-100" id="preview"></iframe>
@@ -91,52 +89,73 @@
   <script src="ace/ace.js"></script>
   <script src="split.js"></script>
   <script>
-    var editor;
-    function codeFromUrl() {
+    var sandbox = {};
+    sandbox.editor = null;
+    sandbox.base = null;
+    sandbox.init = function () {
+      sandbox.trimCode();
+      sandbox.setupEditor();
       var url = new URL(window.location.href);
-      var code = url.searchParams.get("code");
-      if (code != null) {
-        document.getElementById("code").textContent = code;
+      var urlCode = url.searchParams.get("code");
+      var src = url.searchParams.get("src");
+      if (src != null) {
+        var xhr = new XMLHttpRequest(), path;
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState == 4) {
+            sandbox.editor.getSession().setValue(xhr.responseText);
+            sandbox.render();
+          }
+        };
+        xhr.open("GET", src, true);
+        xhr.send();
+        path = src.split("/");
+        path.pop();
+        sandbox.base = path.join("/") + "/";
+      } else {
+        if (urlCode != null) {
+          sandbox.editor.getSession().setValue(urlCode);
+        }
+        sandbox.render();
       }
-    }
-    function trimPre(el) {
+    };
+    sandbox.trimCode = function () {
       var el = document.getElementById("code");
       var html = el.innerHTML;
-      var pattern = html.match(/\s*\n[\t\s]*/);
-      el.innerHTML = html.replace(new RegExp(pattern, "g"), '\n').trim();
-    }
-    function setupEditor() {
-      var e = ace.edit("code");
-      e.setTheme("ace/theme/tomorrow_night");
-      e.getSession().setMode("ace/mode/html");
-      e.setOptions({
+      el.innerHTML = html.replace(new RegExp(html.match(/\s*\n[\t\s]*/), "g"), '\n').trim();
+    };
+    sandbox.setupEditor = function () {
+      sandbox.editor = ace.edit("code");
+      sandbox.editor.setTheme("ace/theme/tomorrow_night");
+      sandbox.editor.getSession().setMode("ace/mode/html");
+      sandbox.editor.setOptions({
         fontSize: "11pt",
         showLineNumbers: true,
         useWorker: false,
         wrap: true
       });
-      e.setShowPrintMargin(false);
-      e.setBehavioursEnabled(false);
-      editor = e;
-    }
-    function runEditor() {
-      var code = editor.getValue();
-      document.getElementById('preview').contentWindow.document.open();
-      document.getElementById('preview').contentWindow.document.write(code);
-      document.getElementById('preview').contentWindow.document.close();
-    }
-    codeFromUrl();
-    trimPre();
-    setupEditor();
-    runEditor();
-    Split(["#codeWrapper", "#previewWrapper"], {
-      sizes: [50, 50],
-      minSize: 300,
-      cursor: 'col-resize',
-      onDrag: function () {
-        editor.resize();
+      sandbox.editor.setShowPrintMargin(false);
+      sandbox.editor.setBehavioursEnabled(false);
+      Split(["#codeWrapper", "#previewWrapper"], {
+        sizes: [50, 50],
+        minSize: 300,
+        cursor: 'col-resize',
+        onDrag: function () {
+          sandbox.editor.resize();
+        }
+      });
+    };
+    sandbox.render = function () {
+      var code = sandbox.editor.getValue(), preview = document.getElementById('preview'), baseEl;
+      preview.contentWindow.document.open();
+      preview.contentWindow.document.write(code);
+      if (sandbox.base != null && preview.contentDocument.head.querySelector("base") == null) {
+        baseEl = preview.contentDocument.createElement("base");
+        baseEl.setAttribute("href", sandbox.base);
+        preview.contentDocument.head.appendChild(baseEl);
       }
-    });
+      preview.contentWindow.document.close();
+    };
+    sandbox.init();
   </script>
 </body>
 

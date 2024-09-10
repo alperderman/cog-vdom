@@ -7,6 +7,7 @@
                 <h5 class="card-title">{{item.title}}</h5>
                 <p class="card-text">{{item.desc}}</p>
                 <a cog-prop="attr:{href:{{item.link}}}" target="_blank" class="btn btn-primary">View</a>
+                <a cog-prop="attr:{href:'../sandbox/index.html?src='+encodeURIComponent({{item.link}})}" target="_blank" class="btn btn-info">Open in Sandbox</a>
             </div>
         </div>
     </div>

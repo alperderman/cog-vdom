@@ -68,11 +68,22 @@
     integrity="sha512-gU7kztaQEl7SHJyraPfZLQCNnrKdaQi5ndOyt4L4UPL/FHDd/uB9Je6KDARIqwnNNE27hnqoWLBq+Kpe4iHfeQ=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
-    document.querySelectorAll("pre code").forEach(function (el) {
-      var html = el.innerHTML;
-      var pattern = html.match(/\s*\n[\t\s]*/);
-      el.innerHTML = html.replace(new RegExp(pattern, "g"), '\n').trim();
-    });
+    function openSandbox() {
+      var id = cog.event.target.getAttribute("code-id");
+      var code = encodeURIComponent(document.getElementById(id).textContent);
+      window.open("../sandbox/index.html?code=" + code, '_blank').focus();
+    }
+    function trimPreCode() {
+      var i, elems = document.querySelectorAll("pre code"), elem, html, pattern;
+      for (i = 0; i < elems.length; i++) {
+        elem = elems[i];
+        html = elem.innerHTML;
+        pattern = html.match(/\s*\n[\t\s]*/);
+        elem.innerHTML = html.replace(new RegExp(pattern, "g"), '\n').trim();
+        elem.parentNode.innerHTML = elem.parentNode.innerHTML.trim();
+      }
+    }
+    trimPreCode();
     hljs.highlightAll();
   </script>
 </body>
