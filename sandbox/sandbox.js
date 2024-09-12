@@ -72,8 +72,7 @@ sandbox.setupEditor = function () {
     sandbox.editor.setBehavioursEnabled(false);
     Split(["#codeWrapper", "#previewWrapper"], {
         sizes: [50, 50],
-        minSize: 300,
-        cursor: 'col-resize',
+        minSize: 0,
         onDrag: function () {
             sandbox.editor.resize();
         }

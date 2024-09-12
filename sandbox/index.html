@@ -86,16 +86,16 @@
     <div class="h-100 d-flex flex-column">
       <div class="row g-0 align-items-center bg-dark p-3">
         <div class="col-auto text-white">
-          <h1>CognitiveJS | Sandbox</h1>
+          <h2>CognitiveJS | Sandbox</h2>
         </div>
         <div class="col-auto ms-auto">
           <button type="button" class="btn btn-success" onclick="sandbox.shareModal()">Share</button>
           <button type="button" class="btn btn-primary" onclick="sandbox.render()">Render</button>
         </div>
       </div>
-      <div class="row g-0 flex-grow-1">
-        <div id="codeWrapper" class="col-auto overflow-auto p-0">
-          <div class="h-100" id="code">
+      <div class="d-flex flex-row flex-grow-1">
+        <div id="codeWrapper" class="overflow-auto">
+          <div class="h-100 w-100" id="code">
             &lt;!DOCTYPE html>
             &lt;html>
             &lt;body>
@@ -112,7 +112,7 @@
             &lt;/html>
           </div>
         </div>
-        <div id="previewWrapper" class="col-auto overflow-auto p-0">
+        <div id="previewWrapper" class="overflow-auto">
           <iframe class="h-100 w-100" id="preview"></iframe>
         </div>
       </div>

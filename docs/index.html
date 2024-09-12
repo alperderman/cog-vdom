@@ -20,9 +20,8 @@
 
   <div cog-set="json:sidebar">
     [
-    {"id":"intro", "title":"Introduction",
+    {"id":"intro", "title":"Introduction", "temp":"intro",
     "sub":[
-    {"id":"intro_feat", "title":"Features"},
     {"id":"intro_download", "title":"Download"},
     {"id":"intro_usage", "title":"Basic Usage"}
     ]},
@@ -87,30 +86,8 @@
     ]
   </div>
 
-  <div cog-set="json:docs">[]</div>
-
-  <div cog-set="html:docs.0">
+  <div cog-set="temp:intro;section">
     <div cog-src="sections/intro.html"></div>
-  </div>
-
-  <div cog-set="html:docs.1">
-    <div cog-src="sections/prop.html"></div>
-  </div>
-
-  <div cog-set="html:docs.2">
-    <div cog-src="sections/bind.html"></div>
-  </div>
-
-  <div cog-set="html:docs.3">
-    <div cog-src="sections/pre.html"></div>
-  </div>
-
-  <div cog-set="html:docs.4">
-    <div cog-src="sections/utility.html"></div>
-  </div>
-
-  <div cog-set="html:docs.5">
-    <div cog-src="sections/examples.html"></div>
   </div>
 
   <div cog-set="temp:sidebar">

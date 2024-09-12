@@ -53,8 +53,8 @@ cog.token = {
 cog.regex = {
     head: new RegExp("<head[^>]*>((.|[\\\n\\\r])*)<\\\/head>", "im"),
     body: new RegExp("<body[^>]*>((.|[\\\n\\\r])*)<\\\/body>", "im"),
-    token: new RegExp(cog.token.open + "[\\s\\S]*?" + cog.token.close),
-    node: new RegExp("(?:" + cog.token.open + "(.*?)" + cog.token.close + ")|([^]*?)(?=" + cog.token.open + "|$)", "gm")
+    token: new RegExp(cog.token.open + "[a-zA-Z0-9\\$._-\\s]*?" + cog.token.close),
+    node: new RegExp("(?:" + cog.token.open + "([a-zA-Z0-9\\$._-\\s]*?)" + cog.token.close + ")|([^]*?)(?=" + cog.token.open + "|$)", "gm")
 };
 cog.render = function (layoutSrc) {
     var i, layout, scripts;
@@ -146,7 +146,7 @@ cog.bind = function (dom, callback) {
     var i, ii, iterator, node, ob, nodeAttr, nodeAttrs, newNodeAttrs, nodeContent, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
     if (dom == null) { dom = document.body; }
     while (tempNode = dom.querySelector("[" + cog.label.temp + "]")) {
-        tempAttr = tempNode.getAttribute(cog.label.temp).split(";");
+        tempAttr = cog.replaceText(tempNode.getAttribute(cog.label.temp)).split(";");
         tempId = tempAttr[0].trim();
         if (tempAttr.length == 3) {
             tempToken = tempAttr[2].split(",");
@@ -298,7 +298,7 @@ cog.bind = function (dom, callback) {
 cog.bindRepeats = function (dom) {
     var i, repeatNode, repeatAttr, repeatId, repeatToken, repeatTokenObj, repeatAlias, repeatData, repeatDataLength, repeatDataToken, repeatDataKey, repeatTemp;
     while (repeatNode = dom.querySelector("[" + cog.label.repeat + "]")) {
-        repeatAttr = repeatNode.getAttribute(cog.label.repeat).split(";");
+        repeatAttr = cog.replaceText(repeatNode.getAttribute(cog.label.repeat)).split(";");
         repeatId = repeatAttr[0].trim();
         repeatToken = repeatAttr[2].split(",");
         for (i in repeatToken) {
@@ -1490,6 +1490,16 @@ cog.propCondition = function (obj) {
         return obj;
     }
 };
+cog.replaceText = function (str) {
+    var replace = cog.splitTokens(str), pureToken, token, content, result = str;
+    for (pureToken in replace) {
+        token = cog.token.open + pureToken + cog.token.close;
+        if (str.indexOf(token) === -1) { continue; }
+        content = replace[pureToken];
+        result = result.replace(token, content);
+    }
+    return result;
+};
 cog.replaceTextNode = function (elem, replace, callback) {
     if (Object.keys(replace).length === 0) { return; }
     var nodes = [], i = 0, parent, idx, oldNode, token, content, pureToken;
@@ -1507,7 +1517,7 @@ cog.replaceTextNode = function (elem, replace, callback) {
         for (pureToken in replace) {
             token = cog.token.open + pureToken + cog.token.close;
             idx = parent.nodeValue.indexOf(token);
-            if (idx == -1) { continue; }
+            if (idx === -1) { continue; }
             content = replace[pureToken];
             oldNode = parent.splitText(idx);
             oldNode.nodeValue = oldNode.nodeValue.replace(token, '');

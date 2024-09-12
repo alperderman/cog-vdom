@@ -1,4 +1,4 @@
-<h1 cog-prop="attr:{id:{{sidebar.0.id}}}">{{sidebar.0.title}}</h1>
+<h1 cog-prop="attr:{id:{{section.id}}}">{{section.title}}</h1>
 <p>CognitiveJS is a front-end framework/library, aims to make web development easier by separating the content from the layout. It modifies the DOM according to your declarations and these declarations are simple enough to create and manage because they are directly written inside the HTML part of your page. On the script side, CognitiveJS functions are completely seperate from each other like a library, so that it doesn't force you to write your code or algorithm in a specific way, makes you focus on the "real logic" behind your project. So basically, <b>your project is not inside CognitiveJS</b>, instead <b>CognitiveJS is inside your project</b>.</p>
 <p>In addition to that, Cognitive doesn't have dependencies, it is all inside a single JS file and adding it to your code via script tag is all that its needed to get started. You don't have to import anything else.</p>
 <p>One other benefit of using CognitiveJS is, it is stripped down from almost if not all preliminary actions and design patterns such as; extending a highly specific class somewhere in your project, defining a root element (for god knows why), trying to strictly seperate "models", "views" and "controllers" in an environment where its somewhat has to be conjoined together to make it work, or the other way around where they are so mixed together that it is a complete mess to work on with (JSX).</p>
@@ -9,10 +9,10 @@
 <p>With that in mind, the terms content and layout is also different than models and views, MVC in definition, is too strict for web development and it is just not viable to use it in a meaningful way without crossing set boundaries (unless thats what you want, I personally don't condone it). Content and layout, on the other hand is made-up arbitary terms to <i>loosely</i> define what is considered raw data and what is considered part of the design of your project. What Cognitive does behind the scene is, it only stitches two documents together, fetches the external components and renders them to reduce the repetition of code (solution for problem zero mentioned above). It is completely up to you to decide which part is content and which part is layout. More details on <a href="#prep">Pre-processing Render</a> section.</p>
 <p>And of course, if you don't want to seperate the layout, templates and components, you can also bundle them in a single file like in the examples. As previously mentioned, CognitiveJS is flexible in terms of how you write your code, it doesn't restrict you in any way.</p>
 <hr>
-<h3 cog-prop="attr:{id:{{sidebar.0.sub.1.id}}}">{{sidebar.0.sub.1.title}}</h3>
+<h3 cog-prop="attr:{id:{{section.sub.0.id}}}">{{section.sub.0.title}}</h3>
 <a class="btn btn-primary mb-2" target="_blank" href="https://github.com/alperderman/CognitiveJS"><i class="fas fa-external-link-alt mr-1"></i> Download from GitHub</a>
 <hr>
-<h3 cog-prop="attr:{id:{{sidebar.0.sub.2.id}}}">{{sidebar.0.sub.2.title}}</h3>
+<h3 cog-prop="attr:{id:{{section.sub.1.id}}}">{{section.sub.1.title}}</h3>
 <p>Before we get in to the rest of the documentation I'd like first clarify the terms used inside the documentation;</p>
 <p><b>Tokens:</b> They are variables encapsulated with curly brackets and seperated with dots, sometimes they are also called keys in the documentation e.g. <code>{{foo}}</code>.</p>
 <p><b>Observables:</b> This term is taken directly from <a href="https://knockoutjs.com/" target="_blank">Knockout</a>. It represents the custom objects used to <i>observe</i> changes inside <code>cog.data</code>. More information at <a href="#code_ob">Understanding Observables</a> section.</p>
@@ -52,10 +52,9 @@
                 &lt;/head>
                 &lt;body>
     
-                    &lt;div data-set="text:hello">Hello World&lt;/div>
-    
                     &lt;script src="cog.js">&lt;/script>
                     &lt;script>
+                        cog.data.hello = "Hello World!";
                         cog.render("path/to/layout.html");
                     &lt;/script>
     
@@ -74,7 +73,7 @@
                 &lt;/head>
                 &lt;body>
     
-                    &lt;p data-prop="text:'%hello%'">&lt;/p>
+                    &lt;p>{{hello}}&lt;/p>
     
                     &lt;script src="your_scripts.js">&lt;/script>
 
