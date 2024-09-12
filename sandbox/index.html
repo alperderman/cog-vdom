@@ -60,10 +60,11 @@
         <div class="modal-body">
           <label for="shareInput" class="form-label">URL:</label>
           <input class="form-control" id="shareInput">
+          <div id="shareLimit" class="form-text text-danger">Code length exceeds 4096 bytes limit!</div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary" onclick="sandbox.copyUrl()">Copy</button>
+          <button type="button" class="btn btn-primary" id="shareCopy" onclick="sandbox.copyUrl()">Copy</button>
         </div>
       </div>
     </div>
@@ -85,15 +86,16 @@
   <div class="container-fluid p-0 h-100">
     <div class="h-100 d-flex flex-column">
       <div class="row g-0 align-items-center bg-dark p-3">
-        <div class="col-auto text-white">
+        <div class="col-12 col-md-auto text-white text-center">
           <h2>CognitiveJS | Sandbox</h2>
         </div>
         <div class="col-auto ms-auto">
-          <button type="button" class="btn btn-success" onclick="sandbox.shareModal()">Share</button>
-          <button type="button" class="btn btn-primary" onclick="sandbox.render()">Render</button>
+          <button type="button" class="btn btn-outline-light" onclick="sandbox.toggleSplitDirection()"><i class="fa fa-columns" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-success" onclick="sandbox.shareModal()"><i class="fa fa-share-alt" aria-hidden="true"></i> Share</button>
+          <button type="button" class="btn btn-primary" onclick="sandbox.render()"><i class="fa fa-refresh" aria-hidden="true"></i> Render</button>
         </div>
       </div>
-      <div class="d-flex flex-row flex-grow-1">
+      <div id="splitWrapper" class="flex-grow-1 d-flex flex-row">
         <div id="codeWrapper" class="overflow-auto">
           <div class="h-100 w-100" id="code">
             &lt;!DOCTYPE html>
