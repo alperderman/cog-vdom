@@ -60,9 +60,7 @@ cog.render = function (layoutSrc) {
     var i, layout, scripts;
     step_start();
     function convert_data() {
-        cog.data = new cog.observable(cog.data, function (a) {
-            cog.rebind(a);
-        });
+        cog.data = new cog.observable(cog.data, cog.rebind);
     }
     function step_start() {
         if (typeof layoutSrc === "string") {
@@ -165,6 +163,7 @@ cog.bind = function (dom, callback) {
         tempNode.removeAttribute(cog.label.temp);
         if (cog.templates.hasOwnProperty(tempId)) {
             tempRender = cog.template({ id: tempId, data: tempTokenObj, bind: true, fragment: true });
+
             tempNode.parentNode.replaceChild(tempRender, tempNode);
         }
     }
@@ -613,7 +612,17 @@ cog.addBound = function (dataKeys, targetKeys) {
             cog.addBound(dataKeys, targetKeys);
         });
     } else {
-        var dataKey = cog.get(dataKeys, true), targetKey = cog.get(targetKeys, true);
+        var dataKey, targetKey;
+        if (dataKeys instanceof cog.observable) {
+            dataKey = dataKeys;
+        } else {
+            dataKey = cog.get(dataKeys, true);
+        }
+        if (targetKeys instanceof cog.observable) {
+            targetKey = targetKeys;
+        } else {
+            targetKey = cog.get(targetKeys, true);
+        }
         if (dataKey[cog.keyword.bound].indexOf(targetKey) === -1) {
             dataKey[cog.keyword.bound].push(targetKey);
         }
@@ -628,7 +637,17 @@ cog.removeBound = function (dataKeys, targetKeys) {
             cog.removeBound(dataKeys, targetKeys);
         });
     } else {
-        var dataKey = cog.get(dataKeys, true), targetKey = cog.get(targetKeys, true);
+        var dataKey, targetKey;
+        if (dataKeys instanceof cog.observable) {
+            dataKey = dataKeys;
+        } else {
+            dataKey = cog.get(dataKeys, true);
+        }
+        if (targetKeys instanceof cog.observable) {
+            targetKey = targetKeys;
+        } else {
+            targetKey = cog.get(targetKeys, true);
+        }
         if (dataKey[cog.keyword.bound].indexOf(targetKey) !== -1) {
             dataKey[cog.keyword.bound].splice(dataKey[cog.keyword.bound].indexOf(targetKey), 1);
         }
@@ -673,7 +692,7 @@ cog.get = function (keys, ob) {
     if (typeof ref === 'function') {
         parentKeys = cog.shallowClone(keys);
         parentKeys.pop();
-        ref = ref(parentKeys, keys);
+        ref = ref(cog.get(parentKeys, true), cog.get(keys, true));
     }
     return ref;
 };
@@ -897,9 +916,6 @@ cog.setElems = function (callback) {
             head.removeAttribute(cog.label.head);
             document.head.appendChild(head);
         }
-        if (typeof callback === 'function') {
-            callback();
-        }
         while (setElem = document.querySelector("[" + cog.label.set + "]")) {
             setAttr = setElem.getAttribute(cog.label.set);
             setAttrSplit = setAttr.split(":");
@@ -925,6 +941,7 @@ cog.setElems = function (callback) {
             }
             if (setType == "temp") {
                 cog.extractAssets(setElem);
+
                 setTemp = setKey.split(";");
                 setTempId = setTemp[0].trim();
                 if (setTemp[1]) {
@@ -938,6 +955,9 @@ cog.setElems = function (callback) {
                 cog.template({ id: setTempId, node: setElem, alias: setTempAlias });
             }
             setElem.parentNode.removeChild(setElem);
+        }
+        if (typeof callback === 'function') {
+            callback();
         }
     });
 };
@@ -1622,6 +1642,15 @@ cog.cleanEscapeTags = function () {
         elem.removeAttribute(cog.label.escapeTag);
     }
 };
+cog.removeRedundantProps = function () {
+    var i = 0, prop;
+    while (prop = cog.props[i]) {
+        if (!cog.isInDocument(prop.node)) {
+            cog.props.splice(i, 1);
+        }
+        i++;
+    }
+};
 cog.extractAssets = function (elem) {
     if (elem == null) { elem = document; }
     var i, links = elem.getElementsByTagName("link"), link, styles = elem.getElementsByTagName("style"), style, scripts = elem.getElementsByTagName("script"), script;
@@ -1938,5 +1967,6 @@ cog.getScript = function (url, callback) {
 };
 cog.init = function () {
     cog.addEventListenerAll(document.documentElement, cog.eventListener);
+    setInterval(cog.removeRedundantProps, 30000);
 };
 cog.init();

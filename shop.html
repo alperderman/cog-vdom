@@ -13,12 +13,12 @@
     <h2>SHOP</h2>
     <hr>
     <button
-        onclick='cog.data.products.unshift({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){parent.push("price");cog.addBound(parent, target);return cog.get(parent) > 400;}, rating:6, category:"smartphones"});'>UNSHIFT</button>
+        onclick='cog.data.products.unshift({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){cog.addBound(parent.price, target);return cog.get(parent.price) > 400;}, rating:6, category:"smartphones"});'>UNSHIFT</button>
     <button onclick="cog.data.products.splice(5,4)">SPLICE</button>
     <button onclick="cog.data.products.shift()">SHIFT</button>
     <hr>
     <button
-        onclick='cog.data.products.push({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){parent.push("price");cog.addBound(parent, target);return cog.get(parent) > 400;}, rating:6, category:"smartphones"});'>PUSH</button>
+        onclick='cog.data.products.push({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){cog.addBound(parent.price, target);return cog.get(parent.price) > 400;}, rating:6, category:"smartphones"});'>PUSH</button>
     <button onclick="cog.data.products.pop()">POP</button>
     <button onclick="cog.data.products.splice(cog.data.products.length-10,5)">SPLICE</button>
     <hr>
@@ -36,12 +36,12 @@
         </tbody>
     </table>
     <button
-        onclick='cog.data.products.unshift({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){parent.push("price");cog.addBound(parent, target);return cog.get(parent) > 400;}, rating:6, category:"smartphones"});'>UNSHIFT</button>
+        onclick='cog.data.products.unshift({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){cog.addBound(parent.price, target);return cog.get(parent.price) > 400;}, rating:6, category:"smartphones"});'>UNSHIFT</button>
     <button onclick="cog.data.products.splice(5,4)">SPLICE</button>
     <button onclick="cog.data.products.shift()">SHIFT</button>
     <hr>
     <button
-        onclick='cog.data.products.push({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){parent.push("price");cog.addBound(parent, target);return cog.get(parent) > 400;}, rating:6, category:"smartphones"});'>PUSH</button>
+        onclick='cog.data.products.push({title:"IPhone 120 PRO MAX ULTRA LARGE", description:"WHY ANYONE WOULD BUY THIS PHONE!", price:65999, priceCondition: function(parent, target){cog.addBound(parent.price, target);return cog.get(parent.price) > 400;}, rating:6, category:"smartphones"});'>PUSH</button>
     <button onclick="cog.data.products.pop()">POP</button>
     <button onclick="cog.data.products.splice(cog.data.products.length-10,5)">SPLICE</button>
 
@@ -55,9 +55,8 @@
             cog.data.products = cog.data.products.concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products).concat(cog.data.products);
             for (var i = 0; i < cog.data.products.length; i++) {
                 cog.data.products[i].priceCondition = function (parent, target) {
-                    var price = parent.concat(["price"]);
-                    cog.addBound(price, target);
-                    return cog.get(price) > 400;
+                    cog.addBound(parent.price, target);
+                    return cog.get(parent.price) > 400;
                 };
             }
             cog.render();

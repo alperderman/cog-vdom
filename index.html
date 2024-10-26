@@ -115,7 +115,7 @@
 
         cog.data.fruits = ["apple", "pear", "banana"];
         cog.data.arr = [1, 2, 3, 4];
-        cog.data.obj = { name: "alex", func: function (parent, target) { return target.join("."); } };
+        cog.data.obj = { name: "alex", func: function (parent, target) { return target[cog.keyword.keys].join("."); } };
         cog.data.prim = "nice JOB!";
         cog.render();
     </script>
