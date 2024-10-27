@@ -25,29 +25,16 @@
     {"id":"intro_download", "title":"Download"},
     {"id":"intro_usage", "title":"Basic Usage"}
     ]},
-    {"id":"extren", "title":"External Render"},
-    {"id":"set", "title":"Defining Data",
-    "sub":[
-    {"id":"set_text", "title":"Plain Text"},
-    {"id":"set_json", "title":"JSON"},
-    {"id":"set_html", "title":"HTML"},
-    {"id":"set_raw", "title":"Raw Script"}
-    ]},
-    {"id":"prop", "title":"Properties",
-    "sub":[
-    {"id":"prop_style", "title":"Style"},
-    {"id":"prop_class", "title":"Class"},
-    {"id":"prop_attr", "title":"Attribute"},
-    {"id":"prop_context", "title":"Context"}
-    ]},
-    {"id":"if", "title":"Conditional Rendering"},
-    {"id":"src", "title":"External Sources"},
-    {"id":"esc", "title":"Escape Definitions"},
+    {"id":"defdata", "title":"Defining Data", "temp":"defdata"},
+    {"id":"prop", "title":"Properties", "temp":"prop"},
+    {"id":"src", "title":"External Sources", "temp":"src"},
+    {"id":"esc", "title":"Escape Definitions", "temp":"esc"},
     {"id":"event", "title":"Node Events"},
     {"id":"live", "title":"Live Tokens"},
+    {"id":"if", "title":"Conditional Rendering", "temp":"if"},
     {"id":"template", "title":"Templates"},
     {"id":"repeat", "title":"Repeaters"},
-    {"id":"code", "title":"Code Side",
+    {"id":"code", "title":"Script Side",
     "sub":[
     {"id":"code_ob", "title":"Understanding Observables"},
     {"id":"code_gset", "title":"cog.get() and cog.set()"},
@@ -88,6 +75,26 @@
 
   <div cog-set="temp:intro;section">
     <div cog-src="sections/intro.html"></div>
+  </div>
+
+  <div cog-set="temp:defdata;section">
+    <div cog-src="sections/defdata.html"></div>
+  </div>
+
+  <div cog-set="temp:prop;section">
+    <div cog-src="sections/prop.html"></div>
+  </div>
+
+  <div cog-set="temp:src;section">
+    <div cog-src="sections/src.html"></div>
+  </div>
+
+  <div cog-set="temp:esc;section">
+    <div cog-src="sections/esc.html"></div>
+  </div>
+
+  <div cog-set="temp:if;section">
+    <div cog-src="sections/if.html"></div>
   </div>
 
   <div cog-set="temp:examples;section">

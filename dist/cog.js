@@ -47,8 +47,7 @@ cog.keyword = {
 };
 cog.token = {
     open: "{{",
-    close: "}}",
-    escape: "_"
+    close: "}}"
 };
 cog.regex = {
     head: new RegExp("<head[^>]*>((.|[\\\n\\\r])*)<\\\/head>", "im"),
@@ -163,7 +162,6 @@ cog.bind = function (dom, callback) {
         tempNode.removeAttribute(cog.label.temp);
         if (cog.templates.hasOwnProperty(tempId)) {
             tempRender = cog.template({ id: tempId, data: tempTokenObj, bind: true, fragment: true });
-
             tempNode.parentNode.replaceChild(tempRender, tempNode);
         }
     }
@@ -941,7 +939,6 @@ cog.setElems = function (callback) {
             }
             if (setType == "temp") {
                 cog.extractAssets(setElem);
-
                 setTemp = setKey.split(";");
                 setTempId = setTemp[0].trim();
                 if (setTemp[1]) {

@@ -29,7 +29,13 @@
         &lt;/head>
         &lt;body>
 
-            &lt;p>{{hello}}&lt;/p>
+            &lt;div cog-set="html:paragraph">
+                &lt;h1>Title&lt;/h1>
+                &lt;p>Lorem ipsum dolor sit amet.&lt;/p>
+            &lt;/div>
+
+            &lt;h2>{{hello}}&lt;/h2>
+            {{paragraph}}
 
             &lt;script src="../dist/cog.js">&lt;/script>
             &lt;script>
@@ -41,4 +47,53 @@
         &lt;/html>
     </code>
 </pre>
-<p>Second way is the <strong>External Render</strong> way, which renders another page. This is the intended way of using Cognitive and it has couple of benefits such as managing contents and layouts seperately with ease. It is explained thoroughly on the <a href="#extren">External Render</a> section.</p>
+<p>Second way is the <strong>External Render</strong> way, which renders another page. This is the intended way of using Cognitive and it has couple of benefits such as managing contents and layouts seperately with ease.</p>
+<div class="row">
+    <div class="col-sm-12 col-md-6">
+        <h3>Main Document</h3>
+        <pre cog-escape>
+            <code class="html">
+                &lt;html>
+                &lt;head>
+                    &lt;title>Main&lt;/title>
+                &lt;/head>
+                &lt;body>
+
+                    &lt;div cog-set="html:paragraph">
+                        &lt;h1>Title&lt;/h1>
+                        &lt;p>Lorem ipsum dolor sit amet.&lt;/p>
+                    &lt;/div>
+
+                    &lt;script src="../dist/cog.js">&lt;/script>
+                    &lt;script>
+                        cog.data.hello = "Hello World!";
+                        cog.render("path/to/layout.html");
+                    &lt;/script>
+    
+                &lt;/body>
+                &lt;/html>
+            </code>
+        </pre>
+    </div>
+    <div class="col-sm-12 col-md-6">
+        <h3>Layout Document</h3>
+        <pre cog-escape>
+            <code class="html">
+                &lt;html>
+                &lt;head>
+                    &lt;title>Layout&lt;/title>
+                    &lt;link rel="stylesheet" type="text/css" href="your_styles.css" />
+                &lt;/head>
+                &lt;body>
+    
+                    &lt;h2>{{hello}}&lt;/h2>
+                    {{paragraph}}
+
+                    &lt;script src="your_scripts.js">&lt;/script>
+
+                &lt;/body>
+                &lt;/html>
+            </code>
+        </pre>
+    </div>
+</div>
