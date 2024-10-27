@@ -1,0 +1,36 @@
+<h1 cog-prop="attr:{id:{{section.id}}}">{{section.title}}</h1>
+<p>Properties allows us to dynamically modify the elements as we please. Styles, classes, attributes and node properties (called context for the sake of differentiation) can be declared using <code>cog-prop</code> attribute on elements.</p>
+<p>Multiple <code>cog-prop</code> attributes can be defined in a single element, for example <code>cog-prop1</code>, <code>cog-prop2</code>, <code>cog-propXY</code>. As long as the name of the attribute starts with "cog-prop", it will be treated as a property attribute.</p>
+<div class="d-flex justify-content-end">
+    <button class="btn btn-info" code-id="prop_exp1" cog-event="click:'openSandbox()'">Open in Sandbox</button>
+</div>
+<pre cog-escape>
+    <code class="html" id="prop_exp1">
+        &lt;html>
+        &lt;head>
+            &lt;title>CognitiveJS&lt;/title>
+        &lt;/head>
+        &lt;body>
+
+            &lt;h1 cog-prop="style:{color:'#f00'}">TITLE&lt;/h1>
+
+            &lt;p 
+            cog-prop1="style:{backgroundColor:{{bgcolor}}, color:'#fff'}, class:'class1 '+{{class}}" 
+            cog-prop2="class:'class3'">Lorem ipsum dolor sit amet.&lt;/p>
+
+            &lt;a cog-prop="attr:{href:'http://google.com'}">Link&lt;/a>
+
+            &lt;input cog-prop="context:{value:'input value'}" type="text">
+
+            &lt;script src="../dist/cog.js">&lt;/script>
+            &lt;script>
+                cog.data.bgcolor = "#00f";
+                cog.data.class = "class2";
+                cog.render();
+            &lt;/script>
+
+        &lt;/body>
+        &lt;/html>
+    </code>
+</pre>
+

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CognitiveJS | Shopping Example</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    integrity="sha384-SOnAn/m2fVJCwnbEYgD4xzrPtvsXdElhOVvR8ND1YjB5nhGNwwf7nBQlhfAwHAZC" crossorigin="anonymous">
+</head>
+
+<body style="display: none;">
+  <!--TOAST CONTAINER-->
+  <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div cog-prop="class:{{toast.bg}}" id="toast" class="toast align-items-center text-white border-0" role="alert"
+      aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" cog-prop="style:{color:{{tcolor}}}">{{toast.product}} {{toast.text}}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <h1 class="mb-5 text-center">CognitiveJS Shopping Example</h1>
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-3">
+        <!--SIDEBAR-->
+        <nav cog-repeat="categories;category;categories" class="nav flex-column nav-pills">
+          <button cog-event="click:'changeMenu()'" _category="{{category}}" class="nav-link"
+            style="text-transform: capitalize;">{{category}}</button>
+        </nav>
+      </div>
+      <div class="col-12 col-md-9">
+        <!--CART-->
+        <button cog-if="{{cart._length}} &lt;= 0" class="btn btn-primary position-relative">
+          <i class="fa-solid fa-cart-shopping"></i>
+          <span
+            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{cart._length}}</span>
+        </button>
+        <div cog-if="{{cart._length}} > 0" class="btn-group">
+          <button class="btn btn-primary dropdown-toggle position-relative" data-bs-toggle="dropdown"
+            data-bs-auto-close="outside" aria-expanded="false">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{cart._length}}</span>
+          </button>
+          <ul class="dropdown-menu p-2" style="width: 300px;">
+            <div class="position-fixed start-0 top-0 p-3">
+              <span class="fw-bold">TOTAL: {{cartTotal}} $</span>
+            </div>
+            <hr class="dropdown-divider mt-5">
+            <div cog-repeat="cart;item;cart" style="max-height: 350px;overflow-y: auto;overflow-x: hidden;">
+              <div class="row align-items-center p-1">
+                <div class="col">
+                  <span>{{item.title}}</span>
+                </div>
+                <div class="col-auto">
+                  <span class="text-primary fw-bold">{{item.price}} $ X {{item.quantity}}</span>
+                </div>
+                <div class="col-auto">
+                  <button product-id="{{item.id}}" cog-event="click:'removeItem()'" class="btn btn-danger">
+                    <i class="fs-5 fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <hr cog-if="{{item._index}}+1 != {{cart._length}}" data-prop="if:'%item._row% != %cart._count%'"
+                class="dropdown-divider">
+            </div>
+          </ul>
+        </div>
+        <!--SEARCH BAR-->
+        <input cog-live="live:'search', event:'input'" cog-event="input:'searchProducts()'"
+          cog-prop="context:{value:{{search}}}" class="form-control mb-3 mt-3" placeholder="Search" type="text">
+        <div class="row">
+          <div class="col-6">
+            <p class="text-start m-0" cog-if="{{productsFiltered._length}} != {{products._length}}">
+              Filtered <span class="fw-bold">{{productsFiltered._length}}</span> items
+            </p>
+          </div>
+          <div class="col-6">
+            <p class="text-end m-0">Total of <span class="fw-bold">{{products._length}}</span> items</p>
+          </div>
+        </div>
+        <!--PRODUCTS TABLE-->
+        <table class="table table-striped">
+          <thead>
+            <tr class="fw-bold">
+              <td>#</td>
+              <td>Title</td>
+              <td>Price</td>
+              <td>Rating</td>
+              <td>Category</td>
+            </tr>
+          </thead>
+          <tbody cog-repeat="products;product;productsFiltered">
+            <tr>
+              <td>{{product.number}}</td>
+              <td>{{product.title}}</td>
+              <td>{{product.price}} $</td>
+              <td>{{product.rating}}</td>
+              <td>{{product.category}}</td>
+              <td>
+                <button product-id="{{product.id}}" cog-event="click:'addItem()'" class="btn btn-success">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
+    crossorigin="anonymous"></script>
+  <script src="../dist/cog.js"></script>
+  <script>
+    // DEFINITIONS
+    cog.data.search = "";
+    cog.data.products = null;
+    cog.data.tcolor = "";
+    cog.data.productsFiltered = null;
+    cog.data.categories = ["all"];
+    cog.data.cart = [];
+    cog.data.cartTotal = function () {
+      var total = 0, cart = cog.get("cart");
+      cart.forEach(function (item) {
+        total = total + (item.quantity * item.price);
+      });
+      return total;
+    };
+    cog.data.toast = { product: "", bg: "", text: "" };
+    cog.data.toast.add = { text: "successfully added to the cart!", bg: "bg-primary" };
+    cog.data.toast.remove = { text: "successfully removed from the cart!", bg: "bg-danger" };
+    var toast = new bootstrap.Toast(document.getElementById("toast"));
+
+    // binding function tokens with the tokens that have been used inside them so that any element that uses these function tokens will be refreshed respectfully
+    cog.addBound("cart", "cartTotal");
+
+    // FUNCTIONS
+    function changeMenu(menu) {
+      if (menu == null) {
+        menu = cog.event.target.getAttribute("category");
+      }
+      var filtered = [], navs = document.querySelectorAll(".nav-link"), products = cog.get("products");
+      for (var i = 0; i < navs.length; i++) {
+        navs[i].classList.remove("active");
+        if (navs[i].getAttribute("category") == menu) {
+          navs[i].classList.add("active");
+        }
+      }
+      if (menu != "all") {
+        products.forEach(function (product) {
+          if (product.category == menu) {
+            filtered.push(product);
+          }
+        });
+        cog.set("productsFiltered", filtered);
+      } else {
+        cog.set("productsFiltered", products);
+      }
+      cog.set("search", "");
+    }
+    function searchProducts() {
+      var query = cog.get("search"), filtered = [], actives = document.querySelectorAll(".nav-link.active"), products = cog.get("products");
+      for (var i = 0; i < actives.length; i++) {
+        actives[i].classList.remove("active");
+      }
+      if (query == "") {
+        changeMenu("all");
+      } else {
+        products.forEach(function (product) {
+          if (product.title.toLowerCase().indexOf(query.toLowerCase()) !== -1) {
+            filtered.push(product);
+          }
+        });
+        cog.set("productsFiltered", filtered);
+      }
+    }
+    function addItem() {
+      var i, id = cog.event.target.getAttribute("product-id"), cart = cog.data.cart, addToQuantity = false, existingItem, product, products;
+      for (i = 0; i < cart.length; i++) {
+        item = cart[i];
+        if (cog.get(item.id) == id) {
+          addToQuantity = true;
+          existingItem = item;
+          break;
+        }
+      }
+      if (addToQuantity) {
+        existingItem["quantity"] = cog.get(existingItem["quantity"]) + 1;
+        cog.set("toast.product", existingItem["title"]);
+        cog.set("toast.bg", cog.get("toast.add.bg"));
+        cog.set("toast.text", cog.get("toast.add.text"));
+        toast.show();
+      } else {
+        products = cog.get("products");
+        for (i = 0; i < products.length; i++) {
+          product = products[i];
+          if (product.id == id) {
+            product["quantity"] = 1;
+            cart.push(product);
+            cog.set("toast.product", product["title"]);
+            cog.set("toast.bg", cog.get("toast.add.bg"));
+            cog.set("toast.text", cog.get("toast.add.text"));
+            toast.show();
+            break;
+          }
+        }
+      }
+    }
+    function removeItem() {
+      var i, id = cog.event.target.getAttribute("product-id"), cart = cog.data.cart, item;
+      for (i = 0; i < cart.length; i++) {
+        item = cart[i];
+        if (cog.get(item.id) == id) {
+          cart.splice(i, 1);
+          cog.set("toast.product", item["title"]);
+          cog.set("toast.bg", cog.get("toast.remove.bg"));
+          cog.set("toast.text", cog.get("toast.remove.text"));
+          toast.show();
+          break;
+        }
+      }
+    }
+
+    // getting the products data, executing cog.render() function after we process the categories and lastly removing the display none style from body (I've done it with internal cog.xhr() function but you can use any other API or library you want)
+    cog.xhr("products.json", function (xhr) {
+      cog.data.products = JSON.parse(xhr.responseText).products;
+      cog.data.products.forEach(function (product) {
+        var push = true;
+        product["number"] = function (parent, target) {
+          cog.addBound(parent, target);
+          return parent[cog.keyword.index] + 1;
+        };
+        cog.data.categories.forEach(function (el) {
+          if (el == product.category) {
+            push = false;
+          }
+        });
+        if (push) {
+          cog.data.categories.push(product.category);
+        }
+      });
+      cog.data.productsFiltered = cog.get("products");
+      document.addEventListener(cog.event.afterRender, function () {
+        document.querySelector(".nav-link").classList.add("active");
+        document.body.style.display = "";
+      });
+      cog.render();
+    });
+  </script>
+</body>
+
+</html>
