@@ -15,7 +15,6 @@
         cog-prop1="if:[{{bool}}, {style:{color:'red'}}, {if:[{{bool2}}, {style:{color:'blue'}}, {style:{color:'green'}}]}]">
         {{greet}} PROP</h1>
     <h1>{{arr.0}}</h1>
-    <div>{{_greet}} &lt;- this is an escaped token</div>
     <div cog-escape="">{{greet}} &lt;- this is an escaped element</div>
     <h3>{{greetColor}}{{greet}}</h3>
 
