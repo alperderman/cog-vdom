@@ -14,13 +14,9 @@
 
             &lt;div cog-src="paragraph.html">&lt;/div>
 
-            &lt;div cog-set="json:fruits">
-                &lt;div cog-src="url:'fruits.json', text:true, method:'POST', data:{search:'apple'}">&lt;/div>
-            &lt;/div>
+            &lt;div cog-set="json:fruits" cog-src="url:'fruits.json', text:true, method:'POST', data:{search:'apple'}">&lt;/div>
         
-            &lt;div cog-set="temp:template_name;template_alias1,template_alias2">
-                &lt;div cog-src="template.html">&lt;/div>
-            &lt;/div>
+            &lt;div cog-set="temp:template_name;template_alias1,template_alias2" cog-src="template.html">&lt;/div>
 
             &lt;script src="../dist/cog.js">&lt;/script>
             &lt;script>
