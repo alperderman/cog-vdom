@@ -138,7 +138,7 @@ cog.render = function (layoutSrc) {
     }
 };
 cog.bind = function (dom, callback) {
-    var i, ii, iii, node, nodes = [], splitNodeContent, attrContentNodes, pureToken, token, content, idx, oldNode, parent, ob, nodeAttr, nodeAttrs, newNodeAttrs, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
+    var i, ii, iii, node, nodes = [], nodeType, nodeObj, newNodeLen, splitNodeContent, attrContentNodes, pureToken, token, content, idx, oldNode, parent, ob, nodeAttr, nodeAttrs, newNodeAttrs, attrKey, attrVal, attrContent, tempNode, tempAttr, tempId, tempToken, tempTokenObj, tempAlias, tempRender, nodeSplitTokens, nodeSplitToken, prop, propType, newNode, attrContentParse, attrContentObj, attrContentObjProp;
     if (dom == null) { dom = document.body; }
     while (tempNode = dom.querySelector("[" + cog.label.temp + "]")) {
         tempAttr = cog.replaceText(tempNode.getAttribute(cog.label.temp)).split(";");
@@ -187,12 +187,26 @@ cog.bind = function (dom, callback) {
                 parent = node.parentNode;
                 if (cog.isElement(content)) {
                     newNode = cog.bind(content.cloneNode(true));
+                    if (content.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                        nodeType = "frag";
+                        newNode = cog.arrFragment(newNode);
+                        newNodeLen = newNode.length;
+                        for (ii = 0; ii < newNodeLen; ii++) {
+                            parent.insertBefore(newNode[ii], oldNode);
+                        }
+                    } else {
+                        nodeType = "elem";
+                        parent.insertBefore(newNode, oldNode);
+                    }
                 } else {
                     newNode = document.createTextNode(content);
+                    nodeType = "text";
+                    parent.insertBefore(newNode, oldNode);
                 }
-                parent.insertBefore(newNode, oldNode);
+                nodeObj = {};
+                nodeObj[nodeType] = newNode;
                 ob = cog.get(pureToken, true);
-                cog.pushNode(pureToken, ob, newNode);
+                cog.pushNode(pureToken, ob, nodeObj);
                 if (cog.regex.token.test(oldNode.nodeValue)) {
                     nodes.splice(i + 1, 0, oldNode);
                 } else {
@@ -516,10 +530,36 @@ cog.spliceRepeats = function (ob, index, remove, add) {
     }
 };
 cog.rebindNodes = function (nodes, content) {
-    var i, ii, node, newNode, prop, attrContentObj, attrContentObjProp;
+    var i, ii, node, oldNode, oldNodeLen, newNode, newNodeLen, prop, attrContentObj, attrContentObjProp, isContentElement = cog.isElement(content);
     for (i = 0; i < nodes.length; i++) {
         node = nodes[i];
-        if (node.hasOwnProperty("prop")) {
+        if (node.hasOwnProperty("text")) {
+            oldNode = node.text;
+            if (cog.isInDocument(oldNode)) {
+                if (isContentElement) {
+                    newNode = cog.bind(content.cloneNode(true));
+                    if (content.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                        newNode = cog.arrFragment(newNode);
+                        newNodeLen = newNode.length;
+                        for (ii = 0; ii < newNodeLen; ii++) {
+                            oldNode.parentNode.insertBefore(newNode[ii], oldNode);
+                        }
+                        oldNode.parentNode.removeChild(oldNode);
+                        nodes[i] = { frag: newNode };
+                    } else {
+                        oldNode.parentNode.replaceChild(newNode, oldNode);
+                        nodes[i] = { elem: newNode };
+                    }
+                } else {
+                    if (oldNode.nodeValue != content) {
+                        oldNode.nodeValue = content;
+                    }
+                }
+            } else {
+                nodes.splice(i, 1);
+                --i;
+            }
+        } else if (node.hasOwnProperty("prop")) {
             prop = node.prop;
             if (cog.isInDocument(prop.node)) {
                 if (prop.type == "prop") {
@@ -604,30 +644,74 @@ cog.rebindNodes = function (nodes, content) {
                 }
             } else {
                 nodes.splice(i, 1);
+                --i;
             }
-        } else {
-            if (cog.isInDocument(node)) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    if (cog.isElement(content)) {
-                        newNode = cog.bind(content.cloneNode(true));
-                        node.parentNode.replaceChild(newNode, node);
-                        nodes[i] = newNode;
-                    } else {
-                        if (node.nodeValue != content) {
-                            node.nodeValue = content;
+        } else if (node.hasOwnProperty("frag")) {
+            oldNode = node.frag;
+            for (ii = 0; ii < oldNode.length; ii++) {
+                if (!cog.isInDocument(oldNode[ii])) {
+                    oldNode.splice(ii, 1);
+                    --ii;
+                }
+            }
+            if (oldNode.length > 0) {
+                if (isContentElement) {
+                    newNode = cog.bind(content.cloneNode(true));
+                    if (content.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                        newNode = cog.arrFragment(newNode);
+                        newNodeLen = newNode.length;
+                        for (ii = 0; ii < newNodeLen; ii++) {
+                            oldNode[0].parentNode.insertBefore(newNode[ii], oldNode[0]);
                         }
+                        for (ii = 0; ii < oldNodeLen; ii++) {
+                            oldNode[ii].parentNode.removeChild(oldNode[ii]);
+                        }
+                        nodes[i] = { frag: newNode };
+                    } else {
+                        oldNode[0].parentNode.insertBefore(newNode, oldNode[0]);
+                        for (ii = 0; ii < oldNodeLen; ii++) {
+                            oldNode[ii].parentNode.removeChild(oldNode[ii]);
+                        }
+                        nodes[i] = { elem: newNode };
                     }
                 } else {
-                    if (cog.isElement(content)) {
-                        newNode = cog.bind(content.cloneNode(true));
-                    } else {
-                        newNode = document.createTextNode(content);
+                    newNode = document.createTextNode(content);
+                    oldNode[0].parentNode.insertBefore(newNode, oldNode[0]);
+                    oldNodeLen = oldNode.length;
+                    for (ii = 0; ii < oldNodeLen; ii++) {
+                        oldNode[ii].parentNode.removeChild(oldNode[ii]);
                     }
-                    node.parentNode.replaceChild(newNode, node);
-                    nodes[i] = newNode;
+                    nodes[i] = { text: newNode };
                 }
             } else {
                 nodes.splice(i, 1);
+                --i;
+            }
+        } else if (node.hasOwnProperty("elem")) {
+            oldNode = node.elem;
+            if (cog.isInDocument(oldNode)) {
+                if (isContentElement) {
+                    newNode = cog.bind(content.cloneNode(true));
+                    if (content.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                        newNode = cog.arrFragment(newNode);
+                        newNodeLen = newNode.length;
+                        for (ii = 0; ii < newNodeLen; ii++) {
+                            oldNode.parentNode.insertBefore(newNode[ii], oldNode);
+                        }
+                        oldNode.parentNode.removeChild(oldNode);
+                        nodes[i] = { frag: newNode };
+                    } else {
+                        oldNode.parentNode.replaceChild(newNode, oldNode);
+                        nodes[i] = { elem: newNode };
+                    }
+                } else {
+                    newNode = document.createTextNode(content);
+                    oldNode.parentNode.replaceChild(newNode, oldNode);
+                    nodes[i] = { text: newNode };
+                }
+            } else {
+                nodes.splice(i, 1);
+                --i;
             }
         }
     }
@@ -976,20 +1060,15 @@ cog.setElems = function (callback) {
                 if (propData) {
                     cog.set(setKeys, propData);
                 }
-            }
-            if (setType == "raw") {
+            } else if (setType == "raw") {
                 propData = cog.eval("(" + setElem.textContent + ")");
                 cog.set(setKeys, propData);
-            }
-            if (setType == "text") {
+            } else if (setType == "text") {
                 cog.set(setKeys, setElem.textContent);
-            }
-            if (setType == "html") {
+            } else if (setType == "html") {
                 cog.extractAssets(setElem);
-                setElem.removeAttribute(cog.label.set);
-                cog.set(setKeys, setElem.cloneNode(true));
-            }
-            if (setType == "temp") {
+                cog.set(setKeys, cog.elemFragment(setElem));
+            } else if (setType == "temp") {
                 cog.extractAssets(setElem);
                 setTemp = setKey.split(";");
                 setTempId = setTemp[0].trim();
@@ -1786,11 +1865,18 @@ cog.addEventListenerAll = function (target, listener, capture) {
     }
 };
 cog.elemFragment = function (elem) {
-    var fragment = document.createDocumentFragment();
+    var frag = document.createDocumentFragment();
     while (elem.firstChild) {
-        fragment.appendChild(elem.firstChild);
+        frag.appendChild(elem.firstChild);
     }
-    return fragment;
+    return frag;
+};
+cog.arrFragment = function (frag) {
+    var i, len = frag.childNodes.length, arr = [];
+    for (i = 0; i < len; i++) {
+        arr.push(frag.childNodes[i]);
+    }
+    return arr;
 };
 cog.eval = function (str) {
     try { return eval(str); } catch (e) { }
